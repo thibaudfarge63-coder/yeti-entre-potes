@@ -168,7 +168,7 @@
         if (!solid(x, y)) continue;
         const p = (y * w + x) * 4, edge = !solid(x - 1, y) || !solid(x + 1, y) || !solid(x, y - 1) || !solid(x, y + 1);
         let c;
-        if (edge) c = l;
+        if (edge) c = shade(0.2); // bord fondu dans le métal au lieu d'un trait noir
         else {
           const u = (x - x0) / Math.max(1, x1 - x0);
           // Volume arrondi + reflet principal vif + liseré lumineux à droite + reflets diagonaux.
@@ -178,7 +178,7 @@
           const d = (x + y * 0.6) % 9; if (d < 1.2) t += 0.22;
           c = shade(t);
         }
-        o[p] = c[0]; o[p + 1] = c[1]; o[p + 2] = c[2]; o[p + 3] = 255;
+        o[p] = c[0]; o[p + 1] = c[1]; o[p + 2] = c[2]; o[p + 3] = edge ? 170 : 255;
       }
     }
     // Éclats de brillance.
