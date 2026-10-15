@@ -53,11 +53,11 @@
     {id:'snail',  kind:'curse', emoji:'🐌', fur:['#4a3a1a','#d9c48c'], name:'L’escargot', tag:'5 lancers de suite < 150 m', until:'Fais 150 m ou plus pour t’en débarrasser.', test:l => last(l, 5, v => v < 150)},
   ];
   // Couleur du pingouin selon le podium du club : [ombres, lumières].
-  // Pingouin trophée : une seule couleur pleine + un contour foncé.
+  // Pingouin trophée : lingot poli, opaque, reflets marqués + contour. Purement visuel : aucune influence sur le jeu.
   const PODIUM = {
-    gold:   ['#f5c518','#6b4a00'],
-    silver: ['#c8ced6','#3c434c'],
-    bronze: ['#c8803f','#4a2208'],
+    gold:   {ramp:['#3d2200','#8a5600','#d69a00','#ffcf1a','#fff07a','#fffbe6'], line:'#2e1900'},
+    silver: {ramp:['#12161a','#475059','#8a94a0','#c9d1da','#f2f5f8','#ffffff'], line:'#1a1e22'},
+    bronze: {ramp:['#260c01','#66290a','#a3501c','#dc8240','#ffbf85','#ffeedd'], line:'#2a1003'},
   };
   const YETI_IDS = new Set(), PENGUIN_IDS = new Set();
   for (let id = 168; id <= 297; id++) YETI_IDS.add(id);
@@ -153,14 +153,39 @@
   }
 
   function hex(c) { const n = parseInt(c.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; }
-  function tintPenguin(img, [fill, line]) {
-    const f = hex(fill), l = hex(line), {width: w, height: h, data} = img, out = new ImageData(w, h), o = out.data;
+  function tintPenguin(img, {ramp, line}) {
+    const r = ramp.map(hex), l = hex(line), {width: w, height: h, data} = img, out = new ImageData(w, h), o = out.data;
     const solid = (x, y) => x >= 0 && y >= 0 && x < w && y < h && data[(y * w + x) * 4 + 3] > 60;
-    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-      if (!solid(x, y)) continue;
-      const edge = !solid(x - 1, y) || !solid(x + 1, y) || !solid(x, y - 1) || !solid(x, y + 1);
-      const c = edge ? l : f, p = (y * w + x) * 4;
-      o[p] = c[0]; o[p + 1] = c[1]; o[p + 2] = c[2]; o[p + 3] = 255;
+    let top = h, bottom = 0;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (solid(x, y)) { if (y < top) top = y; if (y > bottom) bottom = y; }
+    const shade = t => { t = Math.min(1, Math.max(0, t)) * (r.length - 1); const i = Math.min(r.length - 2, Math.floor(t)), u = t - i; return r[i].map((c, k) => Math.round(c + (r[i + 1][k] - c) * u)); };
+    for (let y = 0; y < h; y++) {
+      let x0 = -1, x1 = -1;
+      for (let x = 0; x < w; x++) if (solid(x, y)) { if (x0 < 0) x0 = x; x1 = x; }
+      if (x0 < 0) continue;
+      const v = (y - top) / Math.max(1, bottom - top);
+      for (let x = x0; x <= x1; x++) {
+        if (!solid(x, y)) continue;
+        const p = (y * w + x) * 4, edge = !solid(x - 1, y) || !solid(x + 1, y) || !solid(x, y - 1) || !solid(x, y + 1);
+        let c;
+        if (edge) c = l;
+        else {
+          const u = (x - x0) / Math.max(1, x1 - x0);
+          // Volume arrondi + reflet principal vif + liseré lumineux à droite + reflets diagonaux.
+          let t = 0.32 + 0.38 * Math.sin(Math.PI * u) - 0.12 * v;
+          t += 0.75 * Math.exp(-(((u - 0.3) / 0.11) ** 2));
+          t += 0.30 * Math.exp(-(((u - 0.86) / 0.06) ** 2));
+          const d = (x + y * 0.6) % 9; if (d < 1.2) t += 0.22;
+          c = shade(t);
+        }
+        o[p] = c[0]; o[p + 1] = c[1]; o[p + 2] = c[2]; o[p + 3] = 255;
+      }
+    }
+    // Éclats de brillance.
+    const sparkle = (x, y) => { for (const [dx, dy] of [[0,0],[1,0],[-1,0],[0,1],[0,-1]]) { const xx = x + dx, yy = y + dy; if (solid(xx, yy)) { const p = (yy * w + xx) * 4; o[p] = o[p + 1] = o[p + 2] = 255; } } };
+    let n = 0; for (let y = top + 6; y < bottom - 4 && n < 3; y += Math.max(8, Math.round((bottom - top) / 3.2))) {
+      let x0 = -1, x1 = -1; for (let x = 0; x < w; x++) if (solid(x, y)) { if (x0 < 0) x0 = x; x1 = x; }
+      if (x1 - x0 > 6) { sparkle(Math.round(x0 + (x1 - x0) * (n % 2 ? 0.7 : 0.32)), y); n++; }
     }
     return out;
   }
