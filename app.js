@@ -33,6 +33,9 @@
     }).filter(Boolean).sort((a,b)=>a.id-b.id);
     if(!parsed.length)return;
     PLAYERS=parsed;renderPlayerOptions();
+    const known=new Set(PLAYERS.map(p=>p.id)),before=outbox.length;
+    outbox=outbox.filter(s=>known.has(s.player));if(outbox.length!==before)persist();
+    if(selectedPlayer&&!known.has(selectedPlayer)){selectedPlayer=null;persist();}
   }
   function renderPlayerOptions() {
     ['analysis-player','history-player'].forEach(id=>{
