@@ -221,7 +221,37 @@
     $('history-body').innerHTML=selected.length?selected.slice(0,historyLimit).map(s=>{const p=player(s.player);return `<tr><td>${escape(dates.format(new Date(s.played_at)))}</td><td><span class="player-dot" style="background:${p.color}"></span>${escape(p.name)}</td><td>${number.format(s.score)} <span class="record-status">m</span></td><td><span class="record-status ${pending.has(s.id)?'pending':''}">${pending.has(s.id)?'↻ En attente':'✓ Enregistré'}</span></td></tr>`;}).join(''):'<tr class="empty-row"><td colspan="4">Aucun lancer sur cette période. À vous de jouer.</td></tr>';
     $('load-more').hidden=selected.length<=historyLimit;
   }
-  function render() { const scores=filteredScores();renderLeaderboard(scores);renderMetrics(scores);renderTrend(scores);renderHistory(scores); }
+  let tickerKey='',knownScoreIds=null,crackTimer;
+  function tickerItem(s){
+    const p=player(s.player),n=escape(p.name),v=number.format(s.score)+' m';
+    if(s.score>=400)return `<span class="ticker-item crack"><span class="warn-sign" aria-hidden="true">!</span>ATTENTION GROS CRACK : ${n} · ${v}<span class="warn-sign" aria-hidden="true">!</span></span>`;
+    if(s.score<100)return `<span class="ticker-item shame">💩 ${n} PUE LA MERDE · ${v}</span>`;
+    return `<span class="ticker-item"><i class="player-dot" style="background:${p.color}"></i><b>${n}</b> envoie le phoque à ${v}</span>`;
+  }
+  function renderTicker(){
+    const all=allScores(),recent=[...all].sort((a,b)=>Date.parse(b.played_at)-Date.parse(a.played_at)).slice(0,20);
+    const key=recent.map(s=>s.id).join()+'|'+PLAYERS.map(p=>p.id+p.name).join();
+    if(key===tickerKey)return;tickerKey=key;
+    let items=[];
+    if(all.length){
+      const best=all.reduce((a,b)=>b.score>a.score?b:a);
+      items.push(`<span class="ticker-item headline">RECORD DU CLUB : <b>${escape(player(best.player).name)}</b> · ${number.format(best.score)} m</span>`);
+      const today=dayKey(new Date()),todays=all.filter(s=>dayKey(s.played_at)===today);
+      if(todays.length){const t=todays.reduce((a,b)=>b.score>a.score?b:a);items.push(`<span class="ticker-item headline">MEILLEUR LANCER DU JOUR : <b>${escape(player(t.player).name)}</b> · ${number.format(t.score)} m</span>`);}
+      items=items.concat(recent.map(tickerItem));
+    } else items.push('<span class="ticker-item">Aucun lancer pour l’instant. Le premier qui joue fait la une.</span>');
+    const html=items.join('<span class="ticker-sep" aria-hidden="true">◆</span>')+'<span class="ticker-sep" aria-hidden="true">◆</span>';
+    const track=$('ticker-track');track.innerHTML=html+'<span aria-hidden="true" class="ticker-copy">'+html+'</span>';
+    requestAnimationFrame(()=>{const w=track.scrollWidth/2;track.style.setProperty('--ticker-duration',Math.max(20,w/70)+'s');});
+  }
+  function announceNewScores(){
+    const all=allScores();
+    if(knownScoreIds===null){if(!connected)return;knownScoreIds=new Set(all.map(s=>s.id));return;}
+    const fresh=all.filter(s=>!knownScoreIds.has(s.id));fresh.forEach(s=>knownScoreIds.add(s.id));
+    const crack=fresh.filter(s=>s.score>=400).sort((a,b)=>b.score-a.score)[0];
+    if(crack){$('crack-alert-text').textContent=player(crack.player).name+' vient d’envoyer '+number.format(crack.score)+' m';$('crack-alert').hidden=false;clearTimeout(crackTimer);crackTimer=setTimeout(()=>$('crack-alert').hidden=true,7000);}
+  }
+  function render() { const scores=filteredScores();renderLeaderboard(scores);renderMetrics(scores);renderTrend(scores);renderHistory(scores);renderTicker();announceNewScores(); }
 
   function onProfileClick(e){if(e.target.closest('[data-add-player]')){openAddPlayer();return;}const button=e.target.closest('[data-player]');if(button)choosePlayer(Number(button.dataset.player));}
   $('profiles').addEventListener('click',onProfileClick);

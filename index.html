@@ -8,9 +8,9 @@
   <link rel="stylesheet" href="styles.css">
   <script>window.RufflePlayer = window.RufflePlayer || {}; window.RufflePlayer.config = {autoplay:"on",unmuteOverlay:"visible",backgroundColor:"#c9e8f7",contextMenu:"off",warnOnUnsupportedContent:false};</script>
   <script src="ruffle/ruffle.js" defer></script>
-  <script src="config.js?v=20261015-8" defer></script>
-  <script src="data-client.js?v=20261015-8" defer></script>
-  <script src="app.js?v=20261015-8" defer></script>
+  <script src="config.js?v=20261015-9" defer></script>
+  <script src="data-client.js?v=20261015-9" defer></script>
+  <script src="app.js?v=20261015-9" defer></script>
 </head>
 <body>
   <div class="page-shell">
@@ -19,9 +19,11 @@
       <button type="button" id="share-link" class="text-button">Copier le lien du club ↗</button><div id="connection" class="connection" role="status"><span class="status-dot"></span><span id="connection-text">Connexion au club…</span></div>
     </header>
 
-    <div class="intro"><div><p class="eyebrow">TROIS POTES. UN SOMMET.</p><h1>Qui ira le plus <em>haut ?</em></h1><p class="intro-text">Le même jeu, vos records, et quelques comptes à régler.</p></div><div class="club-tag"><span aria-hidden="true">✳</span> <b id="club-names">Loïc · Alexandre · Thibaud</b></div></div>
+    <div class="intro"><div><p class="eyebrow">LES POTES. UN SOMMET.</p><h1>Qui ira le plus <em>haut ?</em></h1><p class="intro-text">Le même jeu, vos records, et quelques comptes à régler.</p></div><div class="club-tag"><span aria-hidden="true">✳</span> <b id="club-names">Loïc · Alexandre · Thibaud</b></div></div>
 
     <main>
+      <section class="news-ticker" aria-label="Les actus du club"><div class="ticker-label"><span class="ticker-live">EN DIRECT</span><span class="ticker-channel">YÉTI INFO</span></div><div class="ticker-viewport"><div class="ticker-track" id="ticker-track"><span class="ticker-item">Les scores arrivent…</span></div></div></section>
+      <div class="crack-alert" id="crack-alert" hidden role="alert"><span class="warn-sign" aria-hidden="true">!</span><div><strong>ATTENTION GROS CRACK</strong><span id="crack-alert-text"></span></div><span class="warn-sign" aria-hidden="true">!</span></div>
       <section class="play-layout" aria-label="Le jeu et le classement">
         <div class="game-column">
           <div class="section-top"><h2><span class="live-dot"></span> À toi de jouer</h2><span class="original-badge">YETISPORTS · SEAL BOUNCE</span></div>
@@ -29,7 +31,7 @@
             <div class="player-bar"><span class="player-label">Je joue avec</span><div class="profiles" id="profiles" aria-label="Choisir son joueur"></div><span class="round-tag" id="round-tag">Prêt pour le lancer</span></div>
             <div class="game-stage" id="game-stage">
               <div id="game-container"></div>
-              <div class="game-cover" id="game-cover"><div class="cover-mountain" aria-hidden="true">▲</div><span class="eyebrow">LE SOMMET VOUS ATTEND</span><h2>Choisis ton pseudo.</h2><p>Chaque lancer sera ajouté à ton historique.</p><div class="cover-profiles" id="cover-profiles"></div></div>
+              <div class="game-cover" id="game-cover"><div class="cover-mountain" aria-hidden="true">▲</div><span class="eyebrow">LE SOMMET VOUS ATTEND</span><h2>Choisis ton pseudo.</h2><p>Chaque lancer sera ajouté à ton historique.</p><p class="cover-hint-mobile">Touche ton prénom juste au-dessus ↑</p><div class="cover-profiles" id="cover-profiles"></div></div>
               <div id="game-loading" class="game-loading" hidden><span class="spinner"></span><p>Le Yéti s’échauffe…</p></div>
             </div>
             <div class="game-footer"><p><span aria-hidden="true">↖</span> Clique dans le jeu pour lancer. Ton score est enregistré automatiquement.</p><button type="button" id="restart-game" class="text-button" disabled>Relancer le jeu <span aria-hidden="true">↻</span></button></div>
@@ -44,7 +46,7 @@
       <section class="analytics" aria-labelledby="analytics-title">
         <div class="analytics-heading"><div><p class="eyebrow">LES CHIFFRES PARLENT</p><h2 id="analytics-title">Le match, à la loupe.</h2></div><div class="filters"><label class="analysis-player-label"><span class="sr-only">Joueur à analyser</span><select id="analysis-player"><option value="all">Tout le club</option><option value="1">Loïc</option><option value="2">Alexandre</option><option value="3">Thibaud</option></select></label><div class="period-buttons" id="period-buttons" aria-label="Période d’analyse"><button type="button" data-period="day">Jour</button><button type="button" data-period="week">Semaine</button><button type="button" data-period="month">Mois</button><button type="button" data-period="all" class="active" aria-pressed="true">Tout</button></div><label class="date-control" id="date-control" hidden><span class="sr-only">Date de référence</span><input type="date" id="reference-date"></label></div></div>
         <div class="metrics" id="metrics"></div>
-        <div class="analysis-grid"><article class="chart-card"><div class="card-title"><div><h3>La progression</h3><p>Moyenne de chaque journée, en mètres</p></div><div class="chart-legend" id="chart-legend"></div></div><div class="chart-wrap" id="trend-chart"></div><p class="chart-note" id="chart-note"></p></article><article class="detail-card"><div class="card-title"><div><h3>Face à face</h3><p>Les trois joueurs, sur la même période</p></div></div><div class="comparison-table-wrap"><table class="comparison-table"><thead><tr><th>Joueur</th><th>Parties</th><th>Moyenne</th><th>Record</th></tr></thead><tbody id="comparison-body"></tbody></table></div><div class="detail-footnote">Dates et journées : heure de Paris.<br>Une semaine commence le lundi.</div></article></div>
+        <div class="analysis-grid"><article class="chart-card"><div class="card-title"><div><h3>La progression</h3><p>Moyenne de chaque journée, en mètres</p></div><div class="chart-legend" id="chart-legend"></div></div><div class="chart-wrap" id="trend-chart"></div><p class="chart-note" id="chart-note"></p></article><article class="detail-card"><div class="card-title"><div><h3>Face à face</h3><p>Tous les joueurs, sur la même période</p></div></div><div class="comparison-table-wrap"><table class="comparison-table"><thead><tr><th>Joueur</th><th>Parties</th><th>Moyenne</th><th>Record</th></tr></thead><tbody id="comparison-body"></tbody></table></div><div class="detail-footnote">Dates et journées : heure de Paris.<br>Une semaine commence le lundi.</div></article></div>
 
         <article class="history-card"><div class="card-title history-heading"><div><h3>Le carnet des lancers</h3><p id="history-description">Les dernières parties du club</p></div><label class="history-select-label"><span>Joueur</span><select id="history-player"><option value="all">Tout le club</option><option value="1">Loïc</option><option value="2">Alexandre</option><option value="3">Thibaud</option></select></label></div><div class="history-table-wrap"><table class="history-table"><thead><tr><th>Date & heure</th><th>Joueur</th><th>Score</th><th>Enregistrement</th></tr></thead><tbody id="history-body"></tbody></table></div><button type="button" class="load-more" id="load-more" hidden>Afficher 30 lancers de plus</button></article>
       </section>
