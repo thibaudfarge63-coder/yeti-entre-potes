@@ -91,6 +91,10 @@
       }
       if (!response.ok) {
         if (data && data.code === '28000') throw accessRequired();
+        if (data && (data.code === 'PGRST202' || data.code === '42883')) {
+          throw failure('L’ajout de joueurs n’est pas encore activé sur le serveur du club.', 501, 'not_supported');
+        }
+        if (data && data.code === '23505') throw failure('Ce joueur existe déjà.', 409, 'duplicate_player');
         if (data && data.code === '22023') {
           throw failure('Ces scores ne peuvent pas être enregistrés. Ils restent en attente.', 400, 'invalid_scores');
         }
@@ -144,7 +148,7 @@
       forgetCode(config);
       return {ok: true};
     }
-    if (path !== '/api/state' && path !== '/api/scores') {
+    if (path !== '/api/state' && path !== '/api/scores' && path !== '/api/players') {
       throw failure('Cette action est introuvable.', 404, 'not_found');
     }
     const invitedState = await validateInvite(config);
@@ -152,6 +156,11 @@
     if (!code) throw accessRequired();
     try {
       if (path === '/api/state') return invitedState || await readState(config, code);
+      if (path === '/api/players') {
+        const name = body && typeof body.name === 'string' ? body.name.trim() : '';
+        if (name.length < 2 || name.length > 24) throw failure('Le prénom doit faire entre 2 et 24 caractères.', 400, 'invalid_player');
+        return await rpc(config, 'yeti_add_player', {p_room_code: code, p_name: name});
+      }
       if (!body || !Array.isArray(body.scores)) {
         throw failure('Liste de scores requise.', 400, 'invalid_scores');
       }
