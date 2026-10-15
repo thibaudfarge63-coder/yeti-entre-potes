@@ -95,7 +95,7 @@
           throw failure('L’ajout de joueurs n’est pas encore activé sur le serveur du club.', 501, 'not_supported');
         }
         if (data && data.code === '23505') throw failure('Ce joueur existe déjà.', 409, 'duplicate_player');
-        if (data && data.code === '22023' && name === 'yeti_send_message') throw failure(data.message || 'Message refusé.', 400, 'invalid_message');
+        if (data && data.code === '22023' && (name === 'yeti_send_message' || name === 'yeti_create_duel')) throw failure(data.message || 'Message refusé.', 400, 'invalid_message');
         if (data && data.code === '22023') {
           throw failure('Ces scores ne peuvent pas être enregistrés. Ils restent en attente.', 400, 'invalid_scores');
         }
@@ -150,7 +150,7 @@
       forgetCode(config);
       return {ok: true};
     }
-    if (path !== '/api/state' && path !== '/api/scores' && path !== '/api/players' && path !== '/api/version' && path !== '/api/chat' && path !== '/api/chat/send') {
+    if (path !== '/api/state' && path !== '/api/scores' && path !== '/api/players' && path !== '/api/version' && path !== '/api/chat' && path !== '/api/chat/send' && path !== '/api/duel') {
       throw failure('Cette action est introuvable.', 404, 'not_found');
     }
     const invitedState = await validateInvite(config);
@@ -159,6 +159,7 @@
     try {
       if (path === '/api/state') return invitedState || await readState(config, code);
       if (path === '/api/chat') return await rpc(config, 'yeti_get_messages', {p_room_code: code, p_after: Number(body && body.after) || 0});
+      if (path === '/api/duel') return await rpc(config, 'yeti_create_duel', {p_room_code: code, p_challenger: Number(body.challenger), p_opponent: Number(body.opponent)});
       if (path === '/api/chat/send') return await rpc(config, 'yeti_send_message', {p_room_code: code, p_player: Number(body.player), p_body: String(body.body || '')});
       if (path === '/api/version') return await rpc(config, 'yeti_get_version', {p_room_code: code});
       if (path === '/api/players') {
