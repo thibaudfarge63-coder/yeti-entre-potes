@@ -8,9 +8,9 @@
   <link rel="stylesheet" href="styles.css">
   <script>window.RufflePlayer = window.RufflePlayer || {}; window.RufflePlayer.config = {autoplay:"on",unmuteOverlay:"visible",backgroundColor:"#c9e8f7",contextMenu:"off",warnOnUnsupportedContent:false};</script>
   <script src="ruffle/ruffle.js" defer></script>
-  <script src="config.js?v=20261015-11" defer></script>
-  <script src="data-client.js?v=20261015-11" defer></script>
-  <script src="app.js?v=20261015-11" defer></script>
+  <script src="config.js?v=20261015-12" defer></script>
+  <script src="data-client.js?v=20261015-12" defer></script>
+  <script src="app.js?v=20261015-12" defer></script>
 </head>
 <body>
   <div class="page-shell">
@@ -48,7 +48,7 @@
         <div class="metrics" id="metrics"></div>
         <div class="analysis-grid"><article class="chart-card"><div class="card-title"><div><h3>La progression</h3><p>Moyenne de chaque journée, en mètres</p></div><div class="chart-legend" id="chart-legend"></div></div><div class="chart-wrap" id="trend-chart"></div><p class="chart-note" id="chart-note"></p></article><article class="detail-card"><div class="card-title"><div><h3>Face à face</h3><p>Tous les joueurs, sur la même période</p></div></div><div class="comparison-table-wrap"><table class="comparison-table"><thead><tr><th>Joueur</th><th>Parties</th><th>Moyenne</th><th>Record</th></tr></thead><tbody id="comparison-body"></tbody></table></div><div class="detail-footnote">Dates et journées : heure de Paris.<br>Une semaine commence le lundi.</div></article></div>
 
-        <article class="history-card"><div class="card-title history-heading"><div><h3>Le carnet des lancers</h3><p id="history-description">Les dernières parties du club</p></div><label class="history-select-label"><span>Joueur</span><select id="history-player"><option value="all">Tout le club</option><option value="1">Loïc</option><option value="2">Alexandre</option><option value="3">Thibaud</option></select></label></div><div class="history-table-wrap"><table class="history-table"><thead><tr><th>Date & heure</th><th>Joueur</th><th>Score</th><th>Enregistrement</th></tr></thead><tbody id="history-body"></tbody></table></div><button type="button" class="load-more" id="load-more" hidden>Afficher 30 lancers de plus</button></article>
+        <button type="button" class="history-toggle" id="history-toggle" aria-expanded="false" aria-controls="history-card">Consulter le carnet des lancers <span aria-hidden="true">→</span></button><article class="history-card" id="history-card" hidden><div class="card-title history-heading"><div><h3>Le carnet des lancers</h3><p id="history-description">Les dernières parties du club</p></div><label class="history-select-label"><span>Joueur</span><select id="history-player"><option value="all">Tout le club</option><option value="1">Loïc</option><option value="2">Alexandre</option><option value="3">Thibaud</option></select></label></div><div class="history-table-wrap"><table class="history-table"><thead><tr><th>Date & heure</th><th>Joueur</th><th>Score</th><th>Enregistrement</th></tr></thead><tbody id="history-body"></tbody></table></div><button type="button" class="load-more" id="load-more" hidden>Afficher 30 lancers de plus</button></article>
       </section>
     </main>
     <footer class="page-footer"><span>LE CLUB DES YÉTIS <strong>JEU ORIGINAL : CHRIS HILGERT</strong></span><p>Un lancer de plus. Juste un.</p></footer>
