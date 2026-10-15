@@ -156,3 +156,24 @@ body.fs-lock{overflow:hidden}
 .history-toggle span{text-decoration:none;transition:transform .2s}
 .history-toggle:hover span{transform:translateX(3px)}
 .game-footer p>.hint-desktop,.game-footer p>.hint-phone{font-size:inherit;margin:0;color:inherit}.is-phone .game-footer p>.hint-desktop{display:none}
+/* Skins */
+.skin-bar{margin-top:14px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 18px}
+.skin-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:12px}
+.skin-head h3{font:600 15px var(--display);margin:0}
+.skin-head p{margin:0;font-size:11px;color:var(--muted);text-align:right}
+.skins{display:flex;gap:9px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin;scroll-snap-type:x proximity}
+.skin-card{flex:0 0 92px;scroll-snap-align:start;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 6px 9px;border:1px solid var(--line);border-radius:12px;background:var(--paper);text-align:center;transition:transform .15s,border-color .15s}
+.skin-card:not(:disabled):hover{transform:translateY(-2px);border-color:var(--green)}
+.skin-card.active{background:#edf4de;border:2px solid var(--green);padding:9px 5px 8px}
+.skin-card.locked{opacity:1;background:#f6f7f4}
+.skin-card.locked .skin-emoji{filter:grayscale(1) brightness(.7);opacity:.35}
+.skin-card:disabled{cursor:default}
+.skin-emoji{font-size:30px;line-height:1.15;height:36px;display:grid;place-items:center}
+.skin-yeti{display:grid;place-items:center;width:32px;height:32px;border-radius:9px;background:var(--green);color:var(--lime);font:700 18px var(--display);letter-spacing:-2px}
+.skin-name{font-size:11px;font-weight:700;line-height:1.2}
+.skin-min{font-size:9.5px;color:var(--muted);line-height:1.25}
+.skin-card.active .skin-min{color:var(--green);font-weight:700}
+.skin-card.prime{background:linear-gradient(160deg,#fff7c9,#f1c94a);border-color:#d9a91c}
+.skin-card.prime .skin-name{color:#6b4a00}
+.skin-card.prime.locked{background:linear-gradient(160deg,#faf6e4,#efe2b4)}
+@media(max-width:600px){.skin-bar{padding:14px 12px;border-radius:14px}.skin-head{flex-direction:column;gap:3px}.skin-head p{text-align:left;font-size:12px}.skin-card{flex-basis:86px}.skin-name{font-size:12px}.skin-min{font-size:10.5px}.skins{margin:0 -12px;padding:0 12px 4px}}

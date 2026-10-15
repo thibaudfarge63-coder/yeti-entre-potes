@@ -109,11 +109,13 @@
     $('cover-profiles').innerHTML=PLAYERS.map(p=>`<button class="profile-button" data-player="${p.id}" type="button"><span class="player-dot" style="background:${p.color}"></span>${escape(p.name)}</button>`).join('')+add;
     $('round-tag').textContent=activeRound?'Lancer en cours…':'Prêt pour le lancer';
     $('restart-game').disabled=!gameLoaded||!!activeRound||loadingGame;
+    if(typeof renderSkins==='function')renderSkins();
   }
   async function choosePlayer(id) {
     if(activeRound||loadingGame||privateAccess)return;
     selectedPlayer=id;persist();renderProfiles();$('game-cover').hidden=true;
-    if(!gameLoaded)await loadGame();else showToast('Tu joues avec '+player(id).name+'.');
+    renderSkins();
+    if(!gameLoaded||loadedSkin!==skinFor(id))await loadGame();else showToast('Tu joues avec '+player(id).name+'.');
   }
   function handleTrace(message) {
     const text=String(message).trim();
@@ -127,6 +129,7 @@
     const round=activeRound;activeRound=null;
     const score={id:round.id,player:round.player,played_at:new Date().toISOString(),score:Math.round(value*100)/100};
     const previous=stats(allScores().filter(s=>s.player===score.player));
+    if(window.YetiSkins){const before=previous.best||0,gained=window.YetiSkins.list.filter(k=>k.min>before&&k.min<=score.score);if(gained.length){const k=gained[gained.length-1];setTimeout(()=>showToast(`Nouveau skin débloqué : ${k.emoji||''} ${k.name} ! Choisis-le sous le jeu.`),1200);}}
     outbox.push(score);persist();lastSaveError='';renderProfiles();render();renderSaveStatus();
     $('last-result').hidden=false;$('last-result-name').textContent='DERNIER LANCER · '+player(score.player).name.toUpperCase();$('last-result-score').textContent=number.format(score.score);
     $('last-result-detail').textContent=previous.best===null?'Le premier lancer est posé. À vous de jouer !':score.score>previous.best?'Nouveau record personnel ! '+number.format(score.score-previous.best)+' m de mieux.':score.score===previous.best?'Record personnel égalé !':'Encore '+number.format(previous.best-score.score)+' m pour égaler ton record.';
@@ -139,8 +142,10 @@
       const ruffle=window.RufflePlayer?.newest();if(!ruffle)throw new Error('Le moteur du jeu n’a pas pu être chargé.');
       $('game-container').replaceChildren();const element=ruffle.createPlayer();$('game-container').appendChild(element);
       playerApi=element.ruffle(1);
-      await playerApi.load({url:'game.swf',autoplay:'on',backgroundColor:'#c9e8f7',allowScriptAccess:false,allowNetworking:'none',openUrlMode:'deny',splashScreen:false,contextMenu:'off',warnOnUnsupportedContent:false});
-      playerApi.traceObserver=handleTrace;gameLoaded=true;
+      const skinId=skinFor(selectedPlayer);let data=null;
+      try{data=window.YetiSkins?await window.YetiSkins.build(skinId):null;}catch(_){data=null;showToast('Le skin n’a pas pu être appliqué, jeu d’origine chargé.');}
+      await playerApi.load({...(data?{data}:{url:'game.swf'}),autoplay:'on',backgroundColor:'#c9e8f7',allowScriptAccess:false,allowNetworking:'none',openUrlMode:'deny',splashScreen:false,contextMenu:'off',warnOnUnsupportedContent:false});
+      playerApi.traceObserver=handleTrace;gameLoaded=true;loadedSkin=skinId;
     } catch(error) {
       gameLoaded=false;showToast(error.message||'Le jeu ne démarre pas. Réessaie en rechargeant la page.');$('game-cover').hidden=false;
     } finally { loadingGame=false;$('game-loading').hidden=true;renderProfiles(); }
@@ -249,7 +254,28 @@
     const crack=fresh.filter(s=>s.score>=400).sort((a,b)=>b.score-a.score)[0];
     if(crack){$('crack-alert-text').textContent=player(crack.player).name+' vient d’envoyer '+number.format(crack.score)+' m';$('crack-alert').hidden=false;clearTimeout(crackTimer);crackTimer=setTimeout(()=>$('crack-alert').hidden=true,7000);}
   }
-  function render() { const scores=filteredScores();renderLeaderboard(scores);renderMetrics(scores);renderTrend(scores);renderHistory(scores);renderTicker();announceNewScores(); }
+  let loadedSkin=null,skinChoices={};
+  try{skinChoices=JSON.parse(localStorage.getItem('yeti-skins')||'{}')||{};}catch(_){}
+  function bestOf(id){return stats(allScores().filter(s=>s.player===id)).best||0;}
+  function skinFor(id){
+    if(!window.YetiSkins||!id)return 'yeti';
+    const k=window.YetiSkins.byId(skinChoices[id]);return bestOf(id)>=k.min?k.id:'yeti';
+  }
+  function renderSkins(){
+    const box=$('skins');if(!box||!window.YetiSkins)return;
+    const best=selectedPlayer?bestOf(selectedPlayer):0,current=skinFor(selectedPlayer),list=window.YetiSkins.list;
+    const next=list.find(k=>k.min>best);
+    $('skin-hint').textContent=!selectedPlayer?'Choisis ton pseudo pour voir tes skins.':next?`Record de ${player(selectedPlayer).name} : ${number.format(best)} m · prochain skin à ${next.min} m`:`${player(selectedPlayer).name} a tout débloqué. Respect.`;
+    box.innerHTML=list.map(k=>{const open=selectedPlayer&&best>=k.min,active=open&&k.id===current;
+      return `<button type="button" class="skin-card ${active?'active':''} ${open?'':'locked'} ${k.id==='prime'?'prime':''}" data-skin="${k.id}" ${open&&!activeRound&&!loadingGame?'':'disabled'} aria-pressed="${active}" title="${escape(k.tag)}"><span class="skin-emoji">${k.emoji||'<span class=\'skin-yeti\'>Y.</span>'}</span><span class="skin-name">${escape(k.name)}</span><span class="skin-min">${open?(active?'Équipé':escape(k.tag)):'🔒 '+k.min+' m'}</span></button>`;}).join('');
+  }
+  async function chooseSkin(id){
+    if(!selectedPlayer||activeRound||loadingGame)return;
+    const k=window.YetiSkins.byId(id);if(bestOf(selectedPlayer)<k.min)return;
+    skinChoices[selectedPlayer]=id;try{localStorage.setItem('yeti-skins',JSON.stringify(skinChoices));}catch(_){}
+    renderSkins();if(gameLoaded&&loadedSkin!==id){await loadGame();showToast(`${k.emoji||''} ${k.name} est sur la banquise.`);}
+  }
+  function render() { const scores=filteredScores();renderLeaderboard(scores);renderMetrics(scores);renderTrend(scores);renderHistory(scores);renderTicker();announceNewScores();renderSkins(); }
 
   function onProfileClick(e){if(e.target.closest('[data-add-player]')){openAddPlayer();return;}const button=e.target.closest('[data-player]');if(button)choosePlayer(Number(button.dataset.player));}
   $('profiles').addEventListener('click',onProfileClick);
@@ -278,6 +304,7 @@
     finally{button.disabled=false;}
   });
   $('restart-game').addEventListener('click',loadGame);
+  $('skins').addEventListener('click',e=>{const b=e.target.closest('[data-skin]');if(b&&!b.disabled)chooseSkin(b.dataset.skin);});
   const isPhone=()=>matchMedia('(pointer:coarse)').matches&&Math.min(screen.width,screen.height)<=820;
   document.documentElement.classList.toggle('is-phone',isPhone());
   $('fullscreen-game').hidden=!isPhone();
