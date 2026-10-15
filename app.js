@@ -141,7 +141,6 @@
       else if(skinBefore.curse&&!skinAfter.curse)msg='Malédiction levée, tu retrouves ton skin.';
       if(gained.length){const g=gained[gained.length-1];msg=(g.kind==='ultra'?'💎 ULTRA RARE débloqué : ':'Nouveau skin : ')+`${g.emoji} ${g.name} !`+(gained.length>1?` (+${gained.length-1} autre${gained.length>2?'s':''})`:'')+(msg?' · '+msg:'');}
       if(msg)setTimeout(()=>showToast(msg),1200);
-      if(gameKey(score.player)!==loadedSkin)setTimeout(()=>{if(!activeRound&&!loadingGame&&selectedPlayer===score.player)loadGame();},3500);
     }
     flushScores();
   }
@@ -154,19 +153,21 @@
       playerApi=element.ruffle(1);
       const skinId=skinFor(selectedPlayer),podium=podiumOf(selectedPlayer),key=skinId+'|'+(podium||'');let data=null;
       try{data=window.YetiSkins?await window.YetiSkins.build(skinId,podium):null;}catch(_){data=null;showToast('Le skin n’a pas pu être appliqué, jeu d’origine chargé.');}
-      await playerApi.load({...(data?{data}:{url:'game.swf'}),autoplay:'on',backgroundColor:'#c9e8f7',allowScriptAccess:false,allowNetworking:'none',openUrlMode:'deny',splashScreen:false,contextMenu:'off',warnOnUnsupportedContent:false});
+      await playerApi.load({...(data?{data}:{url:'game.swf'}),autoplay:'on',quality:'medium',backgroundColor:'#c9e8f7',allowScriptAccess:false,allowNetworking:'none',openUrlMode:'deny',splashScreen:false,contextMenu:'off',warnOnUnsupportedContent:false});
       playerApi.traceObserver=handleTrace;gameLoaded=true;loadedSkin=key;
     } catch(error) {
       gameLoaded=false;showToast(error.message||'Le jeu ne démarre pas. Réessaie en rechargeant la page.');$('game-cover').hidden=false;
     } finally { loadingGame=false;$('game-loading').hidden=true;renderProfiles(); }
   }
+  let lastStateSig='';
   async function refresh() {
     try {
       const data=await request('/api/state');
       if(!data||!Array.isArray(data.scores))throw new Error('Historique indisponible.');
       setPlayers(data.players);
+      const sig=JSON.stringify([data.players,data.scores.length,data.scores.length?data.scores[data.scores.length-1].id:'']);const same=sig===lastStateSig;lastStateSig=sig;
       serverScores=data.scores.map(s=>({...s,player:Number(s.player),score:Number(s.score)})).filter(validScore);
-      privateAccess=false;$('access-overlay').hidden=true;setConnection(true);render();
+      privateAccess=false;$('access-overlay').hidden=true;if(!connected||!same)setConnection(true);if(!same)render();
       if(selectedPlayer&&!gameLoaded&&!loadingGame){$('game-cover').hidden=true;loadGame();}
       return true;
     } catch(error) {
@@ -288,7 +289,10 @@
     $('skin-hint').textContent=!st?'Choisis ton pseudo pour voir tes skins.':`${name} · ${st.unlocked.size}/${list.filter(k=>k.kind!=='curse').length} skins`+(st.next?` · prochain palier à ${st.next.min} m`:'')+pod;
     $('skin-curse').hidden=!(st&&st.curse);
     if(st&&st.curse)$('skin-curse').innerHTML=`<span class="curse-emoji">${st.curse.emoji}</span><div><strong>Malédiction : ${escape(st.curse.name)}</strong><span>${escape(st.curse.tag)}. ${escape(st.curse.until)}</span></div>`;
-    box.innerHTML=SKIN_GROUPS.map(([kind,label])=>{
+    const pending=gameLoaded&&selectedPlayer&&loadedSkin!==gameKey(selectedPlayer);
+    $('restart-game').innerHTML=pending?'Appliquer le nouveau look <span aria-hidden="true">↻</span>':'Relancer le jeu <span aria-hidden="true">↻</span>';
+    $('restart-game').classList.toggle('pending',!!pending);
+    const html=SKIN_GROUPS.map(([kind,label])=>{
       const cards=list.filter(k=>k.kind===kind).map(k=>{
         const curse=kind==='curse',open=!!st&&(curse?st.curse&&st.curse.id===k.id:st.unlocked.has(k.id)),active=!!st&&k.id===current;
         const cond=k.kind==='record'?k.min+' m de record':k.tag;
@@ -298,6 +302,7 @@
       }).join('');
       return `<div class="skin-group"><span class="skin-group-label">${label}</span><div class="skin-group-cards">${cards}</div></div>`;
     }).join('');
+    if(box._html!==html){box.innerHTML=html;box._html=html;}
   }
   async function chooseSkin(id){
     if(!selectedPlayer||activeRound||loadingGame)return;
@@ -365,7 +370,7 @@
   window.addEventListener('storage',e=>{if(e.key!==STORAGE)return;try{const other=JSON.parse(e.newValue||'{}');if(Array.isArray(other.outbox)){const merged=new Map(outbox.map(s=>[s.id,s]));other.outbox.filter(validScore).forEach(s=>merged.set(s.id,s));const known=new Set(serverScores.map(s=>s.id));outbox=[...merged.values()].filter(s=>!known.has(s.id));render();renderSaveStatus();}}catch(_){}});
   let lastVersion=null,polling=false,lastFull=Date.now();
   async function poll(){
-    if(polling||document.hidden||privateAccess)return;polling=true;
+    if(polling||document.hidden||privateAccess||activeRound||loadingGame)return;polling=true;
     try{
       if(outbox.length)await flushScores();
       let changed=Date.now()-lastFull>30000;

@@ -196,3 +196,13 @@ body.fs-lock{overflow:hidden}
 .skin-curse span{font-size:11px;color:#8a5a48}
 @media(max-width:600px){.skin-group-cards{margin:0 -12px;padding:0 12px 4px}.skin-group-label{font-size:11px}.skin-curse strong{font-size:14px}.skin-curse span{font-size:12px}}
 .skin-card:disabled{opacity:1}.skin-card.locked:not(.kind-curse) .skin-name{opacity:.75}
+/* Performance : rien ne doit redessiner la page en continu pendant que le jeu tourne */
+.ticker-viewport{mask-image:none;-webkit-mask-image:none;position:relative;contain:paint}
+.ticker-viewport:after{content:'';position:absolute;left:0;top:0;bottom:0;width:16px;background:linear-gradient(90deg,#0d1b33,transparent);pointer-events:none}
+.ticker-track{will-change:transform;transform:translate3d(0,0,0);backface-visibility:hidden}
+@keyframes ticker{from{transform:translate3d(0,0,0)}to{transform:translate3d(-50%,0,0)}}
+.news-ticker{box-shadow:none;contain:layout paint}
+.skin-card.kind-ultra:not(.locked){animation:none;box-shadow:0 0 0 1px #b79cff,0 3px 14px #7b5cd655}
+.crack-alert{animation:crack-in .35s ease-out}
+.game-card,.game-stage{contain:layout paint}
+#game-container{isolation:isolate}
