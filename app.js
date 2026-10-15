@@ -229,20 +229,18 @@
     return `<span class="ticker-item"><i class="player-dot" style="background:${p.color}"></i><b>${n}</b> envoie le phoque à ${v}</span>`;
   }
   function renderTicker(){
-    const all=allScores(),recent=[...all].sort((a,b)=>Date.parse(b.played_at)-Date.parse(a.played_at)).slice(0,20);
+    const recent=allScores().filter(s=>s.score<150||s.score>250).sort((a,b)=>Date.parse(b.played_at)-Date.parse(a.played_at)||b.id.localeCompare(a.id)).slice(0,10);
     const key=recent.map(s=>s.id).join()+'|'+PLAYERS.map(p=>p.id+p.name).join();
     if(key===tickerKey)return;tickerKey=key;
-    let items=[];
-    if(all.length){
-      const best=all.reduce((a,b)=>b.score>a.score?b:a);
-      items.push(`<span class="ticker-item headline">RECORD DU CLUB : <b>${escape(player(best.player).name)}</b> · ${number.format(best.score)} m</span>`);
-      const today=dayKey(new Date()),todays=all.filter(s=>dayKey(s.played_at)===today);
-      if(todays.length){const t=todays.reduce((a,b)=>b.score>a.score?b:a);items.push(`<span class="ticker-item headline">MEILLEUR LANCER DU JOUR : <b>${escape(player(t.player).name)}</b> · ${number.format(t.score)} m</span>`);}
-      items=items.concat(recent.map(tickerItem));
-    } else items.push('<span class="ticker-item">Aucun lancer pour l’instant. Le premier qui joue fait la une.</span>');
-    const html=items.join('<span class="ticker-sep" aria-hidden="true">◆</span>')+'<span class="ticker-sep" aria-hidden="true">◆</span>';
-    const track=$('ticker-track');track.innerHTML=html+'<span aria-hidden="true" class="ticker-copy">'+html+'</span>';
-    requestAnimationFrame(()=>{const w=track.scrollWidth/2;track.style.setProperty('--ticker-duration',Math.max(20,w/70)+'s');});
+    const items=recent.length?recent.map(tickerItem):['<span class="ticker-item">Aucun lancer pour l’instant. Le premier qui joue fait la une.</span>'];
+    const unit=items.join('<span class="ticker-sep" aria-hidden="true">◆</span>')+'<span class="ticker-sep" aria-hidden="true">◆</span>';
+    const track=$('ticker-track'),viewport=track.parentElement;
+    track.style.animation='none';track.innerHTML=unit;
+    const unitWidth=Math.max(1,track.scrollWidth),repeat=Math.max(1,Math.ceil(viewport.clientWidth/unitWidth));
+    const half=unit.repeat(repeat);
+    track.innerHTML=half+'<span aria-hidden="true" class="ticker-copy">'+half+'</span>';
+    track.style.setProperty('--ticker-duration',Math.max(12,unitWidth*repeat/60)+'s');
+    void track.offsetWidth;track.style.animation='';
   }
   function announceNewScores(){
     const all=allScores();
