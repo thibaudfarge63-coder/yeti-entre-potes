@@ -97,7 +97,13 @@
   const toastQueue=[];
   function showToast(message) { if(toastQueue[toastQueue.length-1]===message)return;toastQueue.push(message);if(toastQueue.length===1)nextToast(); }
   function nextToast(){ if(!toastQueue.length)return;$('toast').textContent=toastQueue[0];$('toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>{toastQueue.shift();$('toast').hidden=true;if(toastQueue.length)setTimeout(nextToast,250);},toastQueue.length>1?3200:4500); }
-  function allScores() { const map=new Map(serverScores.map(s=>[s.id,s]));outbox.forEach(s=>map.set(s.id,s));return [...map.values()]; }
+  // Le serveur ne garde que le top 10 de chacun + Battle royale et duels : les lancers vus depuis l'ouverture
+  // de la page restent en mémoire (défis de skins, malédictions, bandeau d'actus) jusqu'au prochain rechargement.
+  const sessionSeen=new Map();let flushedSince=new Set();
+  function remember(list){for(const s of list)sessionSeen.set(s.id,s);if(sessionSeen.size>400){const old=[...sessionSeen.values()].sort((a,b)=>Date.parse(a.played_at)-Date.parse(b.played_at)).slice(0,sessionSeen.size-400);old.forEach(s=>sessionSeen.delete(s.id));}}
+  function allScores() { const map=new Map(sessionSeen);serverScores.forEach(s=>map.set(s.id,s));outbox.forEach(s=>map.set(s.id,s));return [...map.values()]; }
+  // Lancers pas encore comptés dans les compteurs du serveur (en attente ou envoyés depuis le dernier rafraîchissement).
+  const notCounted=s=>flushedSince.has(s.id)||outbox.some(o=>o.id===s.id);
 
   function dayKey(date) {
     const parts=dayFormatter.formatToParts(new Date(date));return ['year','month','day'].map(k=>parts.find(p=>p.type===k).value).join('-');
@@ -136,7 +142,7 @@
     if(activeRound||loadingGame||privateAccess)return;
     if(banLeft(id)){showToast(`⛔ ${player(id).name} est banni jusqu’à ${hhmm(bans[id])}.`);return;}
     if(!trusted&&authed!==id){const ok=await askPassword(id);if(!ok)return;}
-    authed=id;selectedPlayer=id;playMode={kind:'free'};persist();online.add(id);renderProfiles();renderCompet();pingPresence();
+    authed=id;selectedPlayer=id;topPlayer=id;playMode={kind:'free'};persist();renderTop();online.add(id);renderProfiles();renderCompet();pingPresence();
     duels.filter(d=>d.status==='pending'&&d.opponent===id&&!inviteShown.has(d.id)).forEach(queueInvite);$('game-cover').hidden=true;if(typeof renderChat==='function')renderChat();
     renderSkins();
     if(!gameLoaded||loadedSkin!==gameKey(id))await loadGame();else showToast('Tu joues avec '+player(id).name+'.');
@@ -194,9 +200,9 @@
       setPlayers(data.players);
       if(Array.isArray(data.duels))setDuels(data.duels);
       if(Array.isArray(data.daily))dailyResults=data.daily.map(r=>({day:String(r.day).slice(0,10),player:Number(r.player),n:Number(r.n)||0,total:Number(r.total)||0}));
-      const sig=JSON.stringify([data.players,data.scores.length,data.scores.length?data.scores[data.scores.length-1].id:'',data.duels||[],data.daily||[]]);const same=sig===lastStateSig;lastStateSig=sig;
+      const sig=JSON.stringify([data.players,data.scores.map(s=>s.id).join(),data.duels||[],data.daily||[]]);const same=sig===lastStateSig;lastStateSig=sig;
       serverScores=data.scores.map(s=>({...s,player:Number(s.player),score:Number(s.score)})).filter(validScore);
-      snapshotIds=new Set(serverScores.map(s=>s.id));
+      snapshotIds=new Set(serverScores.map(s=>s.id));flushedSince=new Set();remember(serverScores);
       saveSkins();
       privateAccess=false;$('access-overlay').hidden=true;if(!connected||!same)setConnection(true);if(!same)render();
       if(selectedPlayer&&!gameLoaded&&!loadingGame){$('game-cover').hidden=true;loadGame();}
@@ -217,7 +223,7 @@
           if(!result||!Array.isArray(result.accepted))throw new Error('Le serveur n’a pas confirmé la sauvegarde.');
           const accepted=new Set(result.accepted),rejected=new Set(Array.isArray(result.rejected)?result.rejected:[]);
           if(!batch.some(s=>accepted.has(s.id)||rejected.has(s.id)))throw new Error('Aucun lancer confirmé.');
-          batch.filter(s=>accepted.has(s.id)).forEach(s=>{if(!serverScores.some(r=>r.id===s.id))serverScores.push(s);});
+          batch.filter(s=>accepted.has(s.id)).forEach(s=>{flushedSince.add(s.id);remember([s]);if(!serverScores.some(r=>r.id===s.id))serverScores.push(s);});
           if(rejected.size)showToast(`${rejected.size} lancer${rejected.size>1?'s':''} refusé${rejected.size>1?'s':''} par le serveur (données invalides), supprimé${rejected.size>1?'s':''}.`);
           outbox=outbox.filter(s=>!accepted.has(s.id)&&!rejected.has(s.id));persist();lastSaveError='';setConnection(true);render();
         }
@@ -240,7 +246,7 @@
     let rank=0,previous=null;
     $('leaderboard').innerHTML=records.map((p,index)=>{
       if(p.best!==previous||index===0)rank=index+1;previous=p.best;
-      return `<div class="ranking-row ${rank===1&&p.best!==null?'leader':''}"><span class="rank-number">${p.count?String(rank).padStart(2,'0'):'—'}</span>${avatar(p)}<div><div class="ranking-name"><span class="player-dot" style="background:${p.color}"></span>${escape(p.name)}</div><div class="ranking-sub">${p.count?`${p.count} lancer${p.count>1?'s':''} · moy. ${oneDecimal.format(p.average)} m`:'Le sommet attend'}</div></div><div class="ranking-score">${p.best===null?'—':number.format(p.best)}<small>mètres</small></div></div>`;
+      return `<div class="ranking-row ${rank===1&&p.best!==null?'leader':''}"><span class="rank-number">${p.count?String(rank).padStart(2,'0'):'—'}</span>${avatar(p)}<div><div class="ranking-name"><span class="player-dot" style="background:${p.color}"></span>${escape(p.name)}</div><div class="ranking-sub">${p.count?(period==='all'?`${(totals.get(p.id)||0)+allScores().filter(s=>s.player===p.id&&notCounted(s)).length||p.count} lancers · moy. top 10 ${oneDecimal.format(topOf(p.id).reduce((a,s)=>a+s.score,0)/Math.max(1,topOf(p.id).length))} m`:`${p.count} lancer${p.count>1?'s':''} · moy. ${oneDecimal.format(p.average)} m`):'Le sommet attend'}</div></div><div class="ranking-score">${p.best===null?'—':number.format(p.best)}<small>mètres</small></div></div>`;
     }).join('');
     $('board-period').textContent=bounds().label;
   }
@@ -335,7 +341,7 @@
   function bestOf(id){return stats(allScores().filter(s=>s.player===id)).best||0;}
   function skinState(id){
     if(!window.YetiSkins||!id)return null;
-    const mine=allScores().filter(s=>s.player===id),total=(totals.get(id)||0)+mine.filter(s=>!snapshotIds.has(s.id)).length;
+    const mine=allScores().filter(s=>s.player===id),total=(totals.get(id)||0)+mine.filter(notCounted).length;
     return window.YetiSkins.evaluate(mine,player(id).name,{total,saved:savedSkins.get(id)||[]});
   }
   // Les skins débloqués sont enregistrés sur le serveur : la purge de l'historique ne les fait jamais perdre.
@@ -401,7 +407,7 @@
   // Résultat : {length: nombre de lancers, avg: moyenne}.
   const avgOf=l=>l.length?l.avg:null;
   const tally=(base,sum,extra)=>{const n=base+extra.length,t=sum+extra.reduce((a,s)=>a+s.score,0);return {length:n,avg:n?t/n:null};};
-  const unsynced=ok=>allScores().filter(s=>!snapshotIds.has(s.id)&&ok(s));
+  const unsynced=ok=>allScores().filter(s=>notCounted(s)&&ok(s));
   const dailyOf=(pid,day)=>{const r=dailyResults.find(x=>x.player===pid&&x.day===day);return tally(r?r.n:0,r?r.total:0,unsynced(s=>s.mode==='daily'&&s.ref===day&&s.player===pid));};
   const duelOf=(d,pid)=>{const c=pid===d.challenger;return tally(c?d.c_n:d.o_n,c?d.c_sum:d.o_sum,unsynced(s=>s.mode==='duel'&&s.ref===String(d.id)&&s.player===pid));};
   let duelStatus=new Map(),inviteQueue=[],inviteShown=new Set();
@@ -531,7 +537,21 @@
     catch(error){showToast(error.message||'Impossible de créer le duel.');}finally{duelOpp=null;renderCompet();}});
   $('duel-pick').addEventListener('click',e=>{const b=e.target.closest('[data-opp]');if(!b)return;const id=Number(b.dataset.opp);duelOpp=duelOpp===id?null:id;renderCompet();});
   document.querySelector('.compet-tabs').addEventListener('click',e=>{const t=e.target.closest('[data-tab]');if(!t)return;competTab=t.dataset.tab;renderCompet();});
-  function render() { const scores=filteredScores();renderLeaderboard(scores);renderMetrics(scores);renderTrend(scores);renderHistory(scores);renderTicker();announceNewScores();renderSkins();renderCompet(); }
+  // ---------- Top 10 de chaque joueur ----------
+  let topPlayer=null;
+  function topOf(id){return allScores().filter(s=>s.player===id).sort((a,b)=>b.score-a.score||Date.parse(a.played_at)-Date.parse(b.played_at)).slice(0,10);}
+  const topDate=new Intl.DateTimeFormat('fr-FR',{timeZone:'Europe/Paris',day:'2-digit',month:'2-digit',year:'2-digit'});
+  function renderTop(){
+    const box=$('top-list');if(!box)return;
+    if(!PLAYERS.some(p=>p.id===topPlayer))topPlayer=selectedPlayer||PLAYERS[0]?.id||null;
+    $('top-tabs').innerHTML=PLAYERS.map(p=>`<button type="button" class="top-tab ${p.id===topPlayer?'active':''}" data-top="${p.id}" role="tab" aria-selected="${p.id===topPlayer}"><span class="player-dot" style="background:${p.color}"></span>${escape(p.name)}</button>`).join('');
+    const list=topPlayer?topOf(topPlayer):[];
+    if(topPlayer){const n=(totals.get(topPlayer)||0)+allScores().filter(s=>s.player===topPlayer&&notCounted(s)).length;$('top-sub').textContent=`${player(topPlayer).name} · ${n} lancer${n>1?'s':''} au total · seuls les 10 meilleurs sont gardés (Battle royale et duels compris).`;}
+    const html=list.length?list.map((s,i)=>`<li class="top-row ${i<3?'podium':''}"><span class="top-rank">${['🥇','🥈','🥉'][i]||String(i+1).padStart(2,'0')}</span><b class="top-score">${number.format(s.score)} <small>m</small></b><span class="top-tag">${s.mode==='daily'?'🏟️ Battle royale':s.mode==='duel'?'⚔️ Duel':''}</span><time>${topDate.format(new Date(s.played_at))}</time></li>`).join(''):'<li class="top-empty">Aucun lancer pour l’instant.</li>';
+    if(box._html!==html){box.innerHTML=html;box._html=html;}
+  }
+  $('top-tabs').addEventListener('click',e=>{const b=e.target.closest('[data-top]');if(!b)return;topPlayer=Number(b.dataset.top);renderTop();});
+  function render() { const scores=filteredScores();renderTop();renderLeaderboard(scores);renderMetrics(scores);renderTrend(scores);renderHistory(scores);renderTicker();announceNewScores();renderSkins();renderCompet(); }
 
   function onProfileClick(e){if(e.target.closest('[data-add-player]')){openAddPlayer();return;}const button=e.target.closest('[data-player]');if(button)choosePlayer(Number(button.dataset.player));}
   $('profiles').addEventListener('click',onProfileClick);

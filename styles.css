@@ -474,3 +474,23 @@ body.chat-wide .chat-fab,body.chat-wide .chat-peek{display:none!important}
   body.chat-wide .chat-head{padding:8px 12px}
   body.chat-wide .chat-head span{display:none}
 }
+
+/* Top 10 de chacun */
+.top-card{margin-top:14px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 18px}
+.top-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.top-head h3{font:600 15px var(--display);margin:0}
+.top-head p{font-size:11px;color:var(--muted);margin:0}
+.top-tabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px;margin-bottom:8px}
+.top-tabs::-webkit-scrollbar{display:none}
+.top-tab{flex-shrink:0;display:flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;border-radius:20px;padding:6px 12px;font-size:12px;font-weight:700}
+.top-tab.active{background:var(--green);border-color:var(--green);color:#fff}
+.top-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(5,auto);grid-auto-flow:column;gap:6px 14px}
+.top-row{display:grid;grid-template-columns:30px auto 1fr auto;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:var(--paper)}
+.top-row.podium{background:#f4f7e6}
+.top-rank{font:600 13px var(--display);color:var(--muted);text-align:center}
+.top-score{font:600 17px var(--display);letter-spacing:-.5px}
+.top-score small{font:400 10px var(--font);color:var(--muted)}
+.top-tag{font-size:10px;color:#8a4b12;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top-row time{font-size:10px;color:var(--muted)}
+.top-empty{color:var(--muted);font-size:12px;padding:10px}
+@media(max-width:600px){.top-list{grid-template-columns:1fr;grid-template-rows:none;grid-auto-flow:row}.top-card{padding:14px}}
