@@ -105,8 +105,11 @@
   // Lancers pas encore comptés dans les compteurs du serveur (en attente ou envoyés depuis le dernier rafraîchissement).
   const notCounted=s=>flushedSince.has(s.id)||outbox.some(o=>o.id===s.id);
 
+  const dayCache=new Map();
   function dayKey(date) {
-    const parts=dayFormatter.formatToParts(new Date(date));return ['year','month','day'].map(k=>parts.find(p=>p.type===k).value).join('-');
+    const k=typeof date==='string'?date:null;if(k&&dayCache.has(k))return dayCache.get(k);
+    const parts=dayFormatter.formatToParts(new Date(date)),v=['year','month','day'].map(t=>parts.find(p=>p.type===t).value).join('-');
+    if(k){if(dayCache.size>5000)dayCache.clear();dayCache.set(k,v);}return v;
   }
   function shiftDay(key, delta) { const d=new Date(key+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+delta);return d.toISOString().slice(0,10); }
   function shortDay(key) { const [,m,d]=key.split('-');return d+'/'+m; }
@@ -339,10 +342,13 @@
   let loadedSkin=null,skinChoices={};
   try{skinChoices=JSON.parse(localStorage.getItem('yeti-skins')||'{}')||{};}catch(_){}
   function bestOf(id){return stats(allScores().filter(s=>s.player===id)).best||0;}
+  const skinMemo=new Map();
   function skinState(id){
     if(!window.YetiSkins||!id)return null;
-    const mine=allScores().filter(s=>s.player===id),total=(totals.get(id)||0)+mine.filter(notCounted).length;
-    return window.YetiSkins.evaluate(mine,player(id).name,{total,saved:savedSkins.get(id)||[]});
+    const mine=allScores().filter(s=>s.player===id),total=(totals.get(id)||0)+mine.filter(notCounted).length,saved=savedSkins.get(id)||[];
+    const key=mine.length+'|'+mine.reduce((a,s)=>a+s.score,0)+'|'+(mine.length?mine[mine.length-1].id:'')+'|'+total+'|'+saved.length+'|'+player(id).name;
+    const hit=skinMemo.get(id);if(hit&&hit.key===key)return hit.st;
+    const st=window.YetiSkins.evaluate(mine,player(id).name,{total,saved});skinMemo.set(id,{key,st});return st;
   }
   // Les skins débloqués sont enregistrés sur le serveur : la purge de l'historique ne les fait jamais perdre.
   const skinsSending=new Set();

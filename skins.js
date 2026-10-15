@@ -5,12 +5,14 @@
   // Échelle calibrée sur les scores du club (médiane ≈ 230 m, 90 % ≈ 300 m, record ≈ 400 m, 500 m quasi inatteignable).
   // Chaque skin garde le corps animé du yéti (bras, jambes, lancer) : fourrure recolorée + tête emoji.
   // kind : 'base' | 'record' (record perso) | 'defi' (formule) | 'ultra' (ultra rare) | 'curse' (imposé automatiquement)
-  const parisHour = d => Number(new Intl.DateTimeFormat('fr-FR', {timeZone: 'Europe/Paris', hour: '2-digit', hourCycle: 'h23'}).format(new Date(d)));
+  // Formats créés une seule fois + résultats mémorisés : créer un Intl.DateTimeFormat par lancer gelait le jeu.
+  const memo = (fmt, conv) => { const cache = new Map(); return d => { const k = String(d); let v = cache.get(k); if (v === undefined) { v = conv(fmt.format(new Date(d))); if (cache.size > 5000) cache.clear(); cache.set(k, v); } return v; }; };
+  const parisHour = memo(new Intl.DateTimeFormat('fr-FR', {timeZone: 'Europe/Paris', hour: '2-digit', hourCycle: 'h23'}), Number);
   const streak = (list, n, ok) => { let run = 0; for (const s of list) { run = ok(s.score) ? run + 1 : 0; if (run >= n) return true; } return false; };
   const count = (list, ok) => list.filter(s => ok(s.score)).length;
   const last = (list, n, ok) => list.length >= n && list.slice(-n).every(s => ok(s.score));
-  const parisDay = d => new Intl.DateTimeFormat('en-CA', {timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit'}).format(new Date(d));
-  const parisWeekday = d => new Intl.DateTimeFormat('en-US', {timeZone: 'Europe/Paris', weekday: 'short'}).format(new Date(d));
+  const parisDay = memo(new Intl.DateTimeFormat('en-CA', {timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit'}), String);
+  const parisWeekday = memo(new Intl.DateTimeFormat('en-US', {timeZone: 'Europe/Paris', weekday: 'short'}), String);
   const fl = s => Math.floor(s.score);
   const pairs = (l, ok) => l.some((s, i) => i && ok(l[i - 1], s));
   const run = (l, n, ok) => { let r = 1; for (let i = 1; i < l.length; i++) { r = ok(l[i - 1], l[i]) ? r + 1 : 1; if (r >= n) return true; } return false; };
