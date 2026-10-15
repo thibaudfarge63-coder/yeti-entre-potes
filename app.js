@@ -1,0 +1,215 @@
+(() => {
+  'use strict';
+  const PLAYERS = [{id:1,name:'Loïc',color:'#7fa645'}, {id:2,name:'Alexandre',color:'#ec935b'}, {id:3,name:'Thibaud',color:'#6b9eaf'}];
+  const STORAGE = 'yeti-club-v1';
+  const $ = id => document.getElementById(id);
+  const number = new Intl.NumberFormat('fr-FR', {maximumFractionDigits:2});
+  const oneDecimal = new Intl.NumberFormat('fr-FR', {minimumFractionDigits:1,maximumFractionDigits:1});
+  const dates = new Intl.DateTimeFormat('fr-FR',{timeZone:'Europe/Paris',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const dayFormatter = new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Paris',year:'numeric',month:'2-digit',day:'2-digit'});
+  let saved = {}, storageAvailable = true;
+  try { saved = JSON.parse(localStorage.getItem(STORAGE) || '{}'); } catch (_) { storageAvailable = false; }
+  const validScore = s => s && typeof s.id === 'string' && PLAYERS.some(p=>p.id===s.player) && Number.isFinite(s.score) && s.score>=0 && !Number.isNaN(Date.parse(s.played_at));
+  let outbox = Array.isArray(saved.outbox) ? saved.outbox.filter(validScore) : [];
+  let selectedPlayer = PLAYERS.some(p=>p.id===saved.player) ? saved.player : null;
+  let serverScores = [], connected = false, privateAccess = false, activeRound = null, playerApi = null, loadingGame = false;
+  let flushing = null, gameLoaded = false, period = 'all', analysisPlayer = 'all', historyPlayer = 'all', historyLimit = 30, toastTimer, lastSaveError = '';
+
+  function persist() {
+    try { localStorage.setItem(STORAGE, JSON.stringify({player:selectedPlayer,outbox})); storageAvailable = true; }
+    catch (_) { storageAvailable = false; }
+  }
+  function player(id) { return PLAYERS.find(p=>p.id===id); }
+  function escape(text) { return String(text).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function uuid() {
+    if (crypto.randomUUID) return crypto.randomUUID();
+    const bytes = new Uint8Array(16); crypto.getRandomValues(bytes); bytes[6]=(bytes[6]&15)|64;bytes[8]=(bytes[8]&63)|128;
+    return [...bytes].map((b,i)=>([4,6,8,10].includes(i)?'-':'')+b.toString(16).padStart(2,'0')).join('');
+  }
+  async function request(path, body) {
+    const adapter = window.YetiData;
+    if (adapter) {
+      if (adapter.ready) await adapter.ready;
+      if (typeof adapter.request === 'function') return adapter.request(path, body);
+      if (path === '/api/state') return adapter.getState();
+      if (path === '/api/scores') return adapter.saveScores(body.scores);
+      if (path === '/api/unlock') return adapter.unlock(body.code);
+    }
+    const response = await fetch(path, {method:body?'POST':'GET',credentials:'same-origin',cache:'no-store',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined});
+    let data; try { data = await response.json(); } catch (_) { throw new Error('Le serveur ne répond pas correctement.'); }
+    if (!response.ok) { const error=new Error(data.error||'Connexion indisponible');error.status=response.status;error.code=data.code;throw error; }
+    return data;
+  }
+  function setConnection(ok, message) {
+    connected=ok; $('connection').className='connection '+(ok?'connected':'offline');
+    $('connection-text').textContent=message || (ok?'Les scores du club sont à jour':'Connexion en attente');
+    renderSaveStatus();
+  }
+  function renderSaveStatus() {
+    const n=outbox.length;
+    let text=n?`${n} lancer${n>1?'s':''} en attente d’enregistrement. Nouvelle tentative automatique.`:'Tous les lancers reçus sont enregistrés dans le club.';
+    if(!connected&&!n)text='Connexion au club en attente. Les nouveaux lancers seront conservés ici.';
+    if(!storageAvailable)text='Le navigateur bloque la sauvegarde locale. Garde cette page ouverte jusqu’à l’enregistrement des scores.';
+    else if(lastSaveError&&n)text=lastSaveError+' Les lancers restent en attente ici.';
+    $('save-status').textContent=text; $('save-icon').textContent=n||!connected?'↻':'✓';
+  }
+  function showToast(message) { clearTimeout(toastTimer);$('toast').textContent=message;$('toast').hidden=false;toastTimer=setTimeout(()=>$('toast').hidden=true,4500); }
+  function allScores() { const map=new Map(serverScores.map(s=>[s.id,s]));outbox.forEach(s=>map.set(s.id,s));return [...map.values()]; }
+
+  function dayKey(date) {
+    const parts=dayFormatter.formatToParts(new Date(date));return ['year','month','day'].map(k=>parts.find(p=>p.type===k).value).join('-');
+  }
+  function shiftDay(key, delta) { const d=new Date(key+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+delta);return d.toISOString().slice(0,10); }
+  function shortDay(key) { const [,m,d]=key.split('-');return d+'/'+m; }
+  $('reference-date').value=dayKey(new Date());
+  function bounds() {
+    const date=$('reference-date').value||dayKey(new Date());
+    if(period==='day')return {start:date,end:date,label:'Le '+shortDay(date)+'/'+date.slice(0,4)};
+    if(period==='week'){const n=new Date(date+'T12:00:00Z').getUTCDay();const start=shiftDay(date,-((n+6)%7));return {start,end:shiftDay(start,6),label:'Du '+shortDay(start)+' au '+shortDay(shiftDay(start,6))};}
+    if(period==='month'){const start=date.slice(0,7)+'-01';const d=new Date(start+'T12:00:00Z');d.setUTCMonth(d.getUTCMonth()+1);d.setUTCDate(0);return {start,end:d.toISOString().slice(0,10),label:new Intl.DateTimeFormat('fr-FR',{month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(start+'T12:00:00Z'))};}
+    return {start:null,end:null,label:'Depuis le début'};
+  }
+  function filteredScores() { const b=bounds();return allScores().filter(s=>{const d=dayKey(s.played_at);return (!b.start||d>=b.start)&&(!b.end||d<=b.end);}); }
+  function stats(scores) {
+    if(!scores.length)return {count:0,average:null,best:null,median:null,standardDeviation:null};
+    const values=scores.map(s=>s.score).sort((a,b)=>a-b),average=values.reduce((a,b)=>a+b,0)/values.length;
+    return {count:values.length,average,best:values[values.length-1],median:values.length%2?values[(values.length-1)/2]:(values[values.length/2-1]+values[values.length/2])/2,standardDeviation:Math.sqrt(values.reduce((n,v)=>n+(v-average)**2,0)/values.length)};
+  }
+  function renderProfiles() {
+    $('profiles').innerHTML=PLAYERS.map(p=>`<button class="profile-button ${selectedPlayer===p.id?'active':''}" data-player="${p.id}" type="button" aria-pressed="${selectedPlayer===p.id}" ${activeRound||loadingGame?'disabled':''}><span class="player-dot" style="background:${p.color}"></span>${p.name}</button>`).join('');
+    $('cover-profiles').innerHTML=PLAYERS.map(p=>`<button class="profile-button" data-player="${p.id}" type="button"><span class="player-dot" style="background:${p.color}"></span>${p.name}</button>`).join('');
+    $('round-tag').textContent=activeRound?'Lancer en cours…':'Prêt pour le lancer';
+    $('restart-game').disabled=!gameLoaded||!!activeRound||loadingGame;
+  }
+  async function choosePlayer(id) {
+    if(activeRound||loadingGame||privateAccess)return;
+    selectedPlayer=id;persist();renderProfiles();$('game-cover').hidden=true;
+    if(!gameLoaded)await loadGame();else showToast('Tu joues avec '+player(id).name+'.');
+  }
+  function handleTrace(message) {
+    const text=String(message).trim();
+    if(text==='YETI_START') {
+      if(selectedPlayer&&!activeRound) { activeRound={id:uuid(),player:selectedPlayer};renderProfiles(); }
+      return;
+    }
+    const match=/^YETI_SCORE:([0-9]+(?:[.,][0-9]+)?)$/.exec(text);
+    if(!match||!activeRound)return;
+    const value=Number(match[1].replace(',','.'));if(!Number.isFinite(value)||value<0||value>1000000)return;
+    const round=activeRound;activeRound=null;
+    const score={id:round.id,player:round.player,played_at:new Date().toISOString(),score:Math.round(value*100)/100};
+    const previous=stats(allScores().filter(s=>s.player===score.player));
+    outbox.push(score);persist();lastSaveError='';renderProfiles();render();renderSaveStatus();
+    $('last-result').hidden=false;$('last-result-name').textContent='DERNIER LANCER · '+player(score.player).name.toUpperCase();$('last-result-score').textContent=number.format(score.score);
+    $('last-result-detail').textContent=previous.best===null?'Le premier lancer est posé. À vous de jouer !':score.score>previous.best?'Nouveau record personnel ! '+number.format(score.score-previous.best)+' m de mieux.':score.score===previous.best?'Record personnel égalé !':'Encore '+number.format(previous.best-score.score)+' m pour égaler ton record.';
+    flushScores();
+  }
+  async function loadGame() {
+    if(loadingGame||activeRound||privateAccess)return;
+    loadingGame=true;$('game-loading').hidden=false;renderProfiles();
+    try {
+      const ruffle=window.RufflePlayer?.newest();if(!ruffle)throw new Error('Le moteur du jeu n’a pas pu être chargé.');
+      $('game-container').replaceChildren();const element=ruffle.createPlayer();$('game-container').appendChild(element);
+      playerApi=element.ruffle(1);
+      await playerApi.load({url:'game.swf',autoplay:'on',backgroundColor:'#c9e8f7',allowScriptAccess:false,allowNetworking:'none',openUrlMode:'deny',splashScreen:false,contextMenu:'off',warnOnUnsupportedContent:false});
+      playerApi.traceObserver=handleTrace;gameLoaded=true;
+    } catch(error) {
+      gameLoaded=false;showToast(error.message||'Le jeu ne démarre pas. Réessaie en rechargeant la page.');$('game-cover').hidden=false;
+    } finally { loadingGame=false;$('game-loading').hidden=true;renderProfiles(); }
+  }
+  async function refresh() {
+    try {
+      const data=await request('/api/state');
+      if(!data||!Array.isArray(data.scores))throw new Error('Historique indisponible.');
+      serverScores=data.scores.map(s=>({...s,player:Number(s.player),score:Number(s.score)})).filter(validScore);
+      privateAccess=false;$('access-overlay').hidden=true;setConnection(true);render();
+      if(selectedPlayer&&!gameLoaded&&!loadingGame){$('game-cover').hidden=true;loadGame();}
+      return true;
+    } catch(error) {
+      if(error.status===401||error.code==='private_access_required') {privateAccess=true;$('access-overlay').hidden=false;setConnection(false,'Lien privé requis');}
+      else setConnection(false,'Connexion au club en attente');
+      return false;
+    }
+  }
+  async function flushScores() {
+    if(flushing)return flushing;
+    flushing=(async()=>{
+      try {
+        while(outbox.length) {
+          const batch=outbox.slice(0,100),result=await request('/api/scores',{scores:batch});
+          if(!result||!Array.isArray(result.accepted))throw new Error('Le serveur n’a pas confirmé la sauvegarde.');
+          const accepted=new Set(result.accepted);if(!batch.some(s=>accepted.has(s.id)))throw new Error('Aucun lancer confirmé.');
+          batch.filter(s=>accepted.has(s.id)).forEach(s=>{if(!serverScores.some(r=>r.id===s.id))serverScores.push(s);});
+          outbox=outbox.filter(s=>!accepted.has(s.id));persist();lastSaveError='';setConnection(true);render();
+        }
+        return true;
+      } catch(error) {
+        lastSaveError=error.message||'Enregistrement momentanément indisponible.';
+        if(error.status===401||error.code==='private_access_required'){privateAccess=true;$('access-overlay').hidden=false;}
+        setConnection(false,'Lancers en attente');render();return false;
+      } finally { flushing=null;renderSaveStatus(); }
+    })();return flushing;
+  }
+  function renderLeaderboard(scores) {
+    const records=PLAYERS.map(p=>({...p,...stats(scores.filter(s=>s.player===p.id))})).sort((a,b)=>(b.best??-1)-(a.best??-1)||a.id-b.id);
+    let rank=0,previous=null;
+    $('leaderboard').innerHTML=records.map((p,index)=>{
+      if(p.best!==previous||index===0)rank=index+1;previous=p.best;
+      return `<div class="ranking-row ${rank===1&&p.best!==null?'leader':''}"><span class="rank-number">${p.count?String(rank).padStart(2,'0'):'—'}</span><div><div class="ranking-name"><span class="player-dot" style="background:${p.color}"></span>${p.name}</div><div class="ranking-sub">${p.count?`${p.count} lancer${p.count>1?'s':''} · moy. ${oneDecimal.format(p.average)} m`:'Le sommet attend'}</div></div><div class="ranking-score">${p.best===null?'—':number.format(p.best)}<small>mètres</small></div></div>`;
+    }).join('');
+    $('board-period').textContent=bounds().label;
+  }
+  function renderMetrics(scores) {
+    const analyzed=scores.filter(s=>analysisPlayer==='all'||s.player===Number(analysisPlayer));
+    const s=stats(analyzed),best=analyzed.find(r=>r.score===s.best),active=PLAYERS.filter(p=>scores.some(s=>s.player===p.id)).length;
+    const cards=[['Lancers enregistrés',number.format(s.count),'',analysisPlayer==='all'?`${active} joueur${active>1?'s':''} actif${active>1?'s':''} sur la période`:player(Number(analysisPlayer)).name+' sur la période'],[analysisPlayer==='all'?'Moyenne du club':'Moyenne de '+player(Number(analysisPlayer)).name,s.average===null?'—':oneDecimal.format(s.average),'m','Tous les lancers ont le même poids'],['Meilleur lancer',s.best===null?'—':number.format(s.best),'m',best?player(best.player).name+' · '+shortDay(dayKey(best.played_at)):'Le record reste à établir'],['Score médian',s.median===null?'—':oneDecimal.format(s.median),'m',s.count?'Écart-type : '+oneDecimal.format(s.standardDeviation)+' m':'Votre prochain lancer lance les stats']];
+    $('metrics').innerHTML=cards.map(([label,value,unit,detail])=>`<div class="metric-card"><div class="metric-label">${label}</div><div class="metric-value">${value}<small>${unit}</small></div><div class="metric-detail">${detail}</div></div>`).join('');
+    $('comparison-body').innerHTML=PLAYERS.map(p=>{const r=stats(scores.filter(s=>s.player===p.id));return `<tr><td><span class="player-dot" style="background:${p.color}"></span>${p.name}</td><td>${r.count}</td><td>${r.average===null?'—':oneDecimal.format(r.average)+' m'}</td><td>${r.best===null?'—':number.format(r.best)+' m'}</td></tr>`;}).join('');
+  }
+  function renderTrend(scores) {
+    const chartPlayers=PLAYERS.filter(p=>analysisPlayer==='all'||p.id===Number(analysisPlayer));
+    scores=scores.filter(s=>analysisPlayer==='all'||s.player===Number(analysisPlayer));
+    $('chart-legend').innerHTML=chartPlayers.map(p=>`<span><i class="player-dot" style="background:${p.color}"></i>${p.name}</span>`).join('');
+    if(!scores.length){$('trend-chart').innerHTML='<div class="chart-empty">Un premier lancer, et la courbe démarre.<br>Les moyennes journalières apparaîtront ici.</div>';$('chart-note').textContent='Aucun score pour cette période.';return;}
+    const days=[...new Set(scores.map(s=>dayKey(s.played_at)))].sort(),w=600,h=215,left=42,right=16,top=12,bottom=30;
+    const series=chartPlayers.map(p=>({...p,points:days.map(day=>{const r=stats(scores.filter(s=>s.player===p.id&&dayKey(s.played_at)===day));return {day,value:r.average,count:r.count};}).filter(p=>p.value!==null)}));
+    const maximum=Math.max(1,...series.flatMap(p=>p.points.map(v=>v.value))),ceiling=Math.ceil(maximum/5)*5;
+    const first=new Date(days[0]+'T12:00:00Z').getTime(),last=new Date(days[days.length-1]+'T12:00:00Z').getTime();
+    const x=day=>days.length===1?(w+left-right)/2:left+(new Date(day+'T12:00:00Z').getTime()-first)/(last-first)*(w-left-right);
+    const y=v=>top+(1-v/ceiling)*(h-top-bottom);
+    let svg=`<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Évolution des moyennes journalières de Loïc, Alexandre et Thibaud"><title>Moyennes journalières, en mètres</title>`;
+    for(let n=0;n<=4;n++){const v=ceiling*n/4,yy=y(v);svg+=`<line x1="${left}" y1="${yy}" x2="${w-right}" y2="${yy}" stroke="#e9eee5" stroke-dasharray="3 4"/><text x="${left-9}" y="${yy+3}" text-anchor="end" fill="#879788" font-family="Arial" font-size="9">${number.format(v)}</text>`;}
+    const tickIndices=[...new Set([0,Math.floor((days.length-1)/3),Math.floor(2*(days.length-1)/3),days.length-1])];
+    tickIndices.forEach(i=>svg+=`<text x="${x(days[i])}" y="${h-7}" text-anchor="middle" fill="#879788" font-family="Arial" font-size="9">${shortDay(days[i])}</text>`);
+    series.forEach(p=>{if(p.points.length>1)svg+=`<polyline points="${p.points.map(v=>x(v.day)+','+y(v.value)).join(' ')}" fill="none" stroke="${p.color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;p.points.forEach(v=>svg+=`<circle cx="${x(v.day)}" cy="${y(v.value)}" r="4" fill="${p.color}" stroke="white" stroke-width="1.5"><title>${p.name} · ${v.day} : ${oneDecimal.format(v.value)} m (${v.count} lancer${v.count>1?'s':''})</title></circle>`);});
+    svg+='</svg>';$('trend-chart').innerHTML=svg;$('chart-note').textContent=days.length+' journée'+(days.length>1?'s':'')+' de jeu · Les jours sans partie ne créent aucun score.';
+  }
+  function renderHistory(scores) {
+    const selected=scores.filter(s=>historyPlayer==='all'||s.player===Number(historyPlayer)).sort((a,b)=>Date.parse(b.played_at)-Date.parse(a.played_at)||b.id.localeCompare(a.id));
+    const pending=new Set(outbox.map(s=>s.id));
+    $('history-description').textContent=`${selected.length} lancer${selected.length>1?'s':''} · ${bounds().label.toLowerCase()}`;
+    $('history-body').innerHTML=selected.length?selected.slice(0,historyLimit).map(s=>{const p=player(s.player);return `<tr><td>${escape(dates.format(new Date(s.played_at)))}</td><td><span class="player-dot" style="background:${p.color}"></span>${p.name}</td><td>${number.format(s.score)} <span class="record-status">m</span></td><td><span class="record-status ${pending.has(s.id)?'pending':''}">${pending.has(s.id)?'↻ En attente':'✓ Enregistré'}</span></td></tr>`;}).join(''):'<tr class="empty-row"><td colspan="4">Aucun lancer sur cette période. À vous de jouer.</td></tr>';
+    $('load-more').hidden=selected.length<=historyLimit;
+  }
+  function render() { const scores=filteredScores();renderLeaderboard(scores);renderMetrics(scores);renderTrend(scores);renderHistory(scores); }
+
+  $('profiles').addEventListener('click',e=>{const button=e.target.closest('[data-player]');if(button)choosePlayer(Number(button.dataset.player));});
+  $('cover-profiles').addEventListener('click',e=>{const button=e.target.closest('[data-player]');if(button)choosePlayer(Number(button.dataset.player));});
+  $('restart-game').addEventListener('click',loadGame);
+  $('period-buttons').addEventListener('click',e=>{const button=e.target.closest('[data-period]');if(!button)return;period=button.dataset.period;historyLimit=30;document.querySelectorAll('[data-period]').forEach(b=>{const active=b===button;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));});$('date-control').hidden=period==='all';render();});
+  $('reference-date').addEventListener('change',()=>{historyLimit=30;render();});
+  $('analysis-player').addEventListener('change',e=>{analysisPlayer=e.target.value;render();});
+  $('history-player').addEventListener('change',e=>{historyPlayer=e.target.value;historyLimit=30;renderHistory(filteredScores());});
+  $('load-more').addEventListener('click',()=>{historyLimit+=30;renderHistory(filteredScores());});
+  $('access-form').addEventListener('submit',async e=>{e.preventDefault();const button=e.target.querySelector('button');button.disabled=true;$('access-error').textContent='';try{await request('/api/unlock',{code:$('club-code').value.trim()});$('club-code').value='';await refresh();await flushScores();}catch(error){$('access-error').textContent=error.message||'Ce code ne permet pas d’entrer.';}finally{button.disabled=false;}});
+  window.addEventListener('online',async()=>{await flushScores();await refresh();});
+  window.addEventListener('offline',()=>setConnection(false,'Hors ligne · scores conservés ici'));
+  document.addEventListener('visibilitychange',async()=>{if(!document.hidden){await flushScores();await refresh();}});
+  window.addEventListener('storage',e=>{if(e.key!==STORAGE)return;try{const other=JSON.parse(e.newValue||'{}');if(Array.isArray(other.outbox)){const merged=new Map(outbox.map(s=>[s.id,s]));other.outbox.filter(validScore).forEach(s=>merged.set(s.id,s));const known=new Set(serverScores.map(s=>s.id));outbox=[...merged.values()].filter(s=>!known.has(s.id));render();renderSaveStatus();}}catch(_){}});
+  setInterval(async()=>{if(!document.hidden){await flushScores();await refresh();}},12000);
+  renderProfiles();render();renderSaveStatus();
+  (async()=>{
+    const fragment=new URLSearchParams(location.hash.slice(1));const code=fragment.get('club');
+    if(code){try{await request('/api/unlock',{code});history.replaceState(null,'',location.pathname+location.search);}catch(error){$('access-error').textContent=error.message||'Le lien privé n’est pas reconnu.';}}
+    await refresh();await flushScores();
+  })();
+})();
