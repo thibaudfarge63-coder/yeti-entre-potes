@@ -242,3 +242,14 @@ body.fs-lock{overflow:hidden}
 @keyframes peek-in{from{opacity:0;transform:translateX(8px)}to{opacity:1;transform:none}}
 @keyframes fab-ping{50%{transform:scale(1.1)}}
 @media(max-width:600px){.chat-peek{right:74px;bottom:22px}}
+/* Record absolu : fête */
+.confetti{position:fixed;inset:0;width:100vw;height:100vh;z-index:70;pointer-events:none}
+.party{position:fixed;inset:0;z-index:69;display:grid;place-items:center;padding:20px;background:#0d1b3355;cursor:pointer;animation:party-fade .3s ease-out}
+.party-card{text-align:center;background:linear-gradient(160deg,#fff8d6,#ffd84a 55%,#f2b705);border-radius:22px;padding:26px 34px 24px;box-shadow:0 25px 80px #0008,0 0 0 4px #fff inset;animation:party-pop .5s cubic-bezier(.2,1.6,.4,1);max-width:calc(100vw - 32px)}
+.party-eyebrow{display:block;font:800 13px var(--display);letter-spacing:1.6px;color:#7a4a00;margin-bottom:6px}
+.party-card strong{display:block;font:700 clamp(34px,7vw,58px)/1.05 var(--display);letter-spacing:-1.5px;text-shadow:0 2px 0 #fff}
+.party-score{display:block;font:700 clamp(46px,10vw,84px)/1 var(--display);color:#3a2200;letter-spacing:-2px;margin:4px 0 8px}
+.party-prev{display:block;font-size:13px;font-weight:600;color:#6b4a00}
+@keyframes party-pop{from{transform:scale(.4) rotate(-6deg);opacity:0}to{transform:none;opacity:1}}
+@keyframes party-fade{from{opacity:0}}
+.party-card strong{color:#2b1a00;display:flex;align-items:center;justify-content:center;gap:12px}.party-card strong .player-dot{width:16px;height:16px;box-shadow:0 0 0 3px #fff}

@@ -8,11 +8,11 @@
   <link rel="stylesheet" href="styles.css">
   <script>window.RufflePlayer = window.RufflePlayer || {}; window.RufflePlayer.config = {autoplay:"on",unmuteOverlay:"visible",backgroundColor:"#c9e8f7",contextMenu:"off",warnOnUnsupportedContent:false};</script>
   <script src="ruffle/ruffle.js" defer></script>
-  <script src="config.js?v=20261015-24" defer></script>
-  <script src="data-client.js?v=20261015-24" defer></script>
-  <script src="costumes.js?v=20261015-24" defer></script>
-  <script src="skins.js?v=20261015-24" defer></script>
-  <script src="app.js?v=20261015-24" defer></script>
+  <script src="config.js?v=20261015-25" defer></script>
+  <script src="data-client.js?v=20261015-25" defer></script>
+  <script src="costumes.js?v=20261015-25" defer></script>
+  <script src="skins.js?v=20261015-25" defer></script>
+  <script src="app.js?v=20261015-25" defer></script>
 </head>
 <body>
   <div class="page-shell">
@@ -61,5 +61,7 @@
   <div class="chat-peek" id="chat-peek" hidden role="status"></div>
   <button type="button" class="chat-fab" id="chat-fab" aria-controls="chat-panel" aria-expanded="false" aria-label="Ouvrir le chat">💬<span class="chat-badge" id="chat-badge" hidden>0</span></button>
   <section class="chat-panel" id="chat-panel" hidden aria-label="Chat du club"><header class="chat-head"><div><strong>Le chat du club</strong><span id="chat-sub">Tout le club voit tes messages</span></div><button type="button" class="chat-close" id="chat-close" aria-label="Fermer le chat">✕</button></header><div class="chat-list" id="chat-list" aria-live="polite"><p class="chat-empty">Pas encore de message. Lance les hostilités.</p></div><form class="chat-form" id="chat-form"><input id="chat-input" type="text" maxlength="280" autocomplete="off" placeholder="Choisis ton pseudo pour écrire" disabled><button type="submit" id="chat-send" disabled aria-label="Envoyer">➤</button></form></section>
+  <canvas class="confetti" id="confetti" hidden aria-hidden="true"></canvas>
+  <div class="party" id="party" hidden role="alert"><div class="party-card"><span class="party-eyebrow">🎉 NOUVEAU RECORD ABSOLU 🎉</span><strong id="party-name"></strong><span class="party-score" id="party-score"></span><span class="party-prev" id="party-prev"></span></div></div>
 </body>
 </html>
