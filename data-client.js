@@ -121,8 +121,9 @@
   }
 
   async function unlock(config, input) {
-    const code = typeof input === 'string' ? input.trim() : '';
-    if (code.length < 32 || code.length > 128) throw accessRequired();
+    let code = typeof input === 'string' ? input.trim() : '';
+    if (code.length < 32) code = code.toUpperCase();
+    if (code.length < 4 || code.length > 128) throw accessRequired();
     const state = await readState(config, code);
     saveCode(config, code);
     removeInviteFragment();
