@@ -113,7 +113,7 @@
   }
   async function choosePlayer(id) {
     if(activeRound||loadingGame||privateAccess)return;
-    selectedPlayer=id;persist();renderProfiles();$('game-cover').hidden=true;
+    selectedPlayer=id;persist();renderProfiles();$('game-cover').hidden=true;if(typeof renderChat==='function')renderChat();
     renderSkins();
     if(!gameLoaded||loadedSkin!==gameKey(id))await loadGame();else showToast('Tu joues avec '+player(id).name+'.');
   }
@@ -370,20 +370,75 @@
   window.addEventListener('storage',e=>{if(e.key!==STORAGE)return;try{const other=JSON.parse(e.newValue||'{}');if(Array.isArray(other.outbox)){const merged=new Map(outbox.map(s=>[s.id,s]));other.outbox.filter(validScore).forEach(s=>merged.set(s.id,s));const known=new Set(serverScores.map(s=>s.id));outbox=[...merged.values()].filter(s=>!known.has(s.id));render();renderSaveStatus();}}catch(_){}});
   let lastVersion=null,polling=false,lastFull=Date.now();
   async function poll(){
-    if(polling||document.hidden||privateAccess||activeRound||loadingGame)return;polling=true;
+    if(polling||document.hidden||privateAccess)return;
+    if(activeRound||loadingGame){if(chatOpen){try{const v=await request('/api/version');if(Number(v.chat)>chatLast)loadChat();}catch(_){}}return;}
+    polling=true;
     try{
       if(outbox.length)await flushScores();
       let changed=Date.now()-lastFull>30000;
-      try{const v=await request('/api/version');if(v&&v.version){if(v.version!==lastVersion){changed=true;lastVersion=v.version;}}}
+      try{const v=await request('/api/version');if(v&&v.version){if(v.version!==lastVersion){changed=true;lastVersion=v.version;}if(Number(v.chat)>chatLast)loadChat();}}
       catch(error){if(error.status===401){changed=true;}else if(Date.now()-lastFull>10000)changed=true;}
       if(changed){lastFull=Date.now();await refresh();}
     }finally{polling=false;}
   }
+  // ---------- Chat ----------
+  let chatMsgs=[],chatLast=0,chatOpen=false,chatLoading=false,chatRead=0,chatInit=false,peekTimer;
+  function chatPeek(m){
+    const p=player(m.player),el=$('chat-peek');
+    el.innerHTML=`<i class="player-dot" style="background:${p.color}"></i><b>${escape(p.name)}</b> : ${escape(m.body)}`;el.hidden=false;
+    $('chat-fab').classList.remove('ping');void $('chat-fab').offsetWidth;$('chat-fab').classList.add('ping');
+    clearTimeout(peekTimer);peekTimer=setTimeout(()=>el.hidden=true,4500);
+  }
+  try{chatRead=Number(localStorage.getItem('yeti-chat-read'))||0;}catch(_){}
+  const chatTime=new Intl.DateTimeFormat('fr-FR',{timeZone:'Europe/Paris',hour:'2-digit',minute:'2-digit'});
+  const chatDay=new Intl.DateTimeFormat('fr-FR',{timeZone:'Europe/Paris',day:'2-digit',month:'2-digit'});
+  async function loadChat(){
+    if(chatLoading)return;chatLoading=true;
+    try{const r=await request('/api/chat',{after:chatLast});const list=Array.isArray(r.messages)?r.messages:[];
+      const known=new Set(chatMsgs.map(m=>m.id));
+      const fresh=[];for(const m of list){if(!known.has(Number(m.id))){const n={...m,id:Number(m.id),player:Number(m.player)};chatMsgs.push(n);fresh.push(n);}}
+      const others=chatInit?fresh.filter(m=>m.player!==selectedPlayer):[];chatInit=true;
+      if(others.length&&!chatOpen)chatPeek(others[others.length-1]);
+      chatMsgs=chatMsgs.filter(m=>!m.temp||!list.some(x=>Number(x.player)===m.player&&x.body===m.body));
+      chatMsgs.sort((a,b)=>(a.temp?1e15:a.id)-(b.temp?1e15:b.id));chatMsgs=chatMsgs.slice(-150);
+      chatLast=Math.max(chatLast,...chatMsgs.filter(m=>!m.temp).map(m=>m.id),0);renderChat();
+    }catch(_){}finally{chatLoading=false;}
+  }
+  function renderChat(){
+    const list=$('chat-list'),stick=list.scrollHeight-list.scrollTop-list.clientHeight<60,today=dayKey(new Date());
+    list.innerHTML=chatMsgs.length?chatMsgs.map(m=>{const p=player(m.player),mine=m.player===selectedPlayer,d=new Date(m.at||Date.now());
+      return `<div class="chat-msg ${mine?'mine':''} ${m.temp?'temp':''}"><div class="chat-meta"><i class="player-dot" style="background:${p.color}"></i><b>${escape(p.name)}</b><time>${dayKey(d)===today?'':chatDay.format(d)+' '}${chatTime.format(d)}</time></div><p>${escape(m.body)}</p></div>`;}).join(''):'<p class="chat-empty">Pas encore de message. Lance les hostilités.</p>';
+    if(stick||chatOpen)list.scrollTop=list.scrollHeight;
+    if(chatOpen){chatRead=chatLast;try{localStorage.setItem('yeti-chat-read',String(chatRead));}catch(_){}}
+    const unread=chatMsgs.filter(m=>!m.temp&&m.id>chatRead&&m.player!==selectedPlayer).length;
+    $('chat-badge').hidden=!unread;$('chat-badge').textContent=unread>9?'9+':String(unread);
+    const can=!!selectedPlayer&&!privateAccess;
+    $('chat-input').disabled=!can;$('chat-send').disabled=!can;
+    $('chat-input').placeholder=can?`Écris en tant que ${player(selectedPlayer).name}…`:'Choisis ton pseudo pour écrire';
+  }
+  function toggleChat(open){
+    chatOpen=open;$('chat-panel').hidden=!open;$('chat-fab').setAttribute('aria-expanded',String(open));$('chat-fab').classList.toggle('open',open);
+    if(open){$('chat-peek').hidden=true;renderChat();loadChat();if(!$('chat-input').disabled&&matchMedia('(pointer:fine)').matches)$('chat-input').focus();}
+  }
+  $('chat-fab').addEventListener('click',()=>toggleChat(!chatOpen));
+  $('chat-peek').addEventListener('click',()=>{$('chat-peek').hidden=true;toggleChat(true);});
+  $('chat-close').addEventListener('click',()=>toggleChat(false));
+  $('chat-form').addEventListener('submit',async e=>{
+    e.preventDefault();const input=$('chat-input'),body=input.value.trim();if(!body||!selectedPlayer)return;
+    input.value='';const temp={id:Date.now(),temp:true,player:selectedPlayer,body,at:new Date().toISOString()};chatMsgs.push(temp);renderChat();
+    try{await request('/api/chat/send',{player:selectedPlayer,body});await loadChat();}
+    catch(error){chatMsgs=chatMsgs.filter(m=>m!==temp);renderChat();input.value=body;showToast(error.message||'Message non envoyé.');}
+  });
+  let chatTicking=false;
+  setInterval(async()=>{ // chat ouvert : vérification chaque seconde
+    if(!chatOpen||chatTicking||document.hidden||privateAccess)return;chatTicking=true;
+    try{const v=await request('/api/version');if(Number(v.chat)>chatLast)await loadChat();}catch(_){}finally{chatTicking=false;}
+  },1000);
   setInterval(poll,2000);
   renderPlayerOptions();renderProfiles();render();renderSaveStatus();
   (async()=>{
     const fragment=new URLSearchParams(location.hash.slice(1));const code=fragment.get('club');
     if(code){try{await request('/api/unlock',{code});history.replaceState(null,'',location.pathname+location.search);}catch(error){$('access-error').textContent=error.message||'Le lien privé n’est pas reconnu.';}}
-    await refresh();await flushScores();
+    await refresh();await flushScores();renderChat();loadChat();
   })();
 })();
