@@ -149,7 +149,7 @@
       forgetCode(config);
       return {ok: true};
     }
-    if (path !== '/api/state' && path !== '/api/scores' && path !== '/api/players') {
+    if (path !== '/api/state' && path !== '/api/scores' && path !== '/api/players' && path !== '/api/version') {
       throw failure('Cette action est introuvable.', 404, 'not_found');
     }
     const invitedState = await validateInvite(config);
@@ -157,6 +157,7 @@
     if (!code) throw accessRequired();
     try {
       if (path === '/api/state') return invitedState || await readState(config, code);
+      if (path === '/api/version') return await rpc(config, 'yeti_get_version', {p_room_code: code});
       if (path === '/api/players') {
         const name = body && typeof body.name === 'string' ? body.name.trim() : '';
         if (name.length < 2 || name.length > 24) throw failure('Le prénom doit faire entre 2 et 24 caractères.', 400, 'invalid_player');

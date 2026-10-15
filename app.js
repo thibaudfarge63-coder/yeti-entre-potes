@@ -36,6 +36,7 @@
     const known=new Set(PLAYERS.map(p=>p.id)),before=outbox.length;
     outbox=outbox.filter(s=>known.has(s.player));if(outbox.length!==before)persist();
     if(selectedPlayer&&!known.has(selectedPlayer)){selectedPlayer=null;persist();}
+    renderProfiles();
   }
   function renderPlayerOptions() {
     ['analysis-player','history-player'].forEach(id=>{
@@ -260,7 +261,18 @@
   window.addEventListener('offline',()=>setConnection(false,'Hors ligne · scores conservés ici'));
   document.addEventListener('visibilitychange',async()=>{if(!document.hidden){await flushScores();await refresh();}});
   window.addEventListener('storage',e=>{if(e.key!==STORAGE)return;try{const other=JSON.parse(e.newValue||'{}');if(Array.isArray(other.outbox)){const merged=new Map(outbox.map(s=>[s.id,s]));other.outbox.filter(validScore).forEach(s=>merged.set(s.id,s));const known=new Set(serverScores.map(s=>s.id));outbox=[...merged.values()].filter(s=>!known.has(s.id));render();renderSaveStatus();}}catch(_){}});
-  setInterval(async()=>{if(!document.hidden){await flushScores();await refresh();}},12000);
+  let lastVersion=null,polling=false,lastFull=Date.now();
+  async function poll(){
+    if(polling||document.hidden||privateAccess)return;polling=true;
+    try{
+      if(outbox.length)await flushScores();
+      let changed=Date.now()-lastFull>30000;
+      try{const v=await request('/api/version');if(v&&v.version){if(v.version!==lastVersion){changed=true;lastVersion=v.version;}}}
+      catch(error){if(error.status===401){changed=true;}else if(Date.now()-lastFull>10000)changed=true;}
+      if(changed){lastFull=Date.now();await refresh();}
+    }finally{polling=false;}
+  }
+  setInterval(poll,2000);
   renderPlayerOptions();renderProfiles();render();renderSaveStatus();
   (async()=>{
     const fragment=new URLSearchParams(location.hash.slice(1));const code=fragment.get('club');
