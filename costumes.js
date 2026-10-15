@@ -41,6 +41,7 @@
     genie:   {suit:'#3a8fd9', hood:true, pat:{type:'belt', color:'#f2c230'}, acc:['topknot','gold-earring']},
     cosmic:  {suit:'#1b0f3a', hood:true, pat:{type:'stars', color:'#ffffff', size:6, nebula:'#7b3fd1'}, acc:['halo']},
     poop:    {suit:'#6b4423', hood:true, pat:{type:'belly', color:'#8a5a2e'}, acc:['poop-hat','flies']},
+    imany:   {suit:'#7b3fa0', pat:{type:'jeans', color:'#3d5f94', seam:'#c9a24a'}, photo:'skins/imany.png', acc:['blouse-collar']},
     snail:   {suit:'#c9a66b', pat:{type:'belly', color:'#e8d3a8'}, acc:['eyestalks','shell']},
   };
 
@@ -122,6 +123,14 @@
         return base;
       }
       case 'cracks': { const v = Math.abs(Math.sin(x * 0.9 + Math.sin(y * 0.5) * 2) * Math.cos(y * 0.35)); return v < 0.12 ? hex(p.color) : base; }
+      case 'jeans': {
+        if (y < g.hip - 1 * g.s) return (Math.abs(x - g.cx) < 0.5 * g.s && Math.floor((y - g.neck) / (4 * g.s)) % 2 === 0) ? [235, 225, 245] : base; // boutons du chemisier
+        if (Math.abs(x - g.cx) > g.torsoHalf * 1.02) return base; // mains et avant-bras restent dans les manches
+        let c = hex(p.color); if (hash(x, y) > 0.6) c = c.map(v => v * 0.9);
+        if (y < g.hip + 1.1 * g.s) return hex(p.seam).map((v, i) => (v + c[i]) / 2); // ceinture
+        if (Math.abs(x - g.cx) < 0.35 * g.s) return c.map(v => v * 0.78);             // entrejambe
+        return c;
+      }
       case 'belt': return (y > g.hip - 3 * g.s && y < g.hip) ? hex(p.color) : base;
     }
     return base;
@@ -147,6 +156,7 @@
         }
         break;
       }
+      case 'blouse-collar': for (const sd of [-1, 1]) fill('#9b5cc4', () => { ctx.moveTo(hx, g.neck + 0.5 * u); ctx.lineTo(hx + sd * 5 * u, g.neck - 0.8 * u); ctx.lineTo(hx + sd * 3.6 * u, g.neck + 3.6 * u); ctx.closePath(); }); break;
       case 'snout': fill('#ff8fab', () => ctx.ellipse(hx, ht + 11.5 * u, 3 * u, 2.1 * u, 0, 0, Math.PI * 2)); fill('#b0485f', () => { circle(hx - 1.1 * u, ht + 11.5 * u, 0.6 * u); circle(hx + 1.1 * u, ht + 11.5 * u, 0.6 * u); }); break;
       case 'frog-eyes': for (const sd of [-1, 1]) { fill(cos.suit, () => circle(hx + sd * 4 * u, ht + 0.5 * u, 3.4 * u)); fill('#fff', () => circle(hx + sd * 4 * u, ht + 0.3 * u, 2.4 * u)); fill('#111', () => circle(hx + sd * 4.3 * u, ht + 0.5 * u, 1.2 * u)); } break;
       case 'eye-patches': for (const sd of [-1, 1]) fill('rgba(20,20,20,.9)', () => ctx.ellipse(hx + sd * 2.6 * u, ht + 7.6 * u, 2.4 * u, 1.9 * u, sd * 0.5, 0, Math.PI * 2)); break;
@@ -216,6 +226,7 @@
       if (!g.isBody(x, y)) continue;
       const p = (y * w + x) * 4, inHead = y < g.neck;
       const fx = (x - g.cx) / faceRx, fy = (y - faceY) / faceRy, inFace = fx * fx + fy * fy < 1;
+      if (inHead && cos.photo) { o[p + 3] = 0; continue; } // la tête est remplacée par la photo
       if (inHead && (!cos.hood || (inFace && !cos.face && !cos.ninja))) continue; // tête/visage d'origine
       if (inHead && cos.ninja && Math.abs(y - g.eyeY) < 1.6 * g.s && Math.abs(x - g.cx) < faceRx) continue; // fente des yeux
       const lum = (0.299 * data[p] + 0.587 * data[p + 1] + 0.114 * data[p + 2]) / 255;
@@ -236,8 +247,17 @@
     const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
     const ctx = cv.getContext('2d', {willReadFrequently: true}); ctx.putImageData(out, 0, 0);
     for (const a of cos.acc || []) { ctx.save(); drawAcc(ctx, a, g, cos); ctx.restore(); }
+    const ph = cos.photo && photos[cos.photo];
+    if (ph && ph.complete && ph.naturalWidth) {
+      const hh = 24 * g.s, ww = hh * ph.naturalWidth / ph.naturalHeight, cy = g.top + 8.5 * g.s;
+      ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 2; ctx.drawImage(ph, g.cx - ww / 2, cy - hh / 2, ww, hh); ctx.restore();
+    }
     return ctx.getImageData(0, 0, w, h);
   }
 
-  window.YetiCostumes = Object.freeze({has: id => !!C[id], dress});
+  const photos = {};
+  const ready = Promise.all(Object.values(C).filter(c => c.photo).map(c => new Promise(res => {
+    const im = new Image(); im.onload = im.onerror = () => res(); im.src = c.photo + '?v=1'; photos[c.photo] = im;
+  })));
+  window.YetiCostumes = Object.freeze({has: id => !!C[id], dress, ready});
 })();

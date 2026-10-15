@@ -51,6 +51,7 @@
     // Malédictions (imposées, priorité dans l'ordre)
     {id:'poop',   kind:'curse', emoji:'💩', fur:['#2e1b0e','#b9844f'], name:'Le caca',    tag:'3 lancers de suite < 50 m', until:'Fais 50 m ou plus pour t’en débarrasser.', test:l => last(l, 3, v => v < 50)},
     {id:'snail',  kind:'curse', emoji:'🐌', fur:['#4a3a1a','#d9c48c'], name:'L’escargot', tag:'5 lancers de suite < 150 m', until:'Fais 150 m ou plus pour t’en débarrasser.', test:l => last(l, 5, v => v < 150)},
+    {id:'imany',  kind:'perso', owner:'imany', photo:'skins/imany.png', emoji:'👩', name:'Imany', tag:'Skin perso, réservé à Imany'},
   ];
   // Couleur du pingouin selon le podium du club : [ombres, lumières].
   // Pingouin trophée : lingot poli, opaque, reflets marqués + contour. Purement visuel : aucune influence sur le jeu.
@@ -141,7 +142,8 @@
         for (const j of [i - 1, i + 1, i - w, i + w]) { const jx = j % w, jy = (j / w) | 0; if (j < 0 || j >= N || Math.abs(jx - cx) > 1 || jy < yMin || jy >= yMax || seen[j] || !op(j) || lumAt(j) < 0.84) continue; seen[j] = 1; q.push(j); } }
       // La banquise est large et collée en bas : on l'écarte.
       let minX = w, maxX = 0, maxY = 0; for (const i of comp) { const cx = i % w, cy = (i / w) | 0; minX = Math.min(minX, cx); maxX = Math.max(maxX, cx); maxY = Math.max(maxY, cy); }
-      if (maxX - minX > 40) continue;
+      let minY = h; for (const i of comp) minY = Math.min(minY, (i / w) | 0);
+      if (maxX - minX > 40 || maxY - minY < 6 || minY > FLOE_TOP - 10) continue; // éclats de banquise, pas le pingouin
       if (comp.length >= 25 && (!best || comp.length > best.length)) best = comp;
     }
     if (!best) return null;
@@ -255,12 +257,13 @@
     list: SKINS,
     byId(id) { return SKINS.find(s => s.id === id) || SKINS[0]; },
     // scores : lancers d'un joueur. Renvoie les skins débloqués et l'éventuelle malédiction en cours.
-    evaluate(scores) {
+    evaluate(scores, ownerName) {
       const list = [...scores].sort((a, b) => Date.parse(a.played_at) - Date.parse(b.played_at) || String(a.id).localeCompare(String(b.id)));
       const best = list.reduce((m, s) => Math.max(m, s.score), 0), unlocked = new Set(['yeti']);
       for (const k of SKINS) {
         if (k.kind === 'record' && best >= k.min) unlocked.add(k.id);
         if ((k.kind === 'defi' || k.kind === 'ultra') && k.test(list)) unlocked.add(k.id);
+        if (k.kind === 'perso' && ownerName && ownerName.trim().toLowerCase() === k.owner) unlocked.add(k.id);
       }
       const curse = SKINS.find(k => k.kind === 'curse' && k.test(list)) || null;
       const next = SKINS.find(k => k.kind === 'record' && k.min > best) || null;
@@ -269,6 +272,7 @@
     async build(id, tintName) {
       const skin = this.byId(id), tint = PODIUM[tintName] ? tintName : null;
       if (skin.id === 'yeti' && !tint) return null; // jeu d'origine
+      if (window.YetiCostumes && window.YetiCostumes.ready) await window.YetiCostumes.ready;
       const key = skin.id + '|' + (tint || '');
       if (!cache.has(key)) cache.set(key, patch(skin, tint).catch(e => { cache.delete(key); throw e; }));
       return cache.get(key);

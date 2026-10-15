@@ -294,7 +294,7 @@
   let loadedSkin=null,skinChoices={};
   try{skinChoices=JSON.parse(localStorage.getItem('yeti-skins')||'{}')||{};}catch(_){}
   function bestOf(id){return stats(allScores().filter(s=>s.player===id)).best||0;}
-  function skinState(id){return window.YetiSkins&&id?window.YetiSkins.evaluate(allScores().filter(s=>s.player===id)):null;}
+  function skinState(id){return window.YetiSkins&&id?window.YetiSkins.evaluate(allScores().filter(s=>s.player===id),player(id).name):null;}
   function podiumOf(id){
     if(!id)return null;
     const bests=PLAYERS.map(p=>({id:p.id,best:stats(allScores().filter(s=>s.player===p.id)).best})).filter(r=>r.best!==null).sort((a,b)=>b.best-a.best);
@@ -306,7 +306,7 @@
     if(st.curse)return st.curse.id;
     return st.unlocked.has(skinChoices[id])?skinChoices[id]:'yeti';
   }
-  const SKIN_GROUPS=[['base','Départ'],['record','Paliers de record'],['defi','Défis'],['ultra','Ultra rares'],['curse','Malédictions']];
+  const SKIN_GROUPS=[['perso','Skin perso'],['base','Départ'],['record','Paliers de record'],['defi','Défis'],['ultra','Ultra rares'],['curse','Malédictions']];
   function renderSkins(){
     const box=$('skins');if(!box||!window.YetiSkins)return;
     const st=skinState(selectedPlayer),current=skinFor(selectedPlayer),list=window.YetiSkins.list,busy=activeRound||loadingGame;
@@ -319,12 +319,13 @@
     $('restart-game').innerHTML=pending?'Appliquer le nouveau look <span aria-hidden="true">↻</span>':'Relancer le jeu <span aria-hidden="true">↻</span>';
     $('restart-game').classList.toggle('pending',!!pending);
     const html=SKIN_GROUPS.map(([kind,label])=>{
-      const cards=list.filter(k=>k.kind===kind).map(k=>{
+      const items=list.filter(k=>k.kind===kind&&(kind!=='perso'||(st&&st.unlocked.has(k.id))));if(!items.length)return '';
+      const cards=items.map(k=>{
         const curse=kind==='curse',open=!!st&&(curse?st.curse&&st.curse.id===k.id:st.unlocked.has(k.id)),active=!!st&&k.id===current;
         const cond=k.kind==='record'?k.min+' m de record':k.tag;
         const sub=curse?(open?'En cours · ':'')+escape(cond):open?(active?'✓ Équipé · ':'✓ ')+escape(cond):'🔒 '+escape(cond);
         const can=open&&!curse&&!busy&&!(st&&st.curse);
-        return `<button type="button" class="skin-card kind-${k.kind} ${active?'active':''} ${open?'':'locked'} ${k.id==='prime'?'prime':''}" data-skin="${k.id}" ${can?'':'disabled'} aria-pressed="${active}" title="${escape(k.name+' — '+k.tag+' · '+cond)}"><span class="skin-emoji">${k.emoji||'<span class=\'skin-yeti\'>Y.</span>'}</span><span class="skin-name">${escape(k.name)}</span><span class="skin-min">${sub}</span></button>`;
+        return `<button type="button" class="skin-card kind-${k.kind} ${active?'active':''} ${open?'':'locked'} ${k.id==='prime'?'prime':''}" data-skin="${k.id}" ${can?'':'disabled'} aria-pressed="${active}" title="${escape(k.name+' — '+k.tag+' · '+cond)}"><span class="skin-emoji">${k.photo?`<img class="skin-photo" src="${k.photo}" alt="">`:k.emoji||'<span class=\'skin-yeti\'>Y.</span>'}</span><span class="skin-name">${escape(k.name)}</span><span class="skin-min">${sub}</span></button>`;
       }).join('');
       return `<div class="skin-group"><span class="skin-group-label">${label}</span><div class="skin-group-cards">${cards}</div></div>`;
     }).join('');

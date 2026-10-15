@@ -253,3 +253,4 @@ body.fs-lock{overflow:hidden}
 @keyframes party-pop{from{transform:scale(.4) rotate(-6deg);opacity:0}to{transform:none;opacity:1}}
 @keyframes party-fade{from{opacity:0}}
 .party-card strong{color:#2b1a00;display:flex;align-items:center;justify-content:center;gap:12px}.party-card strong .player-dot{width:16px;height:16px;box-shadow:0 0 0 3px #fff}
+.skin-photo{width:34px;height:38px;object-fit:cover;border-radius:50%;box-shadow:0 0 0 2px #fff,0 0 0 3px #7b3fa0}.skin-card.kind-perso{background:#f3eafa;border-color:#c9a6e4}
