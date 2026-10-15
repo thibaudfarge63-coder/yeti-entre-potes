@@ -123,33 +123,65 @@
     return body;
   }
 
-  function yetiFrame(img, skin) {
-    const {width: w, height: h, data} = img, [d, l] = skin.fur.map(hex);
-    const out = new ImageData(new Uint8ClampedArray(data), w, h), o = out.data;
-    let minY = h, maxY = 0, minX = w, maxX = 0;
-    for (let y = 0; y < FLOE_TOP + 8; y++) for (let x = 0; x < w; x++) {
-      const p = (y * w + x) * 4; if (o[p + 3] < 20) continue;
-      const r = o[p], g = o[p + 1], b = o[p + 2], lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-      if (y >= FLOE_TOP - 6 && lum > 0.72) continue; // glace de la banquise
-      if (r > 150 && g > 110 && b < 90) continue;     // bec et pattes du pingouin
-      const t = Math.min(1, Math.max(0, (lum - 0.15) / 0.75));
-      for (let k = 0; k < 3; k++) o[p + k] = Math.round(d[k] + (l[k] - d[k]) * t);
-      if (o[p + 3] > 60 && y < FLOE_TOP) { if (y < minY) minY = y; if (y > maxY) maxY = y; if (x < minX) minX = x; if (x > maxX) maxX = x; }
+  // Pingouin tenu par le yéti (écran de rotation) : on repère ses pixels (ventre blanc, bec jaune, dos noir sous le cou).
+  function heldPenguinMask(img) {
+    const {width: w, height: h, data} = img, N = w * h;
+    const lumAt = i => (0.299 * data[i * 4] + 0.587 * data[i * 4 + 1] + 0.114 * data[i * 4 + 2]) / 255;
+    const op = i => data[i * 4 + 3] > 30;
+    let top = -1;
+    for (let y = 0; y < FLOE_TOP && top < 0; y++) { let n = 0; for (let x = 0; x < w; x++) if (op(y * w + x)) n++; if (n >= 3) top = y; }
+    if (top < 0) return null;
+    const yMin = Math.ceil(top + 0.25 * (FLOE_TOP - top)), yMax = FLOE_TOP - 2;
+    // 1) Plus grande tache blanche (ventre du pingouin) : les petits reflets du poil sont ignorés.
+    const seen = new Uint8Array(N); let best = null;
+    for (let y = yMin; y < yMax; y++) for (let x = 0; x < w; x++) {
+      const i0 = y * w + x; if (seen[i0] || !op(i0) || lumAt(i0) < 0.84) continue;
+      const comp = [], q = [i0]; seen[i0] = 1;
+      while (q.length) { const i = q.pop(); comp.push(i); const cx = i % w, cy = (i / w) | 0;
+        for (const j of [i - 1, i + 1, i - w, i + w]) { const jx = j % w, jy = (j / w) | 0; if (j < 0 || j >= N || Math.abs(jx - cx) > 1 || jy < yMin || jy >= yMax || seen[j] || !op(j) || lumAt(j) < 0.84) continue; seen[j] = 1; q.push(j); } }
+      // La banquise est large et collée en bas : on l'écarte.
+      let minX = w, maxX = 0, maxY = 0; for (const i of comp) { const cx = i % w, cy = (i / w) | 0; minX = Math.min(minX, cx); maxX = Math.max(maxX, cx); maxY = Math.max(maxY, cy); }
+      if (maxX - minX > 40) continue;
+      if (comp.length >= 25 && (!best || comp.length > best.length)) best = comp;
     }
-    const [, ctx] = canvas(w, h); ctx.putImageData(out, 0, 0);
-    if (minY < maxY) {
-      // Centre de la tête : moyenne des pixels opaques des premières rangées.
-      let sx = 0, n = 0;
-      for (let y = minY; y < Math.min(maxY, minY + 18); y++) for (let x = 0; x < w; x++) if (data[(y * w + x) * 4 + 3] > 60) { sx += x; n++; }
-      const cx = n ? sx / n : (minX + maxX) / 2, lean = ((cx - (minX + maxX) / 2) / Math.max(10, maxX - minX)) * 0.6;
-      const size = skin.hat ? 26 : 31, cy = skin.hat ? minY - 4 : minY + 14;
-      ctx.save(); ctx.translate(cx, cy); ctx.rotate(lean);
-      ctx.font = `${size}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.shadowColor = 'rgba(0,0,0,.3)'; ctx.shadowBlur = 3; ctx.shadowOffsetY = 1;
-      ctx.fillText(skin.emoji, 0, 0); ctx.restore();
+    if (!best) return null;
+    const m = new Uint8Array(N); let bx0 = w, bx1 = 0, by0 = h, by1 = 0;
+    for (const i of best) { m[i] = 1; const x = i % w, y = (i / w) | 0; bx0 = Math.min(bx0, x); bx1 = Math.max(bx1, x); by0 = Math.min(by0, y); by1 = Math.max(by1, y); }
+    bx0 -= 10; bx1 += 10; by0 -= 6; by1 = Math.min(FLOE_TOP - 5, by1 + 10);
+    // 1b) Franchit le bord flou entre le ventre et le dos.
+    for (let pass = 0; pass < 2; pass++) { const add = [];
+      for (let y = Math.max(1, by0); y <= Math.min(h - 2, by1); y++) for (let x = Math.max(1, bx0); x <= Math.min(w - 2, bx1); x++) {
+        const i = y * w + x; if (m[i] || !op(i) || (y >= FLOE_TOP - 2 && lumAt(i) > 0.6)) continue;
+        if (m[i - 1] || m[i + 1] || m[i - w] || m[i + w]) add.push(i);
+      } for (const i of add) m[i] = 1; }
+    // 2) Étend au dos noir, au bec/pattes jaunes et au blanc flou voisins.
+    for (let pass = 0; pass < 12; pass++) for (let y = Math.max(0, by0); y <= by1; y++) for (let x = Math.max(1, bx0); x <= Math.min(w - 2, bx1); x++) {
+      const i = y * w + x; if (m[i] || !op(i)) continue;
+      if (!(m[i - 1] || m[i + 1] || (i >= w && m[i - w]) || (i + w < N && m[i + w]))) continue;
+      const p = i * 4, r = data[p], g = data[p + 1], b = data[p + 2], l = lumAt(i), sat = Math.max(r, g, b) - Math.min(r, g, b);
+      const ice = y >= FLOE_TOP - 2 && l > 0.6;
+      if (!ice && (l > 0.74 || l < 0.36 || (r > 140 && g > 100 && b < 110 && sat > 50))) m[i] = 1;
     }
-    return ctx.getImageData(0, 0, w, h);
+    return m;
+  }
+
+  function yetiFrame(img, skin, tint) {
+    let out = img;
+    if (skin.id !== 'yeti' && window.YetiCostumes && window.YetiCostumes.has(skin.id)) out = window.YetiCostumes.dress(img, skin.id, FLOE_TOP) || img;
+    if (tint) {
+      const m = heldPenguinMask(img);
+      if (m) {
+        const ramp = tint.ramp.map(hex), o = new ImageData(new Uint8ClampedArray(out.data), out.width, out.height);
+        const shade = t => { t = Math.min(1, Math.max(0, t)) * (ramp.length - 1); const i = Math.min(ramp.length - 2, Math.floor(t)), u = t - i; return ramp[i].map((c, k) => c + (ramp[i + 1][k] - c) * u); };
+        for (let i = 0; i < m.length; i++) if (m[i]) {
+          const p = i * 4, l = (0.299 * img.data[p] + 0.587 * img.data[p + 1] + 0.114 * img.data[p + 2]) / 255;
+          const c = shade(0.22 + 0.5 * l + 0.08 * Math.sin((i % out.width) * 0.9)); // le dos noir devient du métal sombre, le ventre blanc le reflet
+          o.data[p] = c[0]; o.data[p + 1] = c[1]; o.data[p + 2] = c[2];
+        }
+        out = o;
+      }
+    }
+    return out;
   }
 
   function hex(c) { const n = parseInt(c.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; }
@@ -202,11 +234,11 @@
       if (len === 63) { len = dv.getUint32(pos, true); pos += 4; }
       const body = src.subarray(pos, pos + len); pos += len;
       const id = (code === 35 || code === 36 || code === 20) ? body[0] | (body[1] << 8) : -1;
-      const yeti = skin.emoji && YETI_IDS.has(id) && (code === 35 || (code === 36 && body[2] === 5));
+      const yeti = (skin.id !== 'yeti' || tint) && YETI_IDS.has(id) && (code === 35 || (code === 36 && body[2] === 5));
       const peng = tint && PENGUIN_IDS.has(id) && (code === 35 || (code === 36 && body[2] === 5));
       if (yeti || peng) {
         const img = await decode(code, body);
-        const nb = await encodeLossless(id, yeti ? yetiFrame(img, skin) : tintPenguin(img, tint));
+        const nb = await encodeLossless(id, yeti ? yetiFrame(img, skin, tint) : tintPenguin(img, tint));
         const head = new Uint8Array(6), hv = new DataView(head.buffer);
         hv.setUint16(0, (36 << 6) | 63, true); hv.setUint32(2, nb.length, true);
         parts.push(head, nb);
@@ -236,7 +268,7 @@
     },
     async build(id, tintName) {
       const skin = this.byId(id), tint = PODIUM[tintName] ? tintName : null;
-      if (!skin.emoji && !tint) return null; // jeu d'origine
+      if (skin.id === 'yeti' && !tint) return null; // jeu d'origine
       const key = skin.id + '|' + (tint || '');
       if (!cache.has(key)) cache.set(key, patch(skin, tint).catch(e => { cache.delete(key); throw e; }));
       return cache.get(key);

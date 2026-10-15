@@ -292,9 +292,9 @@
       const cards=list.filter(k=>k.kind===kind).map(k=>{
         const curse=kind==='curse',open=!!st&&(curse?st.curse&&st.curse.id===k.id:st.unlocked.has(k.id)),active=!!st&&k.id===current;
         const cond=k.kind==='record'?k.min+' m de record':k.tag;
-        const sub=active?(curse?'Imposé':'Équipé'):open?(curse?'En cours':escape(k.kind==='record'?k.tag:'Débloqué')):(curse?escape(cond):'🔒 '+escape(cond));
+        const sub=curse?(open?'En cours · ':'')+escape(cond):open?(active?'✓ Équipé · ':'✓ ')+escape(cond):'🔒 '+escape(cond);
         const can=open&&!curse&&!busy&&!(st&&st.curse);
-        return `<button type="button" class="skin-card kind-${k.kind} ${active?'active':''} ${open?'':'locked'} ${k.id==='prime'?'prime':''}" data-skin="${k.id}" ${can?'':'disabled'} aria-pressed="${active}" title="${escape(k.name+' — '+cond)}"><span class="skin-emoji">${k.emoji||'<span class=\'skin-yeti\'>Y.</span>'}</span><span class="skin-name">${escape(k.name)}</span><span class="skin-min">${sub}</span></button>`;
+        return `<button type="button" class="skin-card kind-${k.kind} ${active?'active':''} ${open?'':'locked'} ${k.id==='prime'?'prime':''}" data-skin="${k.id}" ${can?'':'disabled'} aria-pressed="${active}" title="${escape(k.name+' — '+k.tag+' · '+cond)}"><span class="skin-emoji">${k.emoji||'<span class=\'skin-yeti\'>Y.</span>'}</span><span class="skin-name">${escape(k.name)}</span><span class="skin-min">${sub}</span></button>`;
       }).join('');
       return `<div class="skin-group"><span class="skin-group-label">${label}</span><div class="skin-group-cards">${cards}</div></div>`;
     }).join('');
