@@ -494,3 +494,7 @@ body.chat-wide .chat-fab,body.chat-wide .chat-peek{display:none!important}
 .top-row time{font-size:10px;color:var(--muted)}
 .top-empty{color:var(--muted);font-size:12px;padding:10px}
 @media(max-width:600px){.top-list{grid-template-columns:1fr;grid-template-rows:none;grid-auto-flow:row}.top-card{padding:14px}}
+
+/* Logo : yéti à quatre pattes */
+.brand-mark.brand-logo{background:none;padding:0;overflow:hidden}
+.brand-logo .yeti-logo{width:100%;height:100%;display:block}

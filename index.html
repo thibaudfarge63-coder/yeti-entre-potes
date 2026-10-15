@@ -4,20 +4,21 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#eef4ef">
-  <title>Yéti entre potes</title>
+  <title>Yeti rich club</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="stylesheet" href="styles.css">
   <script>window.RufflePlayer = window.RufflePlayer || {}; window.RufflePlayer.config = {autoplay:"on",unmuteOverlay:"visible",backgroundColor:"#c9e8f7",contextMenu:"off",warnOnUnsupportedContent:false};</script>
   <script src="ruffle/ruffle.js" defer></script>
-  <script src="config.js?v=20261015-39" defer></script>
-  <script src="data-client.js?v=20261015-39" defer></script>
-  <script src="costumes.js?v=20261015-39" defer></script>
-  <script src="skins.js?v=20261015-39" defer></script>
-  <script src="app.js?v=20261015-39" defer></script>
+  <script src="config.js?v=20261015-40" defer></script>
+  <script src="data-client.js?v=20261015-40" defer></script>
+  <script src="costumes.js?v=20261015-40" defer></script>
+  <script src="skins.js?v=20261015-40" defer></script>
+  <script src="app.js?v=20261015-40" defer></script>
 </head>
 <body>
   <div class="page-shell">
     <header class="masthead">
-      <a class="brand" href="./" aria-label="Yéti entre potes, accueil"><span class="brand-mark" aria-hidden="true">Y.</span><span>LE CLUB DES <strong>YÉTIS</strong></span></a>
+      <a class="brand" href="./" aria-label="Yeti rich club, accueil"><span class="brand-mark brand-logo" aria-hidden="true"><svg class="yeti-logo" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#1b4e3b"/><g fill="#f4f7ee" stroke="#c9d6c2" stroke-width="1" stroke-linejoin="round"><path d="M11 42l-1 9h3.5l1-2 1 2h3.5l.5-9z"/><path d="M21 43l-.5 8h3.5l1-2 1 2h3.5l.5-8z"/><path d="M8 37c-2-2-2-6 1-8 0-6 6-11 13-12 5-6 15-8 22-4 6 2 9 7 8 13l-4 15-2 2-2-2-2 2-2-2-2 2-2-2-2 2-2-2-2 2-2-2-3 2-2-2-3 2-2-2-3 1z"/><path d="M34 39l-1 12h4l1-2 1 2h4l.5-12z"/><path d="M45 37l-.5 14h4l1-2 1 2h4l.5-13z"/></g><g fill="#f4f7ee" stroke="#c9d6c2" stroke-width="1"><path d="M43 24c0-6 4-10 9-10 6 0 9 5 8 10l-1 7c-1 3-4 5-8 5s-7-2-8-5z"/></g><path fill="#8fc4dc" d="M46 24c0-3 3-5 6-5s6 2 6 5v4c0 3-3 5-6 5s-6-2-6-5z"/><circle cx="49.6" cy="24.2" r="1.4" fill="#163c32"/><circle cx="55" cy="24.2" r="1.4" fill="#163c32"/><path d="M49 29q3 2.2 6.3 0" fill="none" stroke="#163c32" stroke-width="1.3" stroke-linecap="round"/><path fill="#f4c542" stroke="#9a6b00" stroke-width=".8" stroke-linejoin="round" d="M45.5 15.5l1.5-7 3.2 4 2.3-5.5 2.3 5.5 3.2-4 1.5 7z"/><circle cx="52.5" cy="6.6" r="1.1" fill="#e30613"/><path d="M45.8 15.5h12.4" stroke="#9a6b00" stroke-width=".8"/></svg></span><span>YETI <strong>RICH CLUB</strong></span></a>
       <button type="button" id="share-link" class="text-button">Copier le lien du club ↗</button><div id="connection" class="connection" role="status"><span class="status-dot"></span><span id="connection-text">Connexion au club…</span></div>
     </header>
 
@@ -65,9 +66,9 @@
         <button type="button" class="history-toggle" id="history-toggle" aria-expanded="false" aria-controls="history-card">Consulter le carnet des lancers <span aria-hidden="true">→</span></button><article class="history-card" id="history-card" hidden><div class="card-title history-heading"><div><h3>Le carnet des lancers</h3><p id="history-description">Les dernières parties du club</p></div><label class="history-select-label"><span>Joueur</span><select id="history-player"><option value="all">Tout le club</option><option value="1">Loïc</option><option value="2">Alexandre</option><option value="3">Thibaud</option></select></label></div><div class="history-table-wrap"><table class="history-table"><thead><tr><th>Date & heure</th><th>Joueur</th><th>Score</th><th>Enregistrement</th></tr></thead><tbody id="history-body"></tbody></table></div><button type="button" class="load-more" id="load-more" hidden>Afficher 30 lancers de plus</button></article>
       </section>
     </main>
-    <footer class="page-footer"><span>LE CLUB DES YÉTIS <strong>JEU ORIGINAL : CHRIS HILGERT</strong></span><p>Un lancer de plus. Juste un.</p></footer>
+    <footer class="page-footer"><span>YETI RICH CLUB <strong>JEU ORIGINAL : CHRIS HILGERT</strong></span><p>Un lancer de plus. Juste un.</p></footer>
   </div>
-  <div class="access-overlay" id="access-overlay" hidden><form id="access-form" class="access-card"><span class="brand-mark" aria-hidden="true">Y.</span><p class="eyebrow">ACCÈS AU CLUB</p><h2>Entre potes seulement.</h2><p>Ouvre le lien privé du club ou saisis son code pour retrouver le jeu et vos scores.</p><label for="club-code">Code du club</label><input id="club-code" type="text" placeholder="Ex. : PGE3" autocomplete="off" required><button class="primary-button" type="submit">Entrer dans le club →</button><p id="access-error" role="alert"></p></form></div>
+  <div class="access-overlay" id="access-overlay" hidden><form id="access-form" class="access-card"><span class="brand-mark brand-logo" aria-hidden="true"><svg class="yeti-logo" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#1b4e3b"/><g fill="#f4f7ee" stroke="#c9d6c2" stroke-width="1" stroke-linejoin="round"><path d="M11 42l-1 9h3.5l1-2 1 2h3.5l.5-9z"/><path d="M21 43l-.5 8h3.5l1-2 1 2h3.5l.5-8z"/><path d="M8 37c-2-2-2-6 1-8 0-6 6-11 13-12 5-6 15-8 22-4 6 2 9 7 8 13l-4 15-2 2-2-2-2 2-2-2-2 2-2-2-2 2-2-2-2 2-2-2-3 2-2-2-3 2-2-2-3 1z"/><path d="M34 39l-1 12h4l1-2 1 2h4l.5-12z"/><path d="M45 37l-.5 14h4l1-2 1 2h4l.5-13z"/></g><g fill="#f4f7ee" stroke="#c9d6c2" stroke-width="1"><path d="M43 24c0-6 4-10 9-10 6 0 9 5 8 10l-1 7c-1 3-4 5-8 5s-7-2-8-5z"/></g><path fill="#8fc4dc" d="M46 24c0-3 3-5 6-5s6 2 6 5v4c0 3-3 5-6 5s-6-2-6-5z"/><circle cx="49.6" cy="24.2" r="1.4" fill="#163c32"/><circle cx="55" cy="24.2" r="1.4" fill="#163c32"/><path d="M49 29q3 2.2 6.3 0" fill="none" stroke="#163c32" stroke-width="1.3" stroke-linecap="round"/><path fill="#f4c542" stroke="#9a6b00" stroke-width=".8" stroke-linejoin="round" d="M45.5 15.5l1.5-7 3.2 4 2.3-5.5 2.3 5.5 3.2-4 1.5 7z"/><circle cx="52.5" cy="6.6" r="1.1" fill="#e30613"/><path d="M45.8 15.5h12.4" stroke="#9a6b00" stroke-width=".8"/></svg></span><p class="eyebrow">ACCÈS AU CLUB</p><h2>Entre potes seulement.</h2><p>Ouvre le lien privé du club ou saisis son code pour retrouver le jeu et vos scores.</p><label for="club-code">Code du club</label><input id="club-code" type="text" placeholder="Ex. : PGE3" autocomplete="off" required><button class="primary-button" type="submit">Entrer dans le club →</button><p id="access-error" role="alert"></p></form></div>
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
   <div class="access-overlay" id="pin-overlay" hidden><form id="pin-form" class="access-card" role="dialog" aria-modal="true" aria-labelledby="pin-title"><span class="brand-mark" aria-hidden="true">🔒</span><p class="eyebrow" id="pin-eyebrow">CONNEXION</p><h2 id="pin-title">Mot de passe</h2><p id="pin-text"></p><input id="pin-user" type="text" autocomplete="username" hidden><label for="pin-input">Mot de passe</label><input id="pin-input" type="password" maxlength="64" autocomplete="current-password" required><div id="pin-confirm-wrap" hidden><label for="pin-confirm">Confirme le mot de passe</label><input id="pin-confirm" type="password" maxlength="64" autocomplete="new-password"></div><button class="primary-button" id="pin-submit" type="submit">Entrer →</button><button class="text-button add-player-cancel" id="pin-cancel" type="button">Choisir un autre joueur</button><p id="pin-error" role="alert"></p></form></div>
   <div class="access-overlay" id="ban-overlay" hidden><div class="access-card" role="alertdialog" aria-modal="true" aria-labelledby="ban-title"><span class="brand-mark" aria-hidden="true">⛔</span><p class="eyebrow">VIRÉ PAR L’ADMIN</p><h2 id="ban-title">Pause forcée.</h2><p id="ban-text"></p><button class="primary-button" id="ban-ok" type="button">OK</button></div></div>

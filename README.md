@@ -1,4 +1,4 @@
-# Yéti entre potes
+# Yeti rich club
 
 Yeti Sports 3 pour Loïc, Alexandre et Thibaud. Le jeu et le classement sont sur la même page.
 
