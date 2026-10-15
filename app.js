@@ -199,14 +199,14 @@
   const AVATARS=new Set(['alexandre','imany','loic','malak','mouna','nina','thibaud']);
   function avatar(p){
     const slug=p.name.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
-    return AVATARS.has(slug)?`<img class="ranking-avatar" src="avatars/${slug}.jpg?v=1" alt="" style="--ring:${p.color}">`:`<span class="player-dot" style="background:${p.color}"></span>`;
+    return AVATARS.has(slug)?`<img class="ranking-avatar" src="avatars/${slug}.jpg?v=1" alt="" style="--ring:${p.color}">`:`<span class="ranking-avatar ranking-avatar-empty" style="--ring:${p.color}">${escape(p.name.slice(0,1).toUpperCase())}</span>`;
   }
   function renderLeaderboard(scores) {
     const records=PLAYERS.map(p=>({...p,...stats(scores.filter(s=>s.player===p.id))})).sort((a,b)=>(b.best??-1)-(a.best??-1)||a.id-b.id);
     let rank=0,previous=null;
     $('leaderboard').innerHTML=records.map((p,index)=>{
       if(p.best!==previous||index===0)rank=index+1;previous=p.best;
-      return `<div class="ranking-row ${rank===1&&p.best!==null?'leader':''}"><span class="rank-number">${p.count?String(rank).padStart(2,'0'):'—'}</span><div><div class="ranking-name">${avatar(p)}${escape(p.name)}</div><div class="ranking-sub">${p.count?`${p.count} lancer${p.count>1?'s':''} · moy. ${oneDecimal.format(p.average)} m`:'Le sommet attend'}</div></div><div class="ranking-score">${p.best===null?'—':number.format(p.best)}<small>mètres</small></div></div>`;
+      return `<div class="ranking-row ${rank===1&&p.best!==null?'leader':''}"><span class="rank-number">${p.count?String(rank).padStart(2,'0'):'—'}</span>${avatar(p)}<div><div class="ranking-name"><span class="player-dot" style="background:${p.color}"></span>${escape(p.name)}</div><div class="ranking-sub">${p.count?`${p.count} lancer${p.count>1?'s':''} · moy. ${oneDecimal.format(p.average)} m`:'Le sommet attend'}</div></div><div class="ranking-score">${p.best===null?'—':number.format(p.best)}<small>mètres</small></div></div>`;
     }).join('');
     $('board-period').textContent=bounds().label;
   }
