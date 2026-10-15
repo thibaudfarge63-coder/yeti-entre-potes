@@ -111,12 +111,14 @@
     $('cover-profiles').innerHTML=PLAYERS.map(p=>`<button class="profile-button" data-player="${p.id}" type="button"><span class="player-dot" style="background:${p.color}"></span>${escape(p.name)}</button>`).join('')+add;
     $('round-tag').textContent=activeRound?'Lancer en cours…':modeLabel();
     $('round-tag').classList.toggle('mode-on',playMode.kind!=='free');
+    if(typeof renderModeBanner==='function')renderModeBanner();
     $('restart-game').disabled=!gameLoaded||!!activeRound||loadingGame;
     if(typeof renderSkins==='function')renderSkins();
   }
   async function choosePlayer(id) {
     if(activeRound||loadingGame||privateAccess)return;
-    selectedPlayer=id;playMode={kind:'free'};persist();renderProfiles();renderCompet();$('game-cover').hidden=true;if(typeof renderChat==='function')renderChat();
+    selectedPlayer=id;playMode={kind:'free'};persist();renderProfiles();renderCompet();
+    duels.filter(d=>d.status==='pending'&&d.opponent===id&&!inviteShown.has(d.id)).forEach(queueInvite);$('game-cover').hidden=true;if(typeof renderChat==='function')renderChat();
     renderSkins();
     if(!gameLoaded||loadedSkin!==gameKey(id))await loadGame();else showToast('Tu joues avec '+player(id).name+'.');
   }
@@ -172,7 +174,7 @@
       if(!data||!Array.isArray(data.scores))throw new Error('Historique indisponible.');
       setPlayers(data.players);
       if(Array.isArray(data.duels))setDuels(data.duels);
-      const sig=JSON.stringify([data.players,data.scores.length,data.scores.length?data.scores[data.scores.length-1].id:'']);const same=sig===lastStateSig;lastStateSig=sig;
+      const sig=JSON.stringify([data.players,data.scores.length,data.scores.length?data.scores[data.scores.length-1].id:'',(data.duels||[]).map(d=>d.id+(d.status||''))]);const same=sig===lastStateSig;lastStateSig=sig;
       serverScores=data.scores.map(s=>({...s,player:Number(s.player),score:Number(s.score)})).filter(validScore);
       privateAccess=false;$('access-overlay').hidden=true;if(!connected||!same)setConnection(true);if(!same)render();
       if(selectedPlayer&&!gameLoaded&&!loadingGame){$('game-cover').hidden=true;loadGame();}
@@ -350,16 +352,43 @@
     renderSkins();if(gameLoaded&&loadedSkin!==gameKey(selectedPlayer)){await loadGame();showToast(`${k.emoji||''} ${k.name} est sur la banquise.`);}
   }
   // ---------- Compétitions : battle royale quotidienne + duels ----------
-  let playMode={kind:'free'},duels=[],knownDuels=null,brView='day';
+  let playMode={kind:'free'},duels=[],knownDuels=null,brView='day',competTab='br',duelOpp=null;
   const POINTS=[10,8,6,5,4,3,2,1],DUEL_N=5,DAILY_N=10;
   const avgOf=l=>l.length?l.reduce((a,s)=>a+s.score,0)/l.length:null;
   const dailyOf=(pid,day)=>allScores().filter(s=>s.mode==='daily'&&s.ref===day&&s.player===pid);
   const duelOf=(d,pid)=>allScores().filter(s=>s.mode==='duel'&&s.ref===String(d.id)&&s.player===pid);
+  let duelStatus=new Map(),inviteQueue=[],inviteShown=new Set();
   function setDuels(list){
-    duels=list.map(d=>({...d,id:Number(d.id),challenger:Number(d.challenger),opponent:Number(d.opponent),throws:Number(d.throws)||DUEL_N}));
-    if(knownDuels===null){knownDuels=new Set(duels.map(d=>d.id));return;}
-    for(const d of duels)if(!knownDuels.has(d.id)){knownDuels.add(d.id);if(d.opponent===selectedPlayer)showToast(`⚔️ ${player(d.challenger).name} te défie en duel ! Va dans « Duels 1v1 ».`);}
+    duels=list.map(d=>({...d,id:Number(d.id),challenger:Number(d.challenger),opponent:Number(d.opponent),throws:Number(d.throws)||DUEL_N,status:d.status||'accepted'}));
+    const first=knownDuels===null;if(first)knownDuels=new Set();
+    for(const d of duels){
+      const prev=duelStatus.get(d.id);duelStatus.set(d.id,d.status);
+      if(!knownDuels.has(d.id)){knownDuels.add(d.id);}
+      if(d.status==='pending'&&d.opponent===selectedPlayer&&!inviteShown.has(d.id))queueInvite(d);
+      if(!first&&prev==='pending'&&d.challenger===selectedPlayer){
+        if(d.status==='accepted')showToast(`✅ ${player(d.opponent).name} a accepté ton duel ! Clique sur « Jouer » dans Duels 1v1.`);
+        if(d.status==='refused')showToast(`❌ ${player(d.opponent).name} a refusé ton duel.`);
+      }
+    }
   }
+  function queueInvite(d){inviteShown.add(d.id);inviteQueue.push(d.id);if(inviteQueue.length===1)showInvite();}
+  function showInvite(){
+    const d=duels.find(x=>x.id===inviteQueue[0]);if(!d||d.status!=='pending'||d.opponent!==selectedPlayer){inviteQueue.shift();if(inviteQueue.length)showInvite();else $('duel-invite').hidden=true;return;}
+    const c=player(d.challenger),me=player(d.opponent);
+    $('di-vs').innerHTML=`${avatar(c)}<span>VS</span>${avatar(me)}`;$('di-title').textContent=`${c.name} te défie !`;$('duel-invite').hidden=false;
+  }
+  async function answerDuel(id,accept){
+    if(!selectedPlayer)return;
+    try{await request('/api/duel/answer',{duel:id,player:selectedPlayer,accept});
+      const d=duels.find(x=>x.id===id);if(d)d.status=accept?'accepted':'refused';duelStatus.set(id,d?d.status:'');
+      if(accept){competTab='duel';setMode({kind:'duel',id});showToast(`⚔️ Duel accepté ! Tes 5 prochains lancers comptent.`);if(!gameLoaded)loadGame();}
+      else showToast('Défi refusé.');
+      await refresh();
+    }catch(error){showToast(error.message||'Réponse impossible pour le moment.');}
+    renderCompet();
+  }
+  $('di-yes').addEventListener('click',()=>{const id=inviteQueue.shift();$('duel-invite').hidden=true;if(id)answerDuel(id,true);if(inviteQueue.length)setTimeout(showInvite,400);});
+  $('di-no').addEventListener('click',()=>{const id=inviteQueue.shift();$('duel-invite').hidden=true;if(id)answerDuel(id,false);if(inviteQueue.length)setTimeout(showInvite,400);});
   function dayRanking(day){
     const rows=PLAYERS.map(p=>{const l=dailyOf(p.id,day);return {p,n:l.length,avg:avgOf(l)};}).filter(r=>r.n);
     rows.sort((a,b)=>(b.n>=DAILY_N)-(a.n>=DAILY_N)||b.avg-a.avg);return rows;
@@ -371,7 +400,7 @@
     return [...t.values()].filter(e=>e.sessions).sort((a,b)=>b.pts-a.pts||b.sum/b.sessions-a.sum/a.sessions);
   }
   function duelState(d){
-    const a=duelOf(d,d.challenger),b=duelOf(d,d.opponent),done=a.length>=d.throws&&b.length>=d.throws,aa=avgOf(a),ba=avgOf(b);
+    const a=duelOf(d,d.challenger),b=duelOf(d,d.opponent),done=d.status==='accepted'&&a.length>=d.throws&&b.length>=d.throws,aa=avgOf(a),ba=avgOf(b);
     return {a,b,aa,ba,done,winner:done?(aa>ba?d.challenger:ba>aa?d.opponent:0):null};
   }
   function modeLabel(){
@@ -379,7 +408,20 @@
     if(playMode.kind==='duel'){const d=duels.find(x=>x.id===playMode.id);if(d){const opp=d.challenger===selectedPlayer?d.opponent:d.challenger;return `⚔️ Duel vs ${player(opp).name} ${duelOf(d,selectedPlayer).length}/${d.throws}`;}}
     return 'Partie libre';
   }
-  function setMode(m){if(activeRound||loadingGame)return;playMode=m;renderProfiles();renderCompet();}
+  function renderModeBanner(){
+    const el=$('mode-banner'),chip=$('mode-chip'),me=selectedPlayer,busy=activeRound?'disabled':'';
+    let cls='free',html='',short='';
+    if(playMode.kind==='daily'&&me){const l=dailyOf(me,dayKey(new Date())),a=avgOf(l);cls='daily';
+      html=`<span class="mb-ico">🏟️</span><span class="mb-txt"><b>BATTLE ROYALE</b> · Session du jour <b>${l.length}/${DAILY_N}</b>${a!==null?` · moy. ${oneDecimal.format(a)} m`:''}<small>Tes lancers comptent pour le classement du jour</small></span><button type="button" class="mb-quit" data-mode="free" ${busy}>Mode classique</button>`;
+      short=`🏟️ ${l.length}/${DAILY_N}`;}
+    else if(playMode.kind==='duel'&&me){const d=duels.find(x=>x.id===playMode.id);if(d){const opp=d.challenger===me?d.opponent:d.challenger,l=duelOf(d,me),a=avgOf(l),ol=duelOf(d,opp),oa=avgOf(ol);cls='duel';
+      html=`<span class="mb-ico">⚔️</span><span class="mb-txt"><b>DUEL vs ${escape(player(opp).name)}</b> · <b>${l.length}/${d.throws}</b>${a!==null?` · ta moy. ${oneDecimal.format(a)} m`:''}<small>${ol.length?`${escape(player(opp).name)} : ${ol.length}/${d.throws}${oa!==null?` · ${oneDecimal.format(oa)} m`:''}`:`${escape(player(opp).name)} n’a pas encore joué`}</small></span><button type="button" class="mb-quit" data-mode="free" ${busy}>Mode classique</button>`;
+      short=`⚔️ ${l.length}/${d.throws}`;}}
+    if(!html){cls='free';html=`<span class="mb-ico">🎮</span><span class="mb-txt"><b>MODE CLASSIQUE</b> · partie libre<small>Lance autant que tu veux, tout compte dans les stats</small></span>`;short='🎮 Classique';}
+    el.className='mode-banner mode-'+cls;el.innerHTML=html;chip.className='mode-chip mode-'+cls;chip.textContent=short;chip.hidden=false;
+  }
+  $('mode-banner').addEventListener('click',e=>{const b=e.target.closest('[data-mode]');if(b&&!b.disabled){setMode({kind:'free'});showToast('🎮 Retour au mode classique.');}});
+  function setMode(m){if(activeRound)return;playMode=m;renderProfiles();renderCompet();}
   function afterModeThrow(score){
     if(score.mode==='daily'){const l=dailyOf(score.player,score.ref);
       if(l.length>=DAILY_N){playMode={kind:'free'};const r=dayRanking(score.ref).findIndex(x=>x.p.id===score.player);setTimeout(()=>showToast(`🏟️ Session terminée : ${oneDecimal.format(avgOf(l))} m de moyenne · ${r+1}${r?'e':'er'} du jour pour l’instant`),1500);}}
@@ -396,7 +438,7 @@
     // ma session
     let mine='';
     if(!me)mine='<p class="br-hint">Choisis ton pseudo pour jouer ta session du jour.</p>';
-    else{const l=dailyOf(me,today),busy=activeRound||loadingGame?'disabled':'';
+    else{const l=dailyOf(me,today),busy=activeRound?'disabled':'';
       if(l.length>=DAILY_N)mine=`<p class="br-done">✅ Session du jour terminée : <b>${oneDecimal.format(avgOf(l))} m</b> de moyenne. Reviens demain !</p>`;
       else if(playMode.kind==='daily')mine=`<div class="br-live"><span>🏟️ Session en cours · <b>${l.length}/${DAILY_N}</b>${l.length?` · moy. ${oneDecimal.format(avgOf(l))} m`:''}</span><button type="button" class="br-btn ghost" data-mode="free" ${busy}>Pause</button></div><div class="br-bar"><i style="width:${l.length*10}%"></i></div>`;
       else mine=`<button type="button" class="br-btn" data-mode="daily" ${busy}>${l.length?`▶ Reprendre ma session (${l.length}/${DAILY_N})`:'▶ Lancer ma session du jour · 10 lancers'}</button>`;}
@@ -409,27 +451,39 @@
       html=rows.length?'<div class="br-head"><span></span><span></span><span>Joueur</span><span>Sessions</span><span>Pts</span></div>'+rows.map((e,i)=>rowHTML(String(i+1).padStart(2,'0'),e.p,`<span class="br-n">${e.sessions}${e.wins?` · 🥇${e.wins}`:''}</span><span class="br-avg">${e.pts} pts</span>`,e.p.id===me)).join(''):'<p class="br-empty">Aucune session complète ce mois-ci.</p>';}
     $('br-table').innerHTML=html;
     // duels
-    const sel=$('duel-opponent'),cur=sel.value;
-    sel.innerHTML='<option value="">Choisis un adversaire</option>'+PLAYERS.filter(p=>p.id!==me).map(p=>`<option value="${p.id}">${escape(p.name)}</option>`).join('');
-    if([...sel.options].some(o=>o.value===cur))sel.value=cur;
-    sel.disabled=$('duel-go').disabled=!me;
+    if(duelOpp===me||!PLAYERS.some(p=>p.id===duelOpp))duelOpp=null;
+    $('duel-pick').innerHTML=me?PLAYERS.filter(p=>p.id!==me).map(p=>`<button type="button" class="duel-opp ${duelOpp===p.id?'on':''}" data-opp="${p.id}" role="radio" aria-checked="${duelOpp===p.id}">${avatar(p)}<span>${escape(p.name)}</span></button>`).join(''):'<p class="br-empty">Choisis ton pseudo pour défier quelqu’un.</p>';
+    $('duel-go').disabled=!me||!duelOpp;$('duel-go').textContent=duelOpp?`⚔️ Défier ${player(duelOpp).name}`:'Choisis un adversaire';
+    // onglets
+    document.querySelectorAll('.compet-tab').forEach(t=>{const on=t.dataset.tab===competTab;t.classList.toggle('active',on);t.setAttribute('aria-selected',String(on));});
+    document.querySelectorAll('.compet-panel').forEach(p=>p.hidden=p.dataset.panel!==competTab);
+    const todo=me?duels.filter(d=>((d.challenger===me||d.opponent===me)&&d.status==='accepted'&&duelOf(d,me).length<d.throws)||(d.status==='pending'&&d.opponent===me)).length:0;
+    $('ct-duel-badge').hidden=!todo;$('ct-duel-badge').textContent=todo;
+    const inv=me?duels.filter(d=>d.status==='pending'&&d.opponent===me).length:0;
+    $('ct-duel-sub').textContent=inv?`${inv} défi${inv>1?'s':''} reçu${inv>1?'s':''} !`:todo?`${todo} duel${todo>1?'s':''} à jouer`:'Défie un pote';
+    const myDay=me?dailyOf(me,today).length:0;
+    $('ct-br-sub').textContent=!me?'Session du jour · 10 lancers':myDay>=DAILY_N?'✅ Session du jour faite':myDay?`Session en cours ${myDay}/${DAILY_N}`:'▶ Ta session du jour t’attend';
     const mineD=duels.filter(d=>d.challenger===me||d.opponent===me).sort((a,b)=>b.id-a.id).slice(0,8);
-    const others=duels.filter(d=>d.challenger!==me&&d.opponent!==me).map(d=>({d,st:duelState(d)})).filter(x=>x.st.done).sort((a,b)=>b.d.id-a.d.id).slice(0,4);
+    const others=duels.filter(d=>d.challenger!==me&&d.opponent!==me&&d.status==='accepted').map(d=>({d,st:duelState(d)})).filter(x=>x.st.done).sort((a,b)=>b.d.id-a.d.id).slice(0,4);
     const line=(d,st)=>{const A=player(d.challenger),B=player(d.opponent),fa=st.a.length,fb=st.b.length;
       const sc=(p,l,av,win)=>`<span class="duel-side ${win?'win':''}">${avatar(p)}<span><b>${escape(p.name)}</b><small>${l}/${d.throws}${av!==null?` · ${oneDecimal.format(av)} m`:''}</small></span></span>`;
       let status='';const myN=me?duelOf(d,me).length:0,isMine=d.challenger===me||d.opponent===me;
-      if(st.done)status=st.winner===0?'<span class="duel-st">🤝 Égalité</span>':isMine?(st.winner===me?'<span class="duel-st win">🏆 Gagné</span>':'<span class="duel-st lose">Perdu</span>'):`<span class="duel-st">🏆 ${escape(player(st.winner).name)}</span>`;
-      else if(isMine&&myN<d.throws)status=playMode.kind==='duel'&&playMode.id===d.id?'<span class="duel-st live">En cours…</span>':`<button type="button" class="br-btn small" data-duel="${d.id}" ${activeRound||loadingGame?'disabled':''}>Jouer</button>`;
+      if(d.status==='refused')status='<span class="duel-st lose">❌ Refusé</span>';
+      else if(d.status==='pending')status=d.opponent===me?`<span class="duel-ans"><button type="button" class="br-btn small ghost" data-answer="0" data-id="${d.id}">Refuser</button><button type="button" class="br-btn small" data-answer="1" data-id="${d.id}">Accepter</button></span>`:'<span class="duel-st">⏳ En attente de réponse</span>';
+      else if(st.done)status=st.winner===0?'<span class="duel-st">🤝 Égalité</span>':isMine?(st.winner===me?'<span class="duel-st win">🏆 Gagné</span>':'<span class="duel-st lose">Perdu</span>'):`<span class="duel-st">🏆 ${escape(player(st.winner).name)}</span>`;
+      else if(isMine&&myN<d.throws)status=playMode.kind==='duel'&&playMode.id===d.id?'<span class="duel-st live">En cours…</span>':`<button type="button" class="br-btn small" data-duel="${d.id}" ${activeRound?'disabled':''}>Jouer</button>`;
       else if(isMine)status=`<span class="duel-st">En attente de ${escape(player(d.challenger===me?d.opponent:d.challenger).name)}</span>`;
       return `<div class="duel-row">${sc(A,fa,st.aa,st.winner===d.challenger)}<span class="duel-vs">VS</span>${sc(B,fb,st.ba,st.winner===d.opponent)}${status}</div>`;};
     $('duel-list').innerHTML=(mineD.length?mineD.map(d=>line(d,duelState(d))).join(''):`<p class="br-empty">${me?'Aucun duel pour toi. Défie quelqu’un !':'Choisis ton pseudo pour voir tes duels.'}</p>`)+(others.length?'<p class="duel-sep">Derniers duels du club</p>'+others.map(x=>line(x.d,x.st)).join(''):'');
   }
   $('br-tabs').addEventListener('click',e=>{const b=e.target.closest('[data-br]');if(b){brView=b.dataset.br;renderCompet();}});
   $('br-me').addEventListener('click',e=>{const b=e.target.closest('[data-mode]');if(!b||b.disabled)return;setMode({kind:b.dataset.mode});if(b.dataset.mode==='daily'){showToast('🏟️ Session du jour lancée : tes 10 prochains lancers comptent !');if(!gameLoaded)loadGame();$('game-stage').scrollIntoView({behavior:'smooth',block:'center'});}});
-  $('duel-list').addEventListener('click',e=>{const b=e.target.closest('[data-duel]');if(!b||b.disabled)return;setMode({kind:'duel',id:Number(b.dataset.duel)});showToast('⚔️ Duel lancé : tes 5 prochains lancers comptent !');if(!gameLoaded)loadGame();$('game-stage').scrollIntoView({behavior:'smooth',block:'center'});});
-  $('duel-new').addEventListener('submit',async e=>{e.preventDefault();const opp=Number($('duel-opponent').value);if(!selectedPlayer||!opp)return;$('duel-go').disabled=true;
-    try{const r=await request('/api/duel',{challenger:selectedPlayer,opponent:opp});await refresh();showToast(`⚔️ Défi envoyé à ${player(opp).name} ! Joue tes 5 lancers quand tu veux.`);if(r&&r.id){knownDuels&&knownDuels.add(Number(r.id));}}
-    catch(error){showToast(error.message||'Impossible de créer le duel.');}finally{$('duel-go').disabled=false;renderCompet();}});
+  $('duel-list').addEventListener('click',e=>{const a=e.target.closest('[data-answer]');if(a){answerDuel(Number(a.dataset.id),a.dataset.answer==='1');return;}const b=e.target.closest('[data-duel]');if(!b||b.disabled)return;setMode({kind:'duel',id:Number(b.dataset.duel)});showToast('⚔️ Duel lancé : tes 5 prochains lancers comptent !');if(!gameLoaded)loadGame();$('game-stage').scrollIntoView({behavior:'smooth',block:'center'});});
+  $('duel-new').addEventListener('submit',async e=>{e.preventDefault();const opp=duelOpp;if(!selectedPlayer||!opp)return;$('duel-go').disabled=true;
+    try{const r=await request('/api/duel',{challenger:selectedPlayer,opponent:opp});await refresh();showToast(`⚔️ Défi envoyé à ${player(opp).name}, en attente de sa réponse…`);if(r&&r.id){knownDuels&&knownDuels.add(Number(r.id));}}
+    catch(error){showToast(error.message||'Impossible de créer le duel.');}finally{duelOpp=null;renderCompet();}});
+  $('duel-pick').addEventListener('click',e=>{const b=e.target.closest('[data-opp]');if(!b)return;const id=Number(b.dataset.opp);duelOpp=duelOpp===id?null:id;renderCompet();});
+  document.querySelector('.compet-tabs').addEventListener('click',e=>{const t=e.target.closest('[data-tab]');if(!t)return;competTab=t.dataset.tab;renderCompet();});
   function render() { const scores=filteredScores();renderLeaderboard(scores);renderMetrics(scores);renderTrend(scores);renderHistory(scores);renderTicker();announceNewScores();renderSkins();renderCompet(); }
 
   function onProfileClick(e){if(e.target.closest('[data-add-player]')){openAddPlayer();return;}const button=e.target.closest('[data-player]');if(button)choosePlayer(Number(button.dataset.player));}

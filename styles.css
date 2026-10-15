@@ -343,3 +343,61 @@ body.fs-lock .chat-fab,body.fs-lock .chat-panel:not([hidden]),body.fs-lock .chat
   .round-tag.mode-on{display:block;font-size:11px;font-weight:700;color:var(--green)}}
 .round-tag.mode-on{color:var(--green);font-weight:700}
 .compet{margin:0 0 30px}
+/* Onglets compétitions */
+.compet-tabs{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.compet-tab{position:relative;display:flex;align-items:center;gap:14px;padding:18px 20px;border:2px solid var(--line);border-radius:16px;background:#fff;text-align:left;transition:border-color .15s,background .15s,transform .15s}
+.compet-tab:hover{transform:translateY(-1px);border-color:#bcd0b6}
+.compet-tab.active{border-color:var(--green);background:var(--green);color:#fff}
+.compet-tab .ct-ico{font-size:30px;line-height:1}
+.compet-tab b{display:block;font:600 19px var(--display);letter-spacing:-.4px}
+.compet-tab small{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+.compet-tab.active small{color:#c2d397}
+.ct-badge{position:absolute;top:10px;right:12px;min-width:22px;height:22px;padding:0 6px;border-radius:11px;background:#e30613;color:#fff;font:700 12px/22px var(--font);font-style:normal;text-align:center}
+.compet-grid{grid-template-columns:1fr}
+.compet-panel[hidden]{display:none}
+.duel-pick-label{font-size:12px;color:var(--muted);margin:0 0 8px;width:100%}
+.duel-new{flex-wrap:wrap}
+.duel-pick{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px;width:100%;margin-bottom:10px}
+.duel-opp{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 6px;border:2px solid var(--line);border-radius:12px;background:var(--paper);font-size:12px;font-weight:700}
+.duel-opp .ranking-avatar{width:46px;height:46px;box-shadow:0 0 0 2px var(--ring)}
+.duel-opp .player-dot{width:14px;height:14px}
+.duel-opp:hover{border-color:#c0392b80}
+.duel-opp.on{border-color:#c0392b;background:#fdecea;box-shadow:0 0 0 3px #c0392b22}
+.duel-new button#duel-go{width:100%;padding:13px}
+@media(max-width:600px){.compet-tabs{gap:8px}.compet-tab{flex-direction:column;align-items:flex-start;gap:6px;padding:13px 12px}.compet-tab .ct-ico{font-size:24px}.compet-tab b{font-size:15px}.compet-tab small{font-size:11px}.duel-pick{grid-template-columns:repeat(3,1fr)}.duel-opp .ranking-avatar{width:40px;height:40px}}
+.duel-new .duel-opp{background:var(--paper);color:var(--ink);padding:10px 6px;border-radius:12px;font:700 12px var(--font)}
+.duel-new .duel-opp:hover{background:#fff}
+.duel-new .duel-opp.on{background:#fdecea;color:#8b1a12;border-color:#c0392b}
+/* Bandeau de mode permanent */
+.mode-banner{display:flex;align-items:center;gap:12px;padding:10px 16px;font-size:12px;border-bottom:1px solid var(--line)}
+.mode-banner .mb-ico{font-size:22px;line-height:1}
+.mode-banner .mb-txt{flex:1;min-width:0;line-height:1.35}
+.mode-banner .mb-txt b{font-weight:800;letter-spacing:.3px}
+.mode-banner small{display:block;font-size:11px;opacity:.8}
+.mode-banner .mb-quit{border:1px solid currentColor;background:#ffffff26;color:inherit;border-radius:8px;padding:7px 11px;font:700 11px var(--font);white-space:nowrap}
+.mode-free{background:#f2f6ee;color:var(--green)}
+.mode-daily{background:linear-gradient(90deg,#f08b50,#f2b705);color:#2b1300;border-bottom-color:#e0a040}
+.mode-duel{background:linear-gradient(90deg,#b3121f,#e8361c);color:#fff;border-bottom-color:#8b0f18}
+.mode-daily,.mode-duel{animation:mode-in .3s ease-out}
+@keyframes mode-in{from{opacity:.4}}
+.mode-chip{position:absolute;top:8px;left:8px;z-index:4;padding:5px 10px;border-radius:14px;font:800 11px var(--font);box-shadow:0 2px 8px #0003;pointer-events:none;display:none}
+.mode-chip.mode-free{background:#ffffffd9;color:var(--green)}
+.game-stage.is-fullscreen .mode-chip:not([hidden]){display:block;top:max(10px,env(safe-area-inset-top));left:max(10px,env(safe-area-inset-left))}
+@media(max-width:600px){.mode-banner{padding:9px 12px;gap:9px}.mode-banner .mb-ico{font-size:20px}.mode-banner small{font-size:10.5px}.mode-banner .mb-quit{padding:6px 9px;font-size:10.5px}}
+/* Invitation en duel */
+.duel-invite{position:fixed;inset:0;z-index:68;display:grid;place-items:center;padding:20px;background:#0d1b3366;animation:party-fade .2s ease-out}
+.di-card{background:#fff;border-radius:22px;padding:24px 26px 20px;width:min(360px,100%);text-align:center;box-shadow:0 25px 80px #0006;animation:party-pop .4s cubic-bezier(.2,1.5,.4,1)}
+.di-vs{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:12px}
+.di-vs .ranking-avatar{width:62px;height:62px;box-shadow:0 0 0 3px var(--ring)}
+.di-vs .player-dot{width:20px;height:20px}
+.di-vs span{font:800 16px var(--display);color:#c0392b;letter-spacing:1px}
+.di-eyebrow{font:800 11px var(--display);letter-spacing:1.5px;color:#c0392b;margin:0 0 4px}
+.di-card h2{font:600 26px var(--display);letter-spacing:-.6px;margin:0 0 6px}
+.di-text{font-size:13px;color:var(--muted);margin:0 0 18px}
+.di-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.di-actions button{border:0;border-radius:12px;padding:13px;font:700 14px var(--font)}
+.di-no{background:#eef1ec;color:var(--ink)}
+.di-yes{background:#1f7a3a;color:#fff}
+.duel-ans{display:flex;gap:6px;margin-left:auto}
+.duel-ans .br-btn.small{margin-left:0}
+@media(max-width:600px){.duel-ans{width:100%}.duel-ans .br-btn{flex:1}}
