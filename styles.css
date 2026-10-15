@@ -342,3 +342,4 @@ body.fs-lock .chat-fab,body.fs-lock .chat-panel:not([hidden]),body.fs-lock .chat
 @media(max-width:600px){.chat-fab{bottom:calc(14px + env(safe-area-inset-bottom))}.chat-peek{bottom:calc(22px + env(safe-area-inset-bottom))}.chat-panel{padding-bottom:env(safe-area-inset-bottom)}
   .round-tag.mode-on{display:block;font-size:11px;font-weight:700;color:var(--green)}}
 .round-tag.mode-on{color:var(--green);font-weight:700}
+.compet{margin:0 0 30px}

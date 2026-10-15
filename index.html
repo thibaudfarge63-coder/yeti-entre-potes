@@ -8,11 +8,11 @@
   <link rel="stylesheet" href="styles.css">
   <script>window.RufflePlayer = window.RufflePlayer || {}; window.RufflePlayer.config = {autoplay:"on",unmuteOverlay:"visible",backgroundColor:"#c9e8f7",contextMenu:"off",warnOnUnsupportedContent:false};</script>
   <script src="ruffle/ruffle.js" defer></script>
-  <script src="config.js?v=20261015-34" defer></script>
-  <script src="data-client.js?v=20261015-34" defer></script>
-  <script src="costumes.js?v=20261015-34" defer></script>
-  <script src="skins.js?v=20261015-34" defer></script>
-  <script src="app.js?v=20261015-34" defer></script>
+  <script src="config.js?v=20261015-35" defer></script>
+  <script src="data-client.js?v=20261015-35" defer></script>
+  <script src="costumes.js?v=20261015-35" defer></script>
+  <script src="skins.js?v=20261015-35" defer></script>
+  <script src="app.js?v=20261015-35" defer></script>
 </head>
 <body>
   <div class="page-shell">
@@ -26,6 +26,16 @@
     <main>
       <section class="news-ticker" aria-label="Les actus du club"><div class="ticker-label"><span class="ticker-live">EN DIRECT</span><span class="ticker-channel">YÉTI INFO</span></div><div class="ticker-viewport"><div class="ticker-track" id="ticker-track"><span class="ticker-item">Les scores arrivent…</span></div></div></section>
       <div class="crack-alert" id="crack-alert" hidden role="alert"><span class="warn-sign" aria-hidden="true">!</span><div><strong>ATTENTION GROS CRACK</strong><span id="crack-alert-text"></span></div><span class="warn-sign" aria-hidden="true">!</span></div>
+<section class="compet" id="compet" aria-labelledby="compet-title">
+        <div class="compet-heading"><div><p class="eyebrow">LES COMPÉTITIONS</p><h2 id="compet-title">Battle royale &amp; duels.</h2></div><p class="compet-rules">Une session officielle par jour : 10 lancers, ta moyenne fait foi. Chaque jour rapporte des points selon ton rang (10, 8, 6, 5, 4, 3, 2, 1) pour le classement du mois.</p></div>
+        <div class="compet-grid">
+          <article class="br-card"><div class="card-title"><div><h3>🏟️ Battle royale</h3><p id="br-date"></p></div><div class="br-tabs" id="br-tabs"><button type="button" data-br="day" class="active">Aujourd’hui</button><button type="button" data-br="month">Ce mois-ci</button></div></div>
+            <div class="br-me" id="br-me"></div><div class="br-table" id="br-table"></div></article>
+          <article class="duel-card"><div class="card-title"><div><h3>⚔️ Duels 1v1</h3><p>5 lancers chacun, la meilleure moyenne gagne.</p></div></div>
+            <form class="duel-new" id="duel-new"><select id="duel-opponent" aria-label="Adversaire"></select><button type="submit" id="duel-go">Défier</button></form>
+            <div class="duel-list" id="duel-list"></div></article>
+        </div>
+      </section>
       <section class="play-layout" aria-label="Le jeu et le classement">
         <div class="game-column">
           <div class="section-top"><h2><span class="live-dot"></span> À toi de jouer</h2><span class="original-badge">YETISPORTS · SEAL BOUNCE</span></div>
@@ -45,16 +55,6 @@
         <aside class="leaderboard-card" aria-labelledby="leaderboard-title"><div class="board-heading"><span class="eyebrow">LES HOSTILITÉS</span><span class="tiny-symbol" aria-hidden="true">↗</span><h2 id="leaderboard-title">Hall of Fame.</h2><p>Le meilleur lancer fait la différence.</p></div><div class="board-period" id="board-period">Depuis le début</div><div id="leaderboard" class="leaderboard"></div><div class="board-bottom"><span aria-hidden="true">✦</span><p>Les scores identiques comptent comme des parties distinctes. Les records ex æquo partagent le même rang.</p></div></aside>
       </section>
 
-      <section class="compet" id="compet" aria-labelledby="compet-title">
-        <div class="compet-heading"><div><p class="eyebrow">LES COMPÉTITIONS</p><h2 id="compet-title">Battle royale &amp; duels.</h2></div><p class="compet-rules">Une session officielle par jour : 10 lancers, ta moyenne fait foi. Chaque jour rapporte des points selon ton rang (10, 8, 6, 5, 4, 3, 2, 1) pour le classement du mois.</p></div>
-        <div class="compet-grid">
-          <article class="br-card"><div class="card-title"><div><h3>🏟️ Battle royale</h3><p id="br-date"></p></div><div class="br-tabs" id="br-tabs"><button type="button" data-br="day" class="active">Aujourd’hui</button><button type="button" data-br="month">Ce mois-ci</button></div></div>
-            <div class="br-me" id="br-me"></div><div class="br-table" id="br-table"></div></article>
-          <article class="duel-card"><div class="card-title"><div><h3>⚔️ Duels 1v1</h3><p>5 lancers chacun, la meilleure moyenne gagne.</p></div></div>
-            <form class="duel-new" id="duel-new"><select id="duel-opponent" aria-label="Adversaire"></select><button type="submit" id="duel-go">Défier</button></form>
-            <div class="duel-list" id="duel-list"></div></article>
-        </div>
-      </section>
       <section class="analytics" aria-labelledby="analytics-title">
         <div class="analytics-heading"><div><p class="eyebrow">LES CHIFFRES PARLENT</p><h2 id="analytics-title">Le match, à la loupe.</h2></div><div class="filters"><label class="analysis-player-label"><span class="sr-only">Joueur à analyser</span><select id="analysis-player"><option value="all">Tout le club</option><option value="1">Loïc</option><option value="2">Alexandre</option><option value="3">Thibaud</option></select></label><div class="period-buttons" id="period-buttons" aria-label="Période d’analyse"><button type="button" data-period="day">Jour</button><button type="button" data-period="week">Semaine</button><button type="button" data-period="month">Mois</button><button type="button" data-period="all" class="active" aria-pressed="true">Tout</button></div><label class="date-control" id="date-control" hidden><span class="sr-only">Date de référence</span><input type="date" id="reference-date"></label></div></div>
         <div class="metrics" id="metrics"></div>
