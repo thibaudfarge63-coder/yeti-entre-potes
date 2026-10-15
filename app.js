@@ -278,6 +278,22 @@
     finally{button.disabled=false;}
   });
   $('restart-game').addEventListener('click',loadGame);
+  const isPhone=()=>matchMedia('(pointer:coarse)').matches&&Math.min(screen.width,screen.height)<=820;
+  document.documentElement.classList.toggle('is-phone',isPhone());
+  $('fullscreen-game').hidden=!isPhone();
+  async function enterFullscreen(){
+    const stage=$('game-stage');stage.classList.add('is-fullscreen');document.body.classList.add('fs-lock');$('fs-close').hidden=false;
+    try{if(stage.requestFullscreen)await stage.requestFullscreen({navigationUI:'hide'});else if(stage.webkitRequestFullscreen)stage.webkitRequestFullscreen();}catch(_){}
+    try{await screen.orientation.lock('landscape');}catch(_){}
+  }
+  async function exitFullscreen(){
+    const stage=$('game-stage');stage.classList.remove('is-fullscreen');document.body.classList.remove('fs-lock');$('fs-close').hidden=true;
+    try{screen.orientation.unlock();}catch(_){}
+    try{if(document.fullscreenElement)await document.exitFullscreen();}catch(_){}
+  }
+  $('fullscreen-game').addEventListener('click',enterFullscreen);
+  $('fs-close').addEventListener('click',exitFullscreen);
+  document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&$('game-stage').classList.contains('is-fullscreen'))exitFullscreen();});
   $('share-link').addEventListener('click',async()=>{try{const url=window.YetiData.getInviteUrl();await navigator.clipboard.writeText(url);showToast('Lien privé copié. Partage-le aux potes.');}catch(_){showToast('Ouvre le lien privé du club pour pouvoir le partager.');}});
   $('period-buttons').addEventListener('click',e=>{const button=e.target.closest('[data-period]');if(!button)return;period=button.dataset.period;historyLimit=30;document.querySelectorAll('[data-period]').forEach(b=>{const active=b===button;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));});$('date-control').hidden=period==='all';render();});
   $('reference-date').addEventListener('change',()=>{historyLimit=30;render();});

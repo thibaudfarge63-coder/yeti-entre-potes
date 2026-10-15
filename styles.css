@@ -133,3 +133,21 @@
 .ticker-item .warn-sign{width:16px;height:14px;font-size:9px;padding-top:4px}
 .ticker-sep{font-size:8px;padding:0 14px}
 @media(max-width:600px){.news-ticker{height:32px;margin-bottom:14px}.ticker-item,.ticker-item.shame,.ticker-item.crack{font-size:11px}.ticker-live{font-size:9px;padding:0 8px}}
+/* Jeu sur téléphone */
+.hint-phone,.fs-rotate{display:none}
+.is-phone .hint-desktop{display:none}.is-phone .hint-phone{display:inline}
+.game-actions{display:flex;align-items:center;gap:12px;flex-shrink:0}
+.fs-button{background:var(--green);color:#fff;border:0;border-radius:20px;padding:8px 14px;font-size:12px;font-weight:700;white-space:nowrap}
+.game-stage.is-fullscreen{position:fixed;inset:0;z-index:60;max-height:none;aspect-ratio:auto;width:100vw;height:100vh;height:100dvh;background:#0d1b33;display:flex;align-items:center;justify-content:center}
+.game-stage.is-fullscreen #game-container{width:min(100vw,calc(100dvh*500/308));height:min(100dvh,calc(100vw*308/500))}
+.game-stage.is-fullscreen .game-cover{position:absolute}
+.fs-close{position:absolute;top:max(10px,env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right));z-index:3;width:38px;height:38px;border-radius:50%;border:0;background:#000a;color:#fff;font-size:17px}
+body.fs-lock{overflow:hidden}
+@media(orientation:portrait){.game-stage.is-fullscreen .fs-rotate{display:flex;position:absolute;left:0;right:0;bottom:max(18px,env(safe-area-inset-bottom));z-index:2;flex-direction:column;align-items:center;gap:6px;color:#fff;font:600 14px var(--font);text-align:center;pointer-events:none}.fs-rotate span{font-size:30px;animation:rotate-hint 1.6s ease-in-out infinite}}
+@keyframes rotate-hint{50%{transform:rotate(-90deg)}}
+/* Téléphone tenu en paysage : le jeu prend toute la hauteur */
+@media(orientation:landscape) and (max-height:500px){
+  .is-phone .game-stage:not(.is-fullscreen){aspect-ratio:auto;height:calc(100dvh - 16px);max-height:none}
+  .is-phone .game-stage:not(.is-fullscreen) #game-container{width:min(100%,calc((100dvh - 16px)*500/308));margin:0 auto}
+}
+@media(max-width:600px){.game-footer{flex-wrap:wrap}.game-actions{width:100%;justify-content:space-between}.fs-button{font-size:13px;padding:10px 16px}}

@@ -8,9 +8,9 @@
   <link rel="stylesheet" href="styles.css">
   <script>window.RufflePlayer = window.RufflePlayer || {}; window.RufflePlayer.config = {autoplay:"on",unmuteOverlay:"visible",backgroundColor:"#c9e8f7",contextMenu:"off",warnOnUnsupportedContent:false};</script>
   <script src="ruffle/ruffle.js" defer></script>
-  <script src="config.js?v=20261015-10" defer></script>
-  <script src="data-client.js?v=20261015-10" defer></script>
-  <script src="app.js?v=20261015-10" defer></script>
+  <script src="config.js?v=20261015-11" defer></script>
+  <script src="data-client.js?v=20261015-11" defer></script>
+  <script src="app.js?v=20261015-11" defer></script>
 </head>
 <body>
   <div class="page-shell">
@@ -29,12 +29,12 @@
           <div class="section-top"><h2><span class="live-dot"></span> À toi de jouer</h2><span class="original-badge">YETISPORTS · SEAL BOUNCE</span></div>
           <div class="game-card">
             <div class="player-bar"><span class="player-label">Je joue avec</span><div class="profiles" id="profiles" aria-label="Choisir son joueur"></div><span class="round-tag" id="round-tag">Prêt pour le lancer</span></div>
-            <div class="game-stage" id="game-stage">
+            <div class="game-stage" id="game-stage"><button type="button" class="fs-close" id="fs-close" hidden aria-label="Quitter le plein écran">✕</button><div class="fs-rotate" id="fs-rotate" aria-hidden="true"><span>📱↻</span>Tourne ton téléphone pour jouer en grand</div>
               <div id="game-container"></div>
               <div class="game-cover" id="game-cover"><div class="cover-mountain" aria-hidden="true">▲</div><span class="eyebrow">LE SOMMET VOUS ATTEND</span><h2>Choisis ton pseudo.</h2><p>Chaque lancer sera ajouté à ton historique.</p><p class="cover-hint-mobile">Touche ton prénom juste au-dessus ↑</p><div class="cover-profiles" id="cover-profiles"></div></div>
               <div id="game-loading" class="game-loading" hidden><span class="spinner"></span><p>Le Yéti s’échauffe…</p></div>
             </div>
-            <div class="game-footer"><p><span aria-hidden="true">↖</span> Clique dans le jeu pour lancer. Ton score est enregistré automatiquement.</p><button type="button" id="restart-game" class="text-button" disabled>Relancer le jeu <span aria-hidden="true">↻</span></button></div>
+            <div class="game-footer"><p><span aria-hidden="true">↖</span> <span class="hint-desktop">Clique dans le jeu pour lancer.</span><span class="hint-phone">Touche le jeu pour lancer.</span> Ton score est enregistré automatiquement.</p><div class="game-actions"><button type="button" id="fullscreen-game" class="fs-button" hidden>⛶ Plein écran</button><button type="button" id="restart-game" class="text-button" disabled>Relancer le jeu <span aria-hidden="true">↻</span></button></div></div>
           </div>
           <div class="save-strip" role="status" aria-live="polite"><span id="save-icon" aria-hidden="true">✓</span><p id="save-status">Une ligne dans l’historique pour chaque lancer terminé.</p></div>
           <div class="last-result" id="last-result" hidden><div><p class="eyebrow" id="last-result-name">DERNIER LANCER</p><strong id="last-result-score">—</strong><span>mètres</span></div><p id="last-result-detail"></p></div>
