@@ -41,6 +41,35 @@
     genie:   {suit:'#3a8fd9', hood:true, pat:{type:'belt', color:'#f2c230'}, acc:['topknot','gold-earring']},
     cosmic:  {suit:'#1b0f3a', hood:true, pat:{type:'stars', color:'#ffffff', size:6, nebula:'#7b3fd1'}, acc:['halo']},
     poop:    {suit:'#6b4423', hood:true, pat:{type:'belly', color:'#8a5a2e'}, acc:['poop-hat','flies']},
+    bizut:   {suit:'#ffe14d', hood:true, pat:{type:'belly', color:'#fff6b0'}, acc:['beak','ear-tufts:#ffe14d']},
+    ten:     {suit:'#3fa9f5', pat:{type:'belly', color:'#ffffff'}, acc:['cap:#1f6fb2']},
+    nice:    {suit:'#ff69b4', pat:{type:'spots', color:'#ffffff', size:7}, acc:['shades','gold-chain']},
+    clover:  {suit:'#2e8b3d', pat:{type:'belt', color:'#111111'}, acc:['top-hat-green','beard-orange']},
+    pi:      {suit:'#2b3a8c', pat:{type:'stars', color:'#ffffff', size:7}, acc:['big-glasses','mustache']},
+    round:   {suit:'#ff8ac9', pat:{type:'spots', color:'#ffd23f', color2:'#3fa9f5', size:6}, acc:['party-hat']},
+    tiny:    {suit:'#c9e3ff', pat:{type:'belly', color:'#ffffff'}, acc:['propeller']},
+    zero:    {suit:'#8a8a8a', pat:{type:'panel', color:'#5a5a5a'}, acc:['headband:#ff9f1c','mustache']},
+    almost:  {suit:'#c8ced6', metal:true, acc:['medal']},
+    bipolar: {suit:'#ffffff', pat:{type:'split', color:'#111111'}, acc:['halo','horns:#c0262d']},
+    stairs:  {suit:'#3fa9f5', pat:{type:'hstripes', colors:['#1f6fb2','#3fa9f5','#7cc4ff','#b9dcff'], period:4}, acc:['top-hat']},
+    crash:   {suit:'#8b1a1a', pat:{type:'gradient', colors:['#2a0a0a','#8b1a1a','#ff5a5a']}, acc:['flies']},
+    copycat: {suit:'#6a5acd', pat:{type:'split', color:'#ff9f1c'}, acc:['big-glasses']},
+    steady:  {suit:'#444b55', pat:{type:'panel', color:'#2b3038'}, acc:['headband:#4cd964']},
+    cold:    {suit:'#bfe6ff', hood:true, pat:{type:'belly', color:'#ffffff'}, acc:['ears-round:#bfe6ff','icicles']},
+    centurion:{suit:'#b5121b', pat:{type:'belt', color:'#f2c230'}, acc:['mohawk','cape']},
+    lazy:    {suit:'#8a7a5a', hood:true, pat:{type:'belly', color:'#c9b98f'}, acc:['ears-round:#6a5a3a','sleep-cap']},
+    early:   {suit:'#ffffff', pat:{type:'hstripes', colors:['#7cc4ff','#ffffff'], period:4}, acc:['sleep-cap']},
+    lunch:   {suit:'#f4f4f4', pat:{type:'tux', color:'#ffffff', tie:'#c0392b'}, acc:['chef-hat','mustache']},
+    office:  {suit:'#3b4a5c', pat:{type:'tux', color:'#ffffff', tie:'#1f6fb2'}, acc:['big-glasses']},
+    sunday:  {suit:'#1aa6a6', pat:{type:'spots', color:'#ff8ac9', color2:'#ffe14d', size:7}, acc:['shades']},
+    party:   {suit:'#9b59b6', metal:true, pat:{type:'spots', color:'#ffffff', size:5}, acc:['shades','gold-chain']},
+    addict:  {suit:'#e8361c', pat:{type:'hstripes', colors:['#e8361c','#ffffff'], period:5}, acc:['headband:#ffffff']},
+    glory:   {suit:'#ff9f1c', metal:true, gold:true, pat:{type:'stars', color:'#fff6c2', size:7}, acc:['halo','cape']},
+    untouch: {suit:'#0d3d1f', hood:true, pat:{type:'belly', color:'#f2d24b', ribbed:true}, acc:['horns:#f5c518','cape']},
+    phoenix: {suit:'#e8361c', pat:{type:'gradient', colors:['#ffe14d','#ff8a1c','#b3121f']}, acc:['flames','cape']},
+    oracle:  {suit:'#1e3a8a', hood:true, pat:{type:'stars', color:'#7cc4ff', size:7}, acc:['third-eye','gold-earring']},
+    fish:    {suit:'#8ab4c9', hood:true, pat:{type:'belly', color:'#e6f2f7'}, acc:['fin','flies']},
+    frozen:  {suit:'#9fd8ff', hood:true, pat:{type:'belly', color:'#e6f6ff'}, acc:['icicles']},
     imany:   {suit:'#7b3fa0', pat:{type:'jeans', color:'#3d5f94', seam:'#c9a24a'}, photo:'skins/imany.png', acc:['blouse-collar']},
     snail:   {suit:'#c9a66b', pat:{type:'belly', color:'#e8d3a8'}, acc:['eyestalks','shell']},
   };
@@ -131,6 +160,7 @@
         if (Math.abs(x - g.cx) < 0.35 * g.s) return c.map(v => v * 0.78);             // entrejambe
         return c;
       }
+      case 'split': return x < g.cx ? hex(p.color) : base;
       case 'belt': return (y > g.hip - 3 * g.s && y < g.hip) ? hex(p.color) : base;
     }
     return base;
@@ -157,6 +187,17 @@
         break;
       }
       case 'blouse-collar': for (const sd of [-1, 1]) fill('#9b5cc4', () => { ctx.moveTo(hx, g.neck + 0.5 * u); ctx.lineTo(hx + sd * 5 * u, g.neck - 0.8 * u); ctx.lineTo(hx + sd * 3.6 * u, g.neck + 3.6 * u); ctx.closePath(); }); break;
+      case 'cap': fill(col, () => { ctx.ellipse(hx, ht + 2.2 * u, 6.5 * u, 4.5 * u, 0, Math.PI, 0); }); fill(col, () => ctx.ellipse(hx + 5 * u, ht + 2.4 * u, 5 * u, 1.4 * u, 0, 0, Math.PI * 2)); break;
+      case 'top-hat-green': fill('#1f6b2a', () => { ctx.rect(hx - 4 * u, ht - 8 * u, 8 * u, 9 * u); ctx.ellipse(hx, ht + 1 * u, 7 * u, 1.6 * u, 0, 0, Math.PI * 2); }); fill('#111', () => ctx.rect(hx - 4 * u, ht - 1.8 * u, 8 * u, 1.5 * u)); fill('#f2c230', () => ctx.rect(hx - 1 * u, ht - 2 * u, 2 * u, 1.9 * u)); break;
+      case 'beard-orange': fill('#e8681c', () => { ctx.moveTo(hx - 4.5 * u, ht + 10 * u); ctx.quadraticCurveTo(hx, ht + 19 * u, hx + 4.5 * u, ht + 10 * u); ctx.closePath(); }); break;
+      case 'mustache': fill('#2b1a0c', () => { ctx.ellipse(hx - 1.8 * u, ht + 11 * u, 2 * u, 0.9 * u, -0.25, 0, Math.PI * 2); ctx.ellipse(hx + 1.8 * u, ht + 11 * u, 2 * u, 0.9 * u, 0.25, 0, Math.PI * 2); }); break;
+      case 'party-hat': fill('#3fa9f5', () => { ctx.moveTo(hx - 4 * u, ht + 1.5 * u); ctx.lineTo(hx, ht - 9 * u); ctx.lineTo(hx + 4 * u, ht + 1.5 * u); ctx.closePath(); }); fill('#ffd23f', () => { circle(hx - 1 * u, ht - 2 * u, 0.8 * u); circle(hx + 1.2 * u, ht - 4.5 * u, 0.7 * u); circle(hx, ht - 9.5 * u, 1.3 * u); }); break;
+      case 'medal': stroke('#1f6fb2', 1.2 * u, () => { ctx.moveTo(hx - 3 * u, g.neck); ctx.lineTo(hx, g.neck + 6 * u); ctx.lineTo(hx + 3 * u, g.neck); }); fill('#dfe4ea', () => circle(hx, g.neck + 7.5 * u, 2.4 * u)); fill('#8d96a0', () => circle(hx, g.neck + 7.5 * u, 1.2 * u)); break;
+      case 'mohawk': for (let i = -3; i <= 3; i++) fill('#d4161c', () => { const x = hx + i * 1.2 * u; ctx.moveTo(x - 0.9 * u, ht + 2 * u); ctx.lineTo(x, ht - (6 - Math.abs(i)) * u); ctx.lineTo(x + 0.9 * u, ht + 2 * u); ctx.closePath(); }); break;
+      case 'sleep-cap': fill('#3f5bd9', () => { ctx.moveTo(hx - 5.5 * u, ht + 2.5 * u); ctx.quadraticCurveTo(hx, ht - 6 * u, hx + 9 * u, ht + 4 * u); ctx.lineTo(hx + 5.5 * u, ht + 2.5 * u); ctx.closePath(); }); fill('#fff', () => circle(hx + 9 * u, ht + 4.5 * u, 1.6 * u)); fill('#fff', () => ctx.rect(hx - 5.5 * u, ht + 1.6 * u, 11 * u, 1.4 * u)); break;
+      case 'chef-hat': fill('#ffffff', () => { circle(hx - 3 * u, ht - 3 * u, 3 * u); circle(hx, ht - 4.5 * u, 3.4 * u); circle(hx + 3 * u, ht - 3 * u, 3 * u); ctx.rect(hx - 4.5 * u, ht - 3 * u, 9 * u, 5 * u); }); stroke('#ddd', 0.5 * u, () => { ctx.moveTo(hx - 4.5 * u, ht + 0.5 * u); ctx.lineTo(hx + 4.5 * u, ht + 0.5 * u); }); break;
+      case 'third-eye': fill('#fff', () => ctx.ellipse(hx, ht + 3.6 * u, 2.2 * u, 1.3 * u, 0, 0, Math.PI * 2)); fill('#1e88e5', () => circle(hx, ht + 3.6 * u, 1 * u)); fill('#111', () => circle(hx, ht + 3.6 * u, 0.45 * u)); break;
+      case 'icicles': for (let i = -3; i <= 3; i++) fill('rgba(220,245,255,.95)', () => { const x = hx + i * 1.7 * u; ctx.moveTo(x - 0.8 * u, ht + 1 * u); ctx.lineTo(x, ht + (3.5 + (i % 2 ? 1.5 : 0)) * u); ctx.lineTo(x + 0.8 * u, ht + 1 * u); ctx.closePath(); }); break;
       case 'snout': fill('#ff8fab', () => ctx.ellipse(hx, ht + 11.5 * u, 3 * u, 2.1 * u, 0, 0, Math.PI * 2)); fill('#b0485f', () => { circle(hx - 1.1 * u, ht + 11.5 * u, 0.6 * u); circle(hx + 1.1 * u, ht + 11.5 * u, 0.6 * u); }); break;
       case 'frog-eyes': for (const sd of [-1, 1]) { fill(cos.suit, () => circle(hx + sd * 4 * u, ht + 0.5 * u, 3.4 * u)); fill('#fff', () => circle(hx + sd * 4 * u, ht + 0.3 * u, 2.4 * u)); fill('#111', () => circle(hx + sd * 4.3 * u, ht + 0.5 * u, 1.2 * u)); } break;
       case 'eye-patches': for (const sd of [-1, 1]) fill('rgba(20,20,20,.9)', () => ctx.ellipse(hx + sd * 2.6 * u, ht + 7.6 * u, 2.4 * u, 1.9 * u, sd * 0.5, 0, Math.PI * 2)); break;
@@ -297,6 +338,23 @@
         const ox = (Math.floor(y / sz) % 2) * sz / 2; ctx.beginPath(); ctx.moveTo(x + ox, y - sz / 2); ctx.lineTo(x + ox + sz / 2, y); ctx.lineTo(x + ox, y + sz / 2); ctx.lineTo(x + ox - sz / 2, y); ctx.closePath(); ctx.stroke();
         ctx.fillStyle = '#1aa6a6'; ctx.beginPath(); ctx.arc(x + ox, y, 2.2, 0, 7); ctx.fill();
       }
+    },
+    glory: (ctx, w, h) => { // coucher de soleil doré
+      const g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#ff5a1f'); g.addColorStop(0.5, '#ffb43a'); g.addColorStop(1, '#ffe68a'); ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+      ctx.fillStyle = 'rgba(255,255,255,.22)'; for (let i = 0; i < 9; i++) { ctx.beginPath(); ctx.moveTo(w / 2, h * 0.35); ctx.lineTo(-40 + i * 25, -10); ctx.lineTo(-28 + i * 25, -10); ctx.closePath(); ctx.fill(); }
+      ctx.fillStyle = '#fff3b0'; ctx.beginPath(); ctx.arc(w / 2, h * 0.35, 16, 0, 7); ctx.fill();
+    },
+    untouch: (ctx, w, h) => { // écailles de dragon
+      ctx.fillStyle = '#0b2e17'; ctx.fillRect(0, 0, w, h);
+      for (let y = 0; y < h + 12; y += 10) for (let x = -12; x < w + 12; x += 14) { const ox = (y / 10) % 2 ? 7 : 0, g = ctx.createRadialGradient(x + ox, y, 1, x + ox, y, 9); g.addColorStop(0, '#5fd47a'); g.addColorStop(1, '#0f4a22'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x + ox, y, 8, 0, Math.PI); ctx.fill(); }
+    },
+    phoenix: (ctx, w, h) => { // plumes de feu
+      ctx.fillStyle = '#3a0a00'; ctx.fillRect(0, 0, w, h);
+      for (let i = 0; i < 26; i++) { const x = hash(i, 61) * w, y = hash(i, 62) * h, g = ctx.createLinearGradient(x, y + 30, x, y - 20); g.addColorStop(0, '#b3121f'); g.addColorStop(0.5, '#ff8a1c'); g.addColorStop(1, '#ffe14d'); ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(x, y, 7, 26, (hash(i, 63) - 0.5) * 0.8, 0, 7); ctx.fill(); }
+    },
+    oracle: (ctx, w, h) => { // mosaïque d'yeux
+      ctx.fillStyle = '#10204f'; ctx.fillRect(0, 0, w, h);
+      for (let y = 12; y < h; y += 26) for (let x = 12 + ((y / 26) % 2) * 13; x < w; x += 26) { ctx.fillStyle = '#1e3a8a'; ctx.beginPath(); ctx.arc(x, y, 11, 0, 7); ctx.fill(); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.ellipse(x, y, 8, 4.5, 0, 0, 7); ctx.fill(); ctx.fillStyle = '#1e88e5'; ctx.beginPath(); ctx.arc(x, y, 3.2, 0, 7); ctx.fill(); ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(x, y, 1.4, 0, 7); ctx.fill(); }
     },
     cosmic: (ctx, w, h) => { // galaxie
       const g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#0b0626'); g.addColorStop(0.5, '#2a1260'); g.addColorStop(1, '#120838');

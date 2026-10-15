@@ -9,6 +9,12 @@
   const streak = (list, n, ok) => { let run = 0; for (const s of list) { run = ok(s.score) ? run + 1 : 0; if (run >= n) return true; } return false; };
   const count = (list, ok) => list.filter(s => ok(s.score)).length;
   const last = (list, n, ok) => list.length >= n && list.slice(-n).every(s => ok(s.score));
+  const parisDay = d => new Intl.DateTimeFormat('en-CA', {timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit'}).format(new Date(d));
+  const parisWeekday = d => new Intl.DateTimeFormat('en-US', {timeZone: 'Europe/Paris', weekday: 'short'}).format(new Date(d));
+  const fl = s => Math.floor(s.score);
+  const pairs = (l, ok) => l.some((s, i) => i && ok(l[i - 1], s));
+  const run = (l, n, ok) => { let r = 1; for (let i = 1; i < l.length; i++) { r = ok(l[i - 1], l[i]) ? r + 1 : 1; if (r >= n) return true; } return false; };
+  const perDay = l => { const m = {}; for (const s of l) (m[parisDay(s.played_at)] ||= []).push(s); return Object.values(m); };
   const SKINS = [
     {id:'yeti',   kind:'base',   emoji:null, fur:null,                  name:'Le Yéti',          tag:'L’original'},
     // Paliers de record
@@ -42,15 +48,44 @@
     {id:'turtle', kind:'defi', emoji:'🐢', fur:['#1f4a2a','#9ed39b'], name:'Le marathonien', tag:'50 lancers au compteur', test:l => l.length >= 50},
     {id:'fossil', kind:'defi', emoji:'🦖', fur:['#2f3d12','#c8e06a'], name:'Le fossile',     tag:'100 lancers au compteur', test:l => l.length >= 100},
     {id:'boss',   kind:'defi', emoji:'😎', fur:['#101820','#8fa6bd'], name:'Le boss',        tag:'10 lancers ≥ 300 m', test:l => count(l, v => v >= 300) >= 10},
+    {id:'bizut',   kind:'defi', emoji:'🐣', name:'Le bizut',         tag:'Faire son tout premier lancer', test:l => l.length >= 1},
+    {id:'ten',     kind:'defi', emoji:'🔟', name:'La dizaine',       tag:'10 lancers au compteur', test:l => l.length >= 10},
+    {id:'nice',    kind:'defi', emoji:'😏', name:'Nice',             tag:'Faire pile 69 m', test:l => l.some(s => fl(s) === 69)},
+    {id:'clover',  kind:'defi', emoji:'🍀', name:'Le trèfle',        tag:'Faire pile 77 m', test:l => l.some(s => fl(s) === 77)},
+    {id:'pi',      kind:'defi', emoji:'🧮', name:'Le matheux',       tag:'Faire 314 m (comme π)', test:l => l.some(s => fl(s) === 314)},
+    {id:'round',   kind:'defi', emoji:'🎂', name:'Le compte rond',   tag:'Faire pile 100, 200 ou 300 m', test:l => l.some(s => [100, 200, 300].includes(fl(s)))},
+    {id:'tiny',    kind:'defi', emoji:'🤏', name:'Presque rien',     tag:'Un lancer sous 5 m', test:l => l.some(s => s.score < 5)},
+    {id:'zero',    kind:'defi', emoji:'🧱', name:'Le mur',           tag:'Un lancer à 0 m', test:l => l.some(s => s.score < 1)},
+    {id:'almost',  kind:'defi', emoji:'🥈', name:'Si près',          tag:'Faire entre 399 et 400 m', test:l => l.some(s => s.score >= 399 && s.score < 400)},
+    {id:'bipolar', kind:'defi', emoji:'🎭', name:'Bipolaire',        tag:'≥ 300 m puis < 50 m juste après', test:l => pairs(l, (a, b) => a.score >= 300 && b.score < 50)},
+    {id:'stairs',  kind:'defi', emoji:'🪜', name:'L’escalier',       tag:'4 lancers de suite, chacun meilleur que le précédent', test:l => run(l, 4, (a, b) => b.score > a.score)},
+    {id:'crash',   kind:'defi', emoji:'📉', name:'La dégringolade',  tag:'4 lancers de suite, chacun pire que le précédent', test:l => run(l, 4, (a, b) => b.score < a.score)},
+    {id:'copycat', kind:'defi', emoji:'🪞', name:'Le copieur',       tag:'2 lancers de suite à moins de 1 m d’écart', test:l => pairs(l, (a, b) => Math.abs(a.score - b.score) < 1)},
+    {id:'steady',  kind:'defi', emoji:'📏', name:'Le métronome',     tag:'5 lancers de suite entre 250 et 300 m', test:l => streak(l, 5, v => v >= 250 && v <= 300)},
+    {id:'cold',    kind:'defi', emoji:'🧊', name:'Sang-froid',       tag:'10 lancers de suite sans passer sous 150 m', test:l => streak(l, 10, v => v >= 150)},
+    {id:'centurion',kind:'defi',emoji:'🏛️', name:'Le centurion',     tag:'25 lancers ≥ 250 m', test:l => count(l, v => v >= 250) >= 25},
+    {id:'lazy',    kind:'defi', emoji:'🦥', name:'Le flemmard',      tag:'Moyenne sous 100 m après 10 lancers', test:l => l.length >= 10 && l.reduce((a, s) => a + s.score, 0) / l.length < 100},
+    {id:'early',   kind:'defi', emoji:'🌅', name:'Le lève-tôt',      tag:'Un lancer entre 5 h et 8 h', test:l => l.some(s => { const h = parisHour(s.played_at); return h >= 5 && h < 8; })},
+    {id:'lunch',   kind:'defi', emoji:'🍽️', name:'La pause déj',     tag:'Un lancer entre 12 h et 14 h', test:l => l.some(s => { const h = parisHour(s.played_at); return h >= 12 && h < 14; })},
+    {id:'office',  kind:'defi', emoji:'💼', name:'Au boulot ?',      tag:'10 lancers un jour de semaine entre 9 h et 17 h', test:l => perDay(l).some(d => d.filter(s => { const h = parisHour(s.played_at), w = parisWeekday(s.played_at); return h >= 9 && h < 17 && w !== 'Sat' && w !== 'Sun'; }).length >= 10)},
+    {id:'sunday',  kind:'defi', emoji:'🛋️', name:'Le dimanche',      tag:'Un lancer un dimanche', test:l => l.some(s => parisWeekday(s.played_at) === 'Sun')},
+    {id:'party',   kind:'defi', emoji:'🪩', name:'La soirée',        tag:'Un lancer entre 22 h et minuit un vendredi ou samedi', test:l => l.some(s => { const h = parisHour(s.played_at), w = parisWeekday(s.played_at); return h >= 22 && (w === 'Fri' || w === 'Sat'); })},
+    {id:'addict',  kind:'defi', emoji:'🏃', name:'L’acharné',        tag:'20 lancers le même jour', test:l => perDay(l).some(d => d.length >= 20)},
     // Ultra rares
     {id:'meteor', kind:'ultra', emoji:'☄️', fur:['#3a1600','#ffb066'], name:'Le météore', tag:'1 lancer ≥ 400 m', test:l => count(l, v => v >= 400) >= 1},
     {id:'ninja',  kind:'ultra', emoji:'🥷', fur:['#0a0a0a','#5c5c66'], name:'Le ninja',   tag:'2 lancers ≥ 400 m', test:l => count(l, v => v >= 400) >= 2},
     {id:'vampire',kind:'ultra', emoji:'🧛', fur:['#2a0008','#c2183a'], name:'Le vampire', tag:'3 lancers ≥ 400 m', test:l => count(l, v => v >= 400) >= 3},
     {id:'genie',  kind:'ultra', emoji:'🧞', fur:['#06284f','#5ec8ff'], name:'Le génie',   tag:'5 lancers ≥ 400 m', test:l => count(l, v => v >= 400) >= 5},
     {id:'cosmic', kind:'ultra', emoji:'🌌', fur:['#14063a','#c9a6ff'], name:'Le cosmique',tag:'10 lancers ≥ 400 m', test:l => count(l, v => v >= 400) >= 10},
+    {id:'glory',   kind:'ultra', emoji:'🌞', name:'Le jour de gloire', tag:'3 lancers ≥ 400 m le même jour', test:l => perDay(l).some(d => count(d, v => v >= 400) >= 3)},
+    {id:'untouch', kind:'ultra', emoji:'🐉', name:'L’intouchable',    tag:'5 lancers de suite ≥ 350 m', test:l => streak(l, 5, v => v >= 350)},
+    {id:'phoenix', kind:'ultra', emoji:'🪶', name:'Le phénix',       tag:'< 50 m puis ≥ 400 m juste après', test:l => pairs(l, (a, b) => a.score < 50 && b.score >= 400)},
+    {id:'oracle',  kind:'ultra', emoji:'🧿', name:'L’oracle',         tag:'2 fois de suite le même nombre de mètres (≥ 300 m)', test:l => pairs(l, (a, b) => fl(a) === fl(b) && a.score >= 300)},
     // Malédictions (imposées, priorité dans l'ordre)
     {id:'poop',   kind:'curse', emoji:'💩', fur:['#2e1b0e','#b9844f'], name:'Le caca',    tag:'3 lancers de suite < 50 m', until:'Fais 50 m ou plus pour t’en débarrasser.', test:l => last(l, 3, v => v < 50)},
     {id:'snail',  kind:'curse', emoji:'🐌', fur:['#4a3a1a','#d9c48c'], name:'L’escargot', tag:'5 lancers de suite < 150 m', until:'Fais 150 m ou plus pour t’en débarrasser.', test:l => last(l, 5, v => v < 150)},
+    {id:'fish',    kind:'curse', emoji:'🐟', name:'Le poisson mort', tag:'Dernier lancer sous 10 m', until:'Fais 10 m ou plus pour t’en débarrasser.', test:l => last(l, 1, v => v < 10)},
+    {id:'frozen',  kind:'curse', emoji:'🥶', name:'Le congelé',      tag:'10 lancers de suite sans dépasser 250 m', until:'Dépasse 250 m pour te réchauffer.', test:l => last(l, 10, v => v <= 250)},
     {id:'imany',  kind:'perso', owner:'imany', photo:'skins/imany.png', emoji:'👩', name:'Imany', tag:'Skin perso, réservé à Imany'},
   ];
   // Couleur du pingouin selon le podium du club : [ombres, lumières].
