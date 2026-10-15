@@ -259,3 +259,8 @@ body.fs-lock{overflow:hidden}
 .ranking-row.leader .ranking-avatar{width:40px;height:40px;box-shadow:0 0 0 2px var(--green),0 0 0 4px var(--lime)}
 @media(max-width:600px){.ranking-avatar{width:30px;height:30px}.ranking-row.leader .ranking-avatar{width:34px;height:34px}}
 .ranking-who{display:flex;align-items:center;gap:11px;min-width:0}.ranking-who>div{min-width:0}
+/* Photos du Hall of Fame : même taille et place que l'ancienne pastille */
+.ranking-name{gap:7px}
+.ranking-avatar,.ranking-row.leader .ranking-avatar{width:20px;height:20px;box-shadow:0 0 0 1.5px var(--ring)}
+.ranking-row.leader .ranking-avatar{box-shadow:0 0 0 1.5px var(--lime)}
+@media(max-width:600px){.ranking-avatar,.ranking-row.leader .ranking-avatar{width:18px;height:18px}}

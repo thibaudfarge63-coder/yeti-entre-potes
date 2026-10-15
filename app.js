@@ -206,7 +206,7 @@
     let rank=0,previous=null;
     $('leaderboard').innerHTML=records.map((p,index)=>{
       if(p.best!==previous||index===0)rank=index+1;previous=p.best;
-      return `<div class="ranking-row ${rank===1&&p.best!==null?'leader':''}"><span class="rank-number">${p.count?String(rank).padStart(2,'0'):'—'}</span><div class="ranking-who">${avatar(p)}<div><div class="ranking-name">${escape(p.name)}</div><div class="ranking-sub">${p.count?`${p.count} lancer${p.count>1?'s':''} · moy. ${oneDecimal.format(p.average)} m`:'Le sommet attend'}</div></div></div><div class="ranking-score">${p.best===null?'—':number.format(p.best)}<small>mètres</small></div></div>`;
+      return `<div class="ranking-row ${rank===1&&p.best!==null?'leader':''}"><span class="rank-number">${p.count?String(rank).padStart(2,'0'):'—'}</span><div><div class="ranking-name">${avatar(p)}${escape(p.name)}</div><div class="ranking-sub">${p.count?`${p.count} lancer${p.count>1?'s':''} · moy. ${oneDecimal.format(p.average)} m`:'Le sommet attend'}</div></div><div class="ranking-score">${p.best===null?'—':number.format(p.best)}<small>mètres</small></div></div>`;
     }).join('');
     $('board-period').textContent=bounds().label;
   }
