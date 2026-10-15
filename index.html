@@ -6,20 +6,26 @@
   <meta name="theme-color" content="#eef4ef">
   <title>Yeti rich club</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Yeti rich club">
   <link rel="stylesheet" href="styles.css">
   <script>window.RufflePlayer = window.RufflePlayer || {}; window.RufflePlayer.config = {autoplay:"on",unmuteOverlay:"visible",backgroundColor:"#c9e8f7",contextMenu:"off",warnOnUnsupportedContent:false};</script>
   <script src="ruffle/ruffle.js" defer></script>
-  <script src="config.js?v=20261015-40" defer></script>
-  <script src="data-client.js?v=20261015-40" defer></script>
-  <script src="costumes.js?v=20261015-40" defer></script>
-  <script src="skins.js?v=20261015-40" defer></script>
-  <script src="app.js?v=20261015-40" defer></script>
+  <script src="config.js?v=20261016-41" defer></script>
+  <script src="data-client.js?v=20261016-41" defer></script>
+  <script src="costumes.js?v=20261016-41" defer></script>
+  <script src="skins.js?v=20261016-41" defer></script>
+  <script src="app.js?v=20261016-41" defer></script>
 </head>
 <body>
   <div class="page-shell">
     <header class="masthead">
       <a class="brand" href="./" aria-label="Yeti rich club, accueil"><span class="brand-mark brand-logo" aria-hidden="true"><svg class="yeti-logo" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#1b4e3b"/><g fill="#f4f7ee" stroke="#c9d6c2" stroke-width="1" stroke-linejoin="round"><path d="M11 42l-1 9h3.5l1-2 1 2h3.5l.5-9z"/><path d="M21 43l-.5 8h3.5l1-2 1 2h3.5l.5-8z"/><path d="M8 37c-2-2-2-6 1-8 0-6 6-11 13-12 5-6 15-8 22-4 6 2 9 7 8 13l-4 15-2 2-2-2-2 2-2-2-2 2-2-2-2 2-2-2-2 2-2-2-3 2-2-2-3 2-2-2-3 1z"/><path d="M34 39l-1 12h4l1-2 1 2h4l.5-12z"/><path d="M45 37l-.5 14h4l1-2 1 2h4l.5-13z"/></g><g fill="#f4f7ee" stroke="#c9d6c2" stroke-width="1"><path d="M43 24c0-6 4-10 9-10 6 0 9 5 8 10l-1 7c-1 3-4 5-8 5s-7-2-8-5z"/></g><path fill="#8fc4dc" d="M46 24c0-3 3-5 6-5s6 2 6 5v4c0 3-3 5-6 5s-6-2-6-5z"/><circle cx="49.6" cy="24.2" r="1.4" fill="#163c32"/><circle cx="55" cy="24.2" r="1.4" fill="#163c32"/><path d="M49 29q3 2.2 6.3 0" fill="none" stroke="#163c32" stroke-width="1.3" stroke-linecap="round"/><path fill="#f4c542" stroke="#9a6b00" stroke-width=".8" stroke-linejoin="round" d="M45.5 15.5l1.5-7 3.2 4 2.3-5.5 2.3 5.5 3.2-4 1.5 7z"/><circle cx="52.5" cy="6.6" r="1.1" fill="#e30613"/><path d="M45.8 15.5h12.4" stroke="#9a6b00" stroke-width=".8"/></svg></span><span>YETI <strong>RICH CLUB</strong></span></a>
-      <button type="button" id="share-link" class="text-button">Copier le lien du club ↗</button><div id="connection" class="connection" role="status"><span class="status-dot"></span><span id="connection-text">Connexion au club…</span></div>
+      <div class="app-actions"><button type="button" id="install-app" class="app-button" hidden>📲 Installer l’appli</button><button type="button" id="notif-btn" class="app-button" hidden>🔔 Activer les notifs</button></div><button type="button" id="share-link" class="text-button">Copier le lien du club ↗</button><div id="connection" class="connection" role="status"><span class="status-dot"></span><span id="connection-text">Connexion au club…</span></div>
     </header>
 
     <div class="intro"><div><p class="eyebrow">LES POTES. UN SOMMET.</p><h1>Qui ira le plus <em>haut ?</em></h1><p class="intro-text">Le même jeu, vos records, et quelques comptes à régler.</p></div><div class="club-tag"><span aria-hidden="true">✳</span> <b id="club-names">Loïc · Alexandre · Thibaud</b></div></div>
@@ -72,6 +78,7 @@
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
   <div class="access-overlay" id="pin-overlay" hidden><form id="pin-form" class="access-card" role="dialog" aria-modal="true" aria-labelledby="pin-title"><span class="brand-mark" aria-hidden="true">🔒</span><p class="eyebrow" id="pin-eyebrow">CONNEXION</p><h2 id="pin-title">Mot de passe</h2><p id="pin-text"></p><input id="pin-user" type="text" autocomplete="username" hidden><label for="pin-input">Mot de passe</label><input id="pin-input" type="password" maxlength="64" autocomplete="current-password" required><div id="pin-confirm-wrap" hidden><label for="pin-confirm">Confirme le mot de passe</label><input id="pin-confirm" type="password" maxlength="64" autocomplete="new-password"></div><button class="primary-button" id="pin-submit" type="submit">Entrer →</button><button class="text-button add-player-cancel" id="pin-cancel" type="button">Choisir un autre joueur</button><p id="pin-error" role="alert"></p></form></div>
   <div class="access-overlay" id="ban-overlay" hidden><div class="access-card" role="alertdialog" aria-modal="true" aria-labelledby="ban-title"><span class="brand-mark" aria-hidden="true">⛔</span><p class="eyebrow">VIRÉ PAR L’ADMIN</p><h2 id="ban-title">Pause forcée.</h2><p id="ban-text"></p><button class="primary-button" id="ban-ok" type="button">OK</button></div></div>
+  <div class="access-overlay" id="install-overlay" hidden><div class="access-card install-card" role="dialog" aria-modal="true" aria-labelledby="install-title"><span class="brand-mark brand-logo" aria-hidden="true"><img src="icon-192.png" alt="" width="46" height="46"></span><p class="eyebrow">APPLI YETI RICH CLUB</p><h2 id="install-title">Installe l’appli.</h2><div id="install-steps"></div><button class="primary-button" id="install-close" type="button">OK</button></div></div>
   <div class="access-overlay" id="admin-overlay" hidden><div class="access-card admin-card" role="dialog" aria-modal="true" aria-labelledby="admin-title"><span class="brand-mark" aria-hidden="true">🛡️</span><p class="eyebrow">ADMIN</p><h2 id="admin-title">Virer quelqu’un.</h2><p>Le joueur banni est déconnecté tout de suite : plus de jeu ni de chat pendant la durée choisie.</p><div class="admin-list" id="admin-list"></div><p id="admin-error" role="alert"></p><button class="text-button add-player-cancel" id="admin-close" type="button">Fermer</button></div></div>
   <div class="access-overlay" id="add-player-overlay" hidden><form id="add-player-form" class="access-card" role="dialog" aria-modal="true" aria-labelledby="add-player-title"><span class="brand-mark" aria-hidden="true">+</span><p class="eyebrow">NOUVEAU JOUEUR</p><h2 id="add-player-title">Un pote de plus.</h2><p>Son prénom apparaîtra à côté des autres, avec son propre classement et son historique.</p><label for="new-player-name">Prénom</label><input id="new-player-name" type="text" maxlength="24" autocomplete="off" required><button class="primary-button" id="add-player-submit" type="submit">Ajouter au club →</button><button class="text-button add-player-cancel" id="add-player-cancel" type="button">Annuler</button><p id="add-player-error" role="alert"></p></form></div>
   <div class="chat-peek" id="chat-peek" hidden role="status"></div>

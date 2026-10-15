@@ -145,7 +145,7 @@
     if(activeRound||loadingGame||privateAccess)return;
     if(banLeft(id)){showToast(`⛔ ${player(id).name} est banni jusqu’à ${hhmm(bans[id])}.`);return;}
     if(!trusted&&authed!==id){const ok=await askPassword(id);if(!ok)return;}
-    authed=id;selectedPlayer=id;topPlayer=id;playMode={kind:'free'};persist();renderTop();online.add(id);renderProfiles();renderCompet();pingPresence();
+    authed=id;selectedPlayer=id;topPlayer=id;playMode={kind:'free'};persist();renderTop();if(typeof syncPush==='function')syncPush(false);online.add(id);renderProfiles();renderCompet();pingPresence();
     duels.filter(d=>d.status==='pending'&&d.opponent===id&&!inviteShown.has(d.id)).forEach(queueInvite);$('game-cover').hidden=true;if(typeof renderChat==='function')renderChat();
     renderSkins();
     if(!gameLoaded||loadedSkin!==gameKey(id))await loadGame();else showToast('Tu joues avec '+player(id).name+'.');
@@ -772,6 +772,72 @@
     catch(_){}finally{presenceBusy=false;}
   }
   setInterval(pingPresence,5000);
+  // ---------- Appli installable + notifications push ----------
+  const isStandalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+  const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  const isAndroid=/android/i.test(navigator.userAgent);
+  const pushOK=()=>'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;
+  let swReg=null,installPrompt=null,pushKey='',pushOn=false;
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('sw.js').then(r=>{swReg=r;syncPush(false);}).catch(()=>{});
+    navigator.serviceWorker.addEventListener('message',e=>{if(e.data&&e.data.type==='yeti-open')openFromUrl(e.data.url,false);});
+  }
+  // Notification touchée : ouvre le chat ou le Top 10.
+  function openFromUrl(url,clean){
+    let what='';try{what=new URL(url,location.href).searchParams.get('open')||'';}catch(_){}
+    if(clean&&what){const u=new URL(location.href);u.searchParams.delete('open');history.replaceState(history.state,'',u.pathname+u.search+u.hash);}
+    if(what==='chat')toggleChat(true);
+    if(what==='top'){const c=document.querySelector('.top-card');if(c)c.scrollIntoView({behavior:'smooth',block:'center'});}
+  }
+  window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;renderAppButtons();});
+  window.addEventListener('appinstalled',()=>{installPrompt=null;renderAppButtons();showToast('📲 Appli installée ! Ouvre-la depuis ton écran d’accueil.');});
+  function renderAppButtons(){
+    const inst=$('install-app'),nb=$('notif-btn');
+    inst.hidden=isStandalone()||!(installPrompt||isIOS||isAndroid);
+    const logged=!!authed&&authed===selectedPlayer;
+    if(!logged){nb.hidden=true;return;}
+    if(!pushOK()){nb.hidden=!(isIOS&&!isStandalone());nb.textContent='🔔 Notifs';nb.className='app-button';return;}
+    nb.hidden=false;
+    const perm=Notification.permission;
+    nb.textContent=perm==='denied'?'🔕 Notifs bloquées':pushOn?'🔔 Notifs activées':'🔔 Activer les notifs';
+    nb.className='app-button'+(pushOn?' on':perm==='denied'?' off':'');
+  }
+  function b64u(s){const p='='.repeat((4-s.length%4)%4),b=atob((s+p).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from(b,c=>c.charCodeAt(0));}
+  async function syncPush(ask){
+    try{
+      if(!swReg||!pushOK()||!authed||authed!==selectedPlayer){renderAppButtons();return false;}
+      if(Notification.permission!=='granted'){
+        if(!ask||Notification.permission==='denied'){pushOn=false;renderAppButtons();return false;}
+        const p=await Notification.requestPermission();if(p!=='granted'){pushOn=false;renderAppButtons();return false;}
+      }
+      let sub=await swReg.pushManager.getSubscription();
+      if(!sub)sub=await swReg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(window.YETI_CONFIG.vapidPublicKey)});
+      const s=getSession();if(!s||s.player!==authed){renderAppButtons();return false;}
+      const key=sub.endpoint+'|'+authed;
+      if(key!==pushKey){await request('/api/push',{player:authed,token:s.token,sub:sub.toJSON()});pushKey=key;}
+      pushOn=true;renderAppButtons();return true;
+    }catch(error){if(ask)showToast(error.message||'Impossible d’activer les notifications.');pushOn=false;renderAppButtons();return false;}
+  }
+  function clubCode(){try{const u=new URL(window.YetiData.getInviteUrl());return new URLSearchParams(u.hash.slice(1)).get('club')||'';}catch(_){return '';}}
+  function showInstallHelp(forNotifs){
+    // Sur iPhone, l'appli a sa propre mémoire : on met le code du club dans l'adresse pour que l'appli s'ouvre directement dans le club.
+    const code=clubCode();if(code&&isIOS){const u=new URL(location.href);u.hash=new URLSearchParams({club:code}).toString();history.replaceState(history.state,'',u.href);}
+    const steps=isIOS?`<p>${forNotifs?'Sur iPhone, les notifications marchent seulement dans l’appli installée. ':''}Dans <b>Safari</b> :</p><ol><li>Touche le bouton <b>Partager</b> <span aria-hidden="true">⬆️</span> en bas de l’écran.</li><li>Choisis <b>« Sur l’écran d’accueil »</b>, puis <b>Ajouter</b>.</li><li>Ouvre l’appli <b>Yeti rich club</b> depuis ton écran d’accueil, reconnecte-toi avec ton mot de passe, puis touche <b>🔔 Activer les notifs</b>.</li></ol><p class="hint">iOS 16.4 ou plus récent nécessaire pour les notifications.</p>`
+      :`<ol><li>Ouvre le menu <b>⋮</b> de ton navigateur (Chrome).</li><li>Choisis <b>« Installer l’application »</b> ou <b>« Ajouter à l’écran d’accueil »</b>.</li><li>Ouvre l’appli <b>Yeti rich club</b>, puis touche <b>🔔 Activer les notifs</b>.</li></ol>`;
+    $('install-steps').innerHTML=steps;$('install-overlay').hidden=false;
+  }
+  $('install-close').addEventListener('click',()=>{$('install-overlay').hidden=true;});
+  $('install-app').addEventListener('click',async()=>{
+    if(installPrompt){installPrompt.prompt();try{await installPrompt.userChoice;}catch(_){}installPrompt=null;renderAppButtons();return;}
+    showInstallHelp(false);
+  });
+  $('notif-btn').addEventListener('click',async()=>{
+    if(!pushOK()){showInstallHelp(true);return;}
+    if(Notification.permission==='denied'){showToast('Notifications bloquées : autorise-les dans les réglages du téléphone / du navigateur pour ce site.');return;}
+    if(pushOn){showToast('🔔 Les notifs sont activées : tags dans le chat et entrées dans le top 5 du Hall of Fame.');return;}
+    if(await syncPush(true))showToast('🔔 Notifs activées ! Tu seras prévenu quand on te tague ou quand quelqu’un entre dans le top 5.');
+  });
+  renderAppButtons();
   // ---------- Mot de passe par joueur ----------
   let pinResolve=null;
   function askPassword(id){
@@ -823,7 +889,7 @@
   function showBan(id){$('ban-text').textContent=`${player(id).name} est banni par l’admin jusqu’à ${hhmm(bans[id])}. Pas de jeu ni de chat d’ici là.`;$('ban-overlay').hidden=false;}
   $('ban-ok').addEventListener('click',()=>{$('ban-overlay').hidden=true;});
   function kick(id){
-    activeRound=null;authed=null;selectedPlayer=null;setSession(null);persist();
+    activeRound=null;authed=null;selectedPlayer=null;setSession(null);persist();if(typeof renderAppButtons==='function')renderAppButtons();
     if(gameLoaded){$('game-container').replaceChildren();gameLoaded=false;playerApi=null;loadedSkin=null;}
     $('game-cover').hidden=false;renderProfiles();renderCompet();renderChat();showBan(id);
   }
@@ -853,6 +919,6 @@
   (async()=>{
     const fragment=new URLSearchParams(location.hash.slice(1));const code=fragment.get('club');
     if(code){try{await request('/api/unlock',{code});history.replaceState(null,'',location.pathname+location.search);}catch(error){$('access-error').textContent=error.message||'Le lien privé n’est pas reconnu.';}}
-    await refresh();await ensureAuth();await flushScores();renderChat();loadChat();pingPresence();
+    await refresh();await ensureAuth();await flushScores();renderChat();loadChat();pingPresence();openFromUrl(location.href,true);
   })();
 })();
