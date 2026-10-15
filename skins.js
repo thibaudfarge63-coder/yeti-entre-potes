@@ -22,10 +22,15 @@
     {id:'lion',   kind:'record', min:360, emoji:'🦁', fur:['#5c3d08','#f6cf63'], name:'Le lion',        tag:'Roi de la banquise'},
     {id:'fox',    kind:'record', min:380, emoji:'🦊', fur:['#6e2a00','#ff9a4a'], name:'Le renard',      tag:'Malin comme pas deux'},
     {id:'alien',  kind:'record', min:400, emoji:'👽', fur:['#124a2b','#a9f2c4'], name:'L’alien',        tag:'Gros crack confirmé'},
+    {id:'shark',  kind:'record', min:410, emoji:'🦈', fur:['#0f2a44','#8fc3e8'], name:'Le requin',      tag:'Ça mord fort'},
     {id:'dragon', kind:'record', min:420, emoji:'🐲', fur:['#0d3d1f','#7ee08f'], name:'Le dragon',      tag:'Crache du feu'},
+    {id:'eagle',  kind:'record', min:430, emoji:'🦅', fur:['#2b1a0c','#e9d3a8'], name:'L’aigle',        tag:'Vue d’en haut'},
     {id:'unicorn',kind:'record', min:440, emoji:'🦄', fur:['#5a2a7a','#f6d6ff'], name:'La licorne',     tag:'Ça n’existe pas'},
+    {id:'wizard', kind:'record', min:450, emoji:'🧙', fur:['#1f1a5c','#a9a2ff'], name:'Le sorcier',     tag:'Magie noire'},
     {id:'robot',  kind:'record', min:460, emoji:'🤖', fur:['#26313b','#d3dee8'], name:'Le robot',       tag:'Suspicion de triche'},
+    {id:'devil',  kind:'record', min:470, emoji:'😈', fur:['#3d0a3d','#e07be0'], name:'Le diable',      tag:'Pacte signé'},
     {id:'ogre',   kind:'record', min:480, emoji:'👹', fur:['#5a0b0b','#ff7b6b'], name:'L’ogre',         tag:'Il a faim de mètres'},
+    {id:'skull',  kind:'record', min:490, emoji:'💀', fur:['#1a1a1a','#e8e8e8'], name:'La légende',     tag:'Mort de rire'},
     {id:'prime',  kind:'record', min:500, emoji:'👑', fur:['#4f3300','#ffe98a'], hat:true, name:'PRIME', tag:'Le roi des yétis'},
     // Défis
     {id:'sniper', kind:'defi', emoji:'🎯', fur:['#3a0d12','#ff8a8a'], name:'Le sniper',      tag:'5 lancers de suite ≥ 250 m', test:l => streak(l, 5, v => v >= 250)},
@@ -38,6 +43,7 @@
     {id:'fossil', kind:'defi', emoji:'🦖', fur:['#2f3d12','#c8e06a'], name:'Le fossile',     tag:'100 lancers au compteur', test:l => l.length >= 100},
     {id:'boss',   kind:'defi', emoji:'😎', fur:['#101820','#8fa6bd'], name:'Le boss',        tag:'10 lancers ≥ 300 m', test:l => count(l, v => v >= 300) >= 10},
     // Ultra rares
+    {id:'meteor', kind:'ultra', emoji:'☄️', fur:['#3a1600','#ffb066'], name:'Le météore', tag:'1 lancer ≥ 400 m', test:l => count(l, v => v >= 400) >= 1},
     {id:'ninja',  kind:'ultra', emoji:'🥷', fur:['#0a0a0a','#5c5c66'], name:'Le ninja',   tag:'2 lancers ≥ 400 m', test:l => count(l, v => v >= 400) >= 2},
     {id:'vampire',kind:'ultra', emoji:'🧛', fur:['#2a0008','#c2183a'], name:'Le vampire', tag:'3 lancers ≥ 400 m', test:l => count(l, v => v >= 400) >= 3},
     {id:'genie',  kind:'ultra', emoji:'🧞', fur:['#06284f','#5ec8ff'], name:'Le génie',   tag:'5 lancers ≥ 400 m', test:l => count(l, v => v >= 400) >= 5},
