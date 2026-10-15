@@ -47,11 +47,11 @@
     {id:'snail',  kind:'curse', emoji:'🐌', fur:['#4a3a1a','#d9c48c'], name:'L’escargot', tag:'5 lancers de suite < 150 m', until:'Fais 150 m ou plus pour t’en débarrasser.', test:l => last(l, 5, v => v < 150)},
   ];
   // Couleur du pingouin selon le podium du club : [ombres, lumières].
-  // Pingouin trophée : métal complet (bec et pattes compris), 4 teintes de l'ombre au reflet.
+  // Pingouin trophée : une seule couleur pleine + un contour foncé.
   const PODIUM = {
-    gold:   ['#3b2400','#a8740a','#f2c230','#fffbe0'],
-    silver: ['#22262c','#7d8692','#d3d9e0','#ffffff'],
-    bronze: ['#2a1205','#8a4a1c','#d08a4e','#ffe2c4'],
+    gold:   ['#f5c518','#6b4a00'],
+    silver: ['#c8ced6','#3c434c'],
+    bronze: ['#c8803f','#4a2208'],
   };
   const YETI_IDS = new Set(), PENGUIN_IDS = new Set();
   for (let id = 168; id <= 297; id++) YETI_IDS.add(id);
@@ -147,15 +147,14 @@
   }
 
   function hex(c) { const n = parseInt(c.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; }
-  function tintPenguin(img, stops) {
-    const c = stops.map(hex), out = new ImageData(new Uint8ClampedArray(img.data), img.width, img.height), o = out.data;
-    for (let p = 0; p < o.length; p += 4) {
-      if (!o[p + 3]) continue;
-      let t = (0.299 * o[p] + 0.587 * o[p + 1] + 0.114 * o[p + 2]) / 255;
-      t = 0.42 + 0.58 * Math.min(1, Math.max(0, (t - 0.05) / 0.85)); // le dos noir devient du métal, pas une ombre
-      t = t < 0.5 ? 2 * t * t : 1 - 2 * (1 - t) * (1 - t); // contraste façon métal poli
-      const f = t * 3, i = Math.min(2, Math.floor(f)), u = f - i;
-      for (let k = 0; k < 3; k++) o[p + k] = Math.round(c[i][k] + (c[i + 1][k] - c[i][k]) * u);
+  function tintPenguin(img, [fill, line]) {
+    const f = hex(fill), l = hex(line), {width: w, height: h, data} = img, out = new ImageData(w, h), o = out.data;
+    const solid = (x, y) => x >= 0 && y >= 0 && x < w && y < h && data[(y * w + x) * 4 + 3] > 60;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      if (!solid(x, y)) continue;
+      const edge = !solid(x - 1, y) || !solid(x + 1, y) || !solid(x, y - 1) || !solid(x, y + 1);
+      const c = edge ? l : f, p = (y * w + x) * 4;
+      o[p] = c[0]; o[p + 1] = c[1]; o[p + 2] = c[2]; o[p + 3] = 255;
     }
     return out;
   }
