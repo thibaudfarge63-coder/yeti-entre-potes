@@ -252,7 +252,7 @@
   $('analysis-player').addEventListener('change',e=>{analysisPlayer=e.target.value;render();});
   $('history-player').addEventListener('change',e=>{historyPlayer=e.target.value;historyLimit=30;renderHistory(filteredScores());});
   $('load-more').addEventListener('click',()=>{historyLimit+=30;renderHistory(filteredScores());});
-  $('access-form').addEventListener('submit',async e=>{e.preventDefault();const button=e.target.querySelector('button');button.disabled=true;$('access-error').textContent='';try{await request('/api/unlock',{code:$('club-code').value.trim()});$('club-code').value='';await refresh();await flushScores();}catch(error){$('access-error').textContent=error.message||'Ce code ne permet pas d’entrer.';}finally{button.disabled=false;}});
+  $('access-form').addEventListener('submit',async e=>{e.preventDefault();const button=e.target.querySelector('button');button.disabled=true;$('access-error').textContent='';try{const raw=$('club-code').value.trim(),found=/club=([A-Za-z0-9]+)/.exec(raw);await request('/api/unlock',{code:found?found[1]:raw});$('club-code').value='';await refresh();await flushScores();}catch(error){$('access-error').textContent=error.message||'Ce code ne permet pas d’entrer.';}finally{button.disabled=false;}});
   window.addEventListener('online',async()=>{await flushScores();await refresh();});
   window.addEventListener('offline',()=>setConnection(false,'Hors ligne · scores conservés ici'));
   document.addEventListener('visibilitychange',async()=>{if(!document.hidden){await flushScores();await refresh();}});

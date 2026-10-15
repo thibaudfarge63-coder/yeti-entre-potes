@@ -8,9 +8,9 @@
   <link rel="stylesheet" href="styles.css">
   <script>window.RufflePlayer = window.RufflePlayer || {}; window.RufflePlayer.config = {autoplay:"on",unmuteOverlay:"visible",backgroundColor:"#c9e8f7",contextMenu:"off",warnOnUnsupportedContent:false};</script>
   <script src="ruffle/ruffle.js" defer></script>
-  <script src="config.js?v=20261015-4" defer></script>
-  <script src="data-client.js?v=20261015-4" defer></script>
-  <script src="app.js?v=20261015-4" defer></script>
+  <script src="config.js?v=20261015-5" defer></script>
+  <script src="data-client.js?v=20261015-5" defer></script>
+  <script src="app.js?v=20261015-5" defer></script>
 </head>
 <body>
   <div class="page-shell">
@@ -51,7 +51,7 @@
     </main>
     <footer class="page-footer"><span>LE CLUB DES YÉTIS <strong>JEU ORIGINAL : CHRIS HILGERT</strong></span><p>Un lancer de plus. Juste un.</p></footer>
   </div>
-  <div class="access-overlay" id="access-overlay" hidden><form id="access-form" class="access-card"><span class="brand-mark" aria-hidden="true">Y.</span><p class="eyebrow">ACCÈS AU CLUB</p><h2>Entre potes seulement.</h2><p>Ouvre le lien privé du club ou saisis son code pour retrouver le jeu et vos scores.</p><label for="club-code">Code du club</label><input id="club-code" type="password" autocomplete="off" required><button class="primary-button" type="submit">Entrer dans le club →</button><p id="access-error" role="alert"></p></form></div>
+  <div class="access-overlay" id="access-overlay" hidden><form id="access-form" class="access-card"><span class="brand-mark" aria-hidden="true">Y.</span><p class="eyebrow">ACCÈS AU CLUB</p><h2>Entre potes seulement.</h2><p>Ouvre le lien privé du club ou saisis son code pour retrouver le jeu et vos scores.</p><label for="club-code">Code du club</label><input id="club-code" type="text" placeholder="Colle le code ou le lien du club" autocomplete="off" required><button class="primary-button" type="submit">Entrer dans le club →</button><p id="access-error" role="alert"></p></form></div>
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
   <div class="access-overlay" id="add-player-overlay" hidden><form id="add-player-form" class="access-card" role="dialog" aria-modal="true" aria-labelledby="add-player-title"><span class="brand-mark" aria-hidden="true">+</span><p class="eyebrow">NOUVEAU JOUEUR</p><h2 id="add-player-title">Un pote de plus.</h2><p>Son prénom apparaîtra à côté des autres, avec son propre classement et son historique.</p><label for="new-player-name">Prénom</label><input id="new-player-name" type="text" maxlength="24" autocomplete="off" required><button class="primary-button" id="add-player-submit" type="submit">Ajouter au club →</button><button class="text-button add-player-cancel" id="add-player-cancel" type="button">Annuler</button><p id="add-player-error" role="alert"></p></form></div>
 </body>
