@@ -254,3 +254,8 @@ body.fs-lock{overflow:hidden}
 @keyframes party-fade{from{opacity:0}}
 .party-card strong{color:#2b1a00;display:flex;align-items:center;justify-content:center;gap:12px}.party-card strong .player-dot{width:16px;height:16px;box-shadow:0 0 0 3px #fff}
 .skin-photo{width:34px;height:38px;object-fit:cover;border-radius:50%;box-shadow:0 0 0 2px #fff,0 0 0 3px #7b3fa0}.skin-card.kind-perso{background:#f3eafa;border-color:#c9a6e4}
+.ranking-name{gap:9px}
+.ranking-avatar{width:34px;height:34px;border-radius:50%;object-fit:cover;flex-shrink:0;box-shadow:0 0 0 2px var(--green),0 0 0 4px var(--ring)}
+.ranking-row.leader .ranking-avatar{width:40px;height:40px;box-shadow:0 0 0 2px var(--green),0 0 0 4px var(--lime)}
+@media(max-width:600px){.ranking-avatar{width:30px;height:30px}.ranking-row.leader .ranking-avatar{width:34px;height:34px}}
+.ranking-who{display:flex;align-items:center;gap:11px;min-width:0}.ranking-who>div{min-width:0}
