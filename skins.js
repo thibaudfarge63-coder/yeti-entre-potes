@@ -237,8 +237,14 @@
       const body = src.subarray(pos, pos + len); pos += len;
       const id = (code === 35 || code === 36 || code === 20) ? body[0] | (body[1] << 8) : -1;
       const yeti = (skin.id !== 'yeti' || tint) && YETI_IDS.has(id) && (code === 35 || (code === 36 && body[2] === 5));
+      const wallId = id === 103 && code === 36 && body[2] === 5 && window.YetiCostumes && window.YetiCostumes.hasWall(skin.id);
       const peng = tint && PENGUIN_IDS.has(id) && (code === 35 || (code === 36 && body[2] === 5));
-      if (yeti || peng) {
+      if (wallId) {
+        const img = await decode(code, body), nb = await encodeLossless(id, window.YetiCostumes.wall(img, skin.id) || img);
+        const head = new Uint8Array(6), hv = new DataView(head.buffer);
+        hv.setUint16(0, (36 << 6) | 63, true); hv.setUint32(2, nb.length, true);
+        parts.push(head, nb);
+      } else if (yeti || peng) {
         const img = await decode(code, body);
         const nb = await encodeLossless(id, yeti ? yetiFrame(img, skin, tint) : tintPenguin(img, tint));
         const head = new Uint8Array(6), hv = new DataView(head.buffer);

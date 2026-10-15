@@ -255,9 +255,73 @@
     return ctx.getImageData(0, 0, w, h);
   }
 
+  // ---------- Parois thématiques des ultra rares (image de la paroi de glace, forme et relief conservés) ----------
+  const WALLS = {
+    meteor: (ctx, w, h) => { // roche volcanique et fissures de lave
+      ctx.fillStyle = '#2a1a14'; ctx.fillRect(0, 0, w, h);
+      for (let i = 0; i < 260; i++) { ctx.fillStyle = `rgba(${60 + hash(i, 1) * 50},${30 + hash(i, 2) * 25},${20 + hash(i, 3) * 15},.7)`; ctx.beginPath(); ctx.arc(hash(i, 4) * w, hash(i, 5) * h, 2 + hash(i, 6) * 7, 0, 7); ctx.fill(); }
+      ctx.save(); ctx.shadowColor = '#ff7a1a'; ctx.shadowBlur = 6; ctx.lineCap = 'round';
+      for (let k = 0; k < 7; k++) { let x = hash(k, 9) * w, y = k * h / 7 + hash(k, 8) * 30; ctx.strokeStyle = k % 2 ? '#ff7a1a' : '#ffd04a'; ctx.lineWidth = 1.6 + hash(k, 7) * 1.4; ctx.beginPath(); ctx.moveTo(x, y);
+        for (let j = 0; j < 7; j++) { x += (hash(k, j) - 0.5) * 24; y += 7 + hash(j, k) * 9; ctx.lineTo(Math.max(2, Math.min(w - 2, x)), y); } ctx.stroke(); }
+      ctx.restore();
+    },
+    ninja: (ctx, w, h) => { // bambous
+      ctx.fillStyle = '#1f2a14'; ctx.fillRect(0, 0, w, h);
+      const cw = 15;
+      for (let c = 0; c * cw < w + cw; c++) {
+        const x = c * cw - (c % 2) * 3, g = ctx.createLinearGradient(x, 0, x + cw, 0);
+        g.addColorStop(0, '#3d6b2a'); g.addColorStop(0.45, '#9fd062'); g.addColorStop(1, '#2f5520');
+        ctx.fillStyle = g; ctx.fillRect(x + 1, 0, cw - 2, h);
+        for (let y = (c * 17) % 46; y < h; y += 46) { ctx.fillStyle = '#2a4a1a'; ctx.fillRect(x + 1, y, cw - 2, 3); ctx.fillStyle = '#c4e889'; ctx.fillRect(x + 1, y + 3, cw - 2, 1); }
+      }
+      ctx.fillStyle = '#5aa03a';
+      for (let i = 0; i < 9; i++) { const x = hash(i, 11) * w, y = hash(i, 12) * h; ctx.beginPath(); ctx.ellipse(x, y, 11, 3, -0.6 + hash(i, 13), 0, 7); ctx.fill(); }
+    },
+    vampire: (ctx, w, h) => { // pierres de château gothique
+      ctx.fillStyle = '#141018'; ctx.fillRect(0, 0, w, h);
+      const bh = 15, bw = 30;
+      for (let r = 0; r * bh < h; r++) for (let c = -1; c * bw < w; c++) {
+        const x = c * bw + (r % 2) * (bw / 2), y = r * bh, v = 50 + hash(r, c) * 30;
+        ctx.fillStyle = `rgb(${v},${v - 6},${v + 6})`; ctx.fillRect(x + 1.5, y + 1.5, bw - 3, bh - 3);
+      }
+      ctx.fillStyle = '#8b0000';
+      for (let i = 0; i < 6; i++) { const x = hash(i, 21) * w, y = hash(i, 22) * h * 0.8, l = 14 + hash(i, 23) * 30; ctx.fillRect(x, y, 2, l); ctx.beginPath(); ctx.arc(x + 1, y + l, 2, 0, 7); ctx.fill(); }
+      ctx.fillStyle = '#050307';
+      for (let i = 0; i < 4; i++) { const x = 10 + hash(i, 31) * (w - 20), y = 20 + hash(i, 32) * (h - 60); ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x - 6, y - 6, x - 12, y - 1); ctx.quadraticCurveTo(x - 7, y + 1, x - 4, y + 4); ctx.lineTo(x, y + 2); ctx.lineTo(x + 4, y + 4); ctx.quadraticCurveTo(x + 7, y + 1, x + 12, y - 1); ctx.quadraticCurveTo(x + 6, y - 6, x, y); ctx.fill(); }
+    },
+    genie: (ctx, w, h) => { // palais doré à arabesques
+      const g = ctx.createLinearGradient(0, 0, w, 0); g.addColorStop(0, '#8a6114'); g.addColorStop(0.5, '#e9c25a'); g.addColorStop(1, '#9a6e18');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+      ctx.strokeStyle = '#fff1b0'; ctx.lineWidth = 1.2; const sz = 22;
+      for (let y = -sz; y < h + sz; y += sz) for (let x = -sz; x < w + sz; x += sz) {
+        const ox = (Math.floor(y / sz) % 2) * sz / 2; ctx.beginPath(); ctx.moveTo(x + ox, y - sz / 2); ctx.lineTo(x + ox + sz / 2, y); ctx.lineTo(x + ox, y + sz / 2); ctx.lineTo(x + ox - sz / 2, y); ctx.closePath(); ctx.stroke();
+        ctx.fillStyle = '#1aa6a6'; ctx.beginPath(); ctx.arc(x + ox, y, 2.2, 0, 7); ctx.fill();
+      }
+    },
+    cosmic: (ctx, w, h) => { // galaxie
+      const g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#0b0626'); g.addColorStop(0.5, '#2a1260'); g.addColorStop(1, '#120838');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+      for (const [x, y, r, c] of [[20, 70, 50, '#ff5fd2'], [70, 190, 60, '#4aa8ff'], [30, 300, 45, '#a46bff']]) { const rg = ctx.createRadialGradient(x, y, 0, x, y, r); rg.addColorStop(0, c + 'aa'); rg.addColorStop(1, c + '00'); ctx.fillStyle = rg; ctx.fillRect(0, 0, w, h); }
+      for (let i = 0; i < 140; i++) { ctx.fillStyle = `rgba(255,255,255,${0.4 + hash(i, 41) * 0.6})`; ctx.fillRect(hash(i, 42) * w, hash(i, 43) * h, hash(i, 44) > 0.9 ? 2 : 1, hash(i, 44) > 0.9 ? 2 : 1); }
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 1;
+      for (let i = 0; i < 5; i++) { const x = hash(i, 51) * w, y = hash(i, 52) * h; ctx.beginPath(); ctx.moveTo(x - 4, y); ctx.lineTo(x + 4, y); ctx.moveTo(x, y - 4); ctx.lineTo(x, y + 4); ctx.stroke(); }
+    },
+  };
+  function wall(img, skinId) {
+    const paint = WALLS[skinId]; if (!paint) return null;
+    const {width: w, height: h, data} = img, cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+    const ctx = cv.getContext('2d', {willReadFrequently: true}); paint(ctx, w, h);
+    const tex = ctx.getImageData(0, 0, w, h), o = tex.data;
+    for (let p = 0; p < o.length; p += 4) {
+      const a = data[p + 3]; if (!a) { o[p + 3] = 0; continue; }
+      const lum = (0.299 * data[p] + 0.587 * data[p + 1] + 0.114 * data[p + 2]) / 255, k = 0.55 + 0.7 * lum; // garde le relief de la glace
+      o[p] = Math.min(255, o[p] * k); o[p + 1] = Math.min(255, o[p + 1] * k); o[p + 2] = Math.min(255, o[p + 2] * k); o[p + 3] = a;
+    }
+    return tex;
+  }
   const photos = {};
   const ready = Promise.all(Object.values(C).filter(c => c.photo).map(c => new Promise(res => {
     const im = new Image(); im.onload = im.onerror = () => res(); im.src = c.photo + '?v=1'; photos[c.photo] = im;
   })));
-  window.YetiCostumes = Object.freeze({has: id => !!C[id], dress, ready});
+  window.YetiCostumes = Object.freeze({has: id => !!C[id], dress, ready, wall, hasWall: id => !!WALLS[id]});
 })();
