@@ -115,7 +115,7 @@
     if(activeRound||loadingGame||privateAccess)return;
     selectedPlayer=id;persist();renderProfiles();$('game-cover').hidden=true;
     renderSkins();
-    if(!gameLoaded||loadedSkin!==skinFor(id))await loadGame();else showToast('Tu joues avec '+player(id).name+'.');
+    if(!gameLoaded||loadedSkin!==gameKey(id))await loadGame();else showToast('Tu joues avec '+player(id).name+'.');
   }
   function handleTrace(message) {
     const text=String(message).trim();
@@ -142,10 +142,10 @@
       const ruffle=window.RufflePlayer?.newest();if(!ruffle)throw new Error('Le moteur du jeu n’a pas pu être chargé.');
       $('game-container').replaceChildren();const element=ruffle.createPlayer();$('game-container').appendChild(element);
       playerApi=element.ruffle(1);
-      const skinId=skinFor(selectedPlayer);let data=null;
-      try{data=window.YetiSkins?await window.YetiSkins.build(skinId):null;}catch(_){data=null;showToast('Le skin n’a pas pu être appliqué, jeu d’origine chargé.');}
+      const skinId=skinFor(selectedPlayer),podium=podiumOf(selectedPlayer),key=skinId+'|'+(podium||'');let data=null;
+      try{data=window.YetiSkins?await window.YetiSkins.build(skinId,podium):null;}catch(_){data=null;showToast('Le skin n’a pas pu être appliqué, jeu d’origine chargé.');}
       await playerApi.load({...(data?{data}:{url:'game.swf'}),autoplay:'on',backgroundColor:'#c9e8f7',allowScriptAccess:false,allowNetworking:'none',openUrlMode:'deny',splashScreen:false,contextMenu:'off',warnOnUnsupportedContent:false});
-      playerApi.traceObserver=handleTrace;gameLoaded=true;loadedSkin=skinId;
+      playerApi.traceObserver=handleTrace;gameLoaded=true;loadedSkin=key;
     } catch(error) {
       gameLoaded=false;showToast(error.message||'Le jeu ne démarre pas. Réessaie en rechargeant la page.');$('game-cover').hidden=false;
     } finally { loadingGame=false;$('game-loading').hidden=true;renderProfiles(); }
@@ -257,6 +257,12 @@
   let loadedSkin=null,skinChoices={};
   try{skinChoices=JSON.parse(localStorage.getItem('yeti-skins')||'{}')||{};}catch(_){}
   function bestOf(id){return stats(allScores().filter(s=>s.player===id)).best||0;}
+  function podiumOf(id){
+    if(!id)return null;
+    const bests=PLAYERS.map(p=>({id:p.id,best:stats(allScores().filter(s=>s.player===p.id)).best})).filter(r=>r.best!==null).sort((a,b)=>b.best-a.best);
+    const i=bests.findIndex(r=>r.id===id);return ['gold','silver','bronze'][i]||null;
+  }
+  function gameKey(id){return skinFor(id)+'|'+(podiumOf(id)||'');}
   function skinFor(id){
     if(!window.YetiSkins||!id)return 'yeti';
     const k=window.YetiSkins.byId(skinChoices[id]);return bestOf(id)>=k.min?k.id:'yeti';
@@ -265,7 +271,8 @@
     const box=$('skins');if(!box||!window.YetiSkins)return;
     const best=selectedPlayer?bestOf(selectedPlayer):0,current=skinFor(selectedPlayer),list=window.YetiSkins.list;
     const next=list.find(k=>k.min>best);
-    $('skin-hint').textContent=!selectedPlayer?'Choisis ton pseudo pour voir tes skins.':next?`Record de ${player(selectedPlayer).name} : ${number.format(best)} m · prochain skin à ${next.min} m`:`${player(selectedPlayer).name} a tout débloqué. Respect.`;
+    const pod={gold:' · 🥇 pingouin en or',silver:' · 🥈 pingouin en argent',bronze:' · 🥉 pingouin en bronze'}[podiumOf(selectedPlayer)]||'';
+    $('skin-hint').textContent=!selectedPlayer?'Choisis ton pseudo pour voir tes skins.':(next?`Record de ${player(selectedPlayer).name} : ${number.format(best)} m · prochain skin à ${next.min} m`:`${player(selectedPlayer).name} a tout débloqué. Respect.`)+pod;
     box.innerHTML=list.map(k=>{const open=selectedPlayer&&best>=k.min,active=open&&k.id===current;
       return `<button type="button" class="skin-card ${active?'active':''} ${open?'':'locked'} ${k.id==='prime'?'prime':''}" data-skin="${k.id}" ${open&&!activeRound&&!loadingGame?'':'disabled'} aria-pressed="${active}" title="${escape(k.tag)}"><span class="skin-emoji">${k.emoji||'<span class=\'skin-yeti\'>Y.</span>'}</span><span class="skin-name">${escape(k.name)}</span><span class="skin-min">${open?(active?'Équipé':escape(k.tag)):'🔒 '+k.min+' m'}</span></button>`;}).join('');
   }
@@ -273,7 +280,7 @@
     if(!selectedPlayer||activeRound||loadingGame)return;
     const k=window.YetiSkins.byId(id);if(bestOf(selectedPlayer)<k.min)return;
     skinChoices[selectedPlayer]=id;try{localStorage.setItem('yeti-skins',JSON.stringify(skinChoices));}catch(_){}
-    renderSkins();if(gameLoaded&&loadedSkin!==id){await loadGame();showToast(`${k.emoji||''} ${k.name} est sur la banquise.`);}
+    renderSkins();if(gameLoaded&&loadedSkin!==gameKey(selectedPlayer)){await loadGame();showToast(`${k.emoji||''} ${k.name} est sur la banquise.`);}
   }
   function render() { const scores=filteredScores();renderLeaderboard(scores);renderMetrics(scores);renderTrend(scores);renderHistory(scores);renderTicker();announceNewScores();renderSkins(); }
 

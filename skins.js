@@ -1,29 +1,25 @@
-/* Skins : remplace le yéti du SWF par un emoji et teinte le pingouin, au chargement, dans le navigateur. */
+/* Skins : recolore le yéti du SWF, lui pose une tête emoji et teinte le pingouin selon le podium, au chargement, dans le navigateur. */
 (() => {
   'use strict';
 
   // Échelle calibrée sur les scores du club (médiane ≈ 230 m, 90 % ≈ 300 m, record ≈ 400 m, 500 m quasi inatteignable).
+  // Chaque skin garde le corps animé du yéti (bras, jambes, lancer) : fourrure recolorée + tête emoji.
   const SKINS = [
-    {id:'yeti',    min:0,   emoji:null, name:'Le Yéti',              tag:'L’original'},
-    {id:'snail',   min:50,  emoji:'🐌', name:'L’escargot',           tag:'Ça avance… à peine'},
-    {id:'potato',  min:100, emoji:'🥔', name:'La patate',            tag:'Lancer de tubercule'},
-    {id:'poop',    min:150, emoji:'💩', name:'Le caca',              tag:'Fallait bien commencer'},
-    {id:'chicken', min:200, emoji:'🐔', name:'Le poulet',            tag:'Cot cot, 200 m'},
-    {id:'frog',    min:250, emoji:'🐸', name:'La grenouille',        tag:'Ça saute'},
-    {id:'clown',   min:300, emoji:'🤡', name:'Le clown',             tag:'On rigole moins'},
-    {id:'gorilla', min:330, emoji:'🦍', name:'Le gorille de salle',  tag:'Jamais skip leg day'},
-    {id:'trex',    min:360, emoji:'🦖', name:'Le T-Rex',             tag:'Petits bras, gros lancers'},
-    {id:'alien',   min:400, emoji:'👽', name:'L’alien',              tag:'Gros crack confirmé'},
-    {id:'robot',   min:450, emoji:'🤖', name:'Le robot',             tag:'Suspicion de triche'},
-    {id:'prime',   min:500, emoji:'👑', name:'PRIME',                tag:'Le roi des yétis'},
+    {id:'yeti',    min:0,   emoji:null, fur:null,                  name:'Le Yéti',             tag:'L’original'},
+    {id:'poop',    min:50,  emoji:'💩', fur:['#2e1b0e','#b9844f'], name:'Le caca',             tag:'Fallait bien commencer'},
+    {id:'pig',     min:100, emoji:'🐷', fur:['#6e2f3f','#ffc7d4'], name:'Le cochon',           tag:'Groin groin'},
+    {id:'frog',    min:150, emoji:'🐸', fur:['#173f17','#a6e07c'], name:'La grenouille',       tag:'Ça saute'},
+    {id:'panda',   min:200, emoji:'🐼', fur:['#101010','#f4f4f4'], name:'Le panda',            tag:'Mange, dort, lance'},
+    {id:'monkey',  min:250, emoji:'🐵', fur:['#3b220f','#cf9a6a'], name:'Le singe',            tag:'Retour aux origines'},
+    {id:'clown',   min:300, emoji:'🤡', fur:['#4b1470','#ffc9f0'], name:'Le clown',            tag:'On rigole moins'},
+    {id:'tiger',   min:330, emoji:'🐯', fur:['#6b2f00','#ffb24a'], name:'Le tigre',            tag:'Œil du tigre'},
+    {id:'lion',    min:360, emoji:'🦁', fur:['#5c3d08','#f6cf63'], name:'Le lion',             tag:'Roi de la banquise'},
+    {id:'alien',   min:400, emoji:'👽', fur:['#124a2b','#a9f2c4'], name:'L’alien',             tag:'Gros crack confirmé'},
+    {id:'robot',   min:450, emoji:'🤖', fur:['#26313b','#d3dee8'], name:'Le robot',            tag:'Suspicion de triche'},
+    {id:'prime',   min:500, emoji:'👑', fur:['#4f3300','#ffe98a'], hat:true, name:'PRIME',      tag:'Le roi des yétis'},
   ];
-  // Couleur du pingouin par palier : [ombres, lumières]. Monte jusqu'à l'or au PRIME.
-  const PENGUIN = {
-    yeti:null, snail:null, potato:null,
-    poop:['#4a2f1a','#e8d3bf'], chicken:['#7a3b10','#f3d1b0'], frog:['#1d5a2a','#cdeccf'],
-    clown:['#5a1f6e','#ead2f2'], gorilla:['#5b3a1e','#e6c79f'], trex:['#5d5f66','#e9ebef'],
-    alien:['#6a5a22','#f0e3a8'], robot:['#7c6512','#f7e7a0'], prime:['#4a3000','#fff6c2'],
-  };
+  // Couleur du pingouin selon le podium du club : [ombres, lumières].
+  const PODIUM = {gold:['#4a3000','#fff6c2'], silver:['#3f444c','#f4f6f9'], bronze:['#3d200a','#eab27c']};
   const YETI_IDS = new Set(), PENGUIN_IDS = new Set();
   for (let id = 168; id <= 297; id++) YETI_IDS.add(id);
   for (let id = 106; id <= 132; id++) PENGUIN_IDS.add(id);
@@ -88,29 +84,31 @@
     return body;
   }
 
-  function yetiFrame(img, emoji) {
-    const {width: w, height: h, data} = img;
-    // Boîte englobante du yéti au-dessus de la banquise, pour suivre sa pose.
-    let minX = w, maxX = 0, minY = h, maxY = 0;
-    for (let y = 0; y < FLOE_TOP; y++) for (let x = 0; x < w; x++) if (data[(y * w + x) * 4 + 3] > 60) {
-      if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y;
+  function yetiFrame(img, skin) {
+    const {width: w, height: h, data} = img, [d, l] = skin.fur.map(hex);
+    const out = new ImageData(new Uint8ClampedArray(data), w, h), o = out.data;
+    let minY = h, maxY = 0, minX = w, maxX = 0;
+    for (let y = 0; y < FLOE_TOP + 8; y++) for (let x = 0; x < w; x++) {
+      const p = (y * w + x) * 4; if (o[p + 3] < 20) continue;
+      const r = o[p], g = o[p + 1], b = o[p + 2], lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+      if (y >= FLOE_TOP - 6 && lum > 0.72) continue; // glace de la banquise
+      if (r > 150 && g > 110 && b < 90) continue;     // bec et pattes du pingouin
+      const t = Math.min(1, Math.max(0, (lum - 0.15) / 0.75));
+      for (let k = 0; k < 3; k++) o[p + k] = Math.round(d[k] + (l[k] - d[k]) * t);
+      if (o[p + 3] > 60 && y < FLOE_TOP) { if (y < minY) minY = y; if (y > maxY) maxY = y; if (x < minX) minX = x; if (x > maxX) maxX = x; }
     }
-    // On ne garde que la banquise : tout ce qui est en dessous, plus la glace claire des rangées de transition.
-    const out = new ImageData(w, h);
-    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-      const p = (y * w + x) * 4, r = data[p], g = data[p + 1], b = data[p + 2];
-      const ice = y >= FLOE_TOP + 8 || (y >= FLOE_TOP - 6 && (r + g + b) / 3 > 185);
-      if (ice) { out.data[p] = r; out.data[p + 1] = g; out.data[p + 2] = b; out.data[p + 3] = data[p + 3]; }
-    }
-    const [c, ctx] = canvas(w, h); ctx.putImageData(out, 0, 0);
-    if (minX <= maxX) {
-      const bh = Math.max(40, maxY - minY), size = Math.min(92, bh * 1.05), cx = (minX + maxX) / 2;
-      const lean = ((cx - w / 2) / (w / 2)) * 0.35;
-      ctx.save(); ctx.translate(cx, FLOE_TOP + 4); ctx.rotate(lean);
-      ctx.font = `${Math.round(size)}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
-      ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-      ctx.shadowColor = 'rgba(0,0,0,.25)'; ctx.shadowBlur = 4; ctx.shadowOffsetY = 2;
-      ctx.fillText(emoji, 0, 0); ctx.restore();
+    const [, ctx] = canvas(w, h); ctx.putImageData(out, 0, 0);
+    if (minY < maxY) {
+      // Centre de la tête : moyenne des pixels opaques des premières rangées.
+      let sx = 0, n = 0;
+      for (let y = minY; y < Math.min(maxY, minY + 18); y++) for (let x = 0; x < w; x++) if (data[(y * w + x) * 4 + 3] > 60) { sx += x; n++; }
+      const cx = n ? sx / n : (minX + maxX) / 2, lean = ((cx - (minX + maxX) / 2) / Math.max(10, maxX - minX)) * 0.6;
+      const size = skin.hat ? 26 : 31, cy = skin.hat ? minY - 4 : minY + 14;
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(lean);
+      ctx.font = `${size}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.shadowColor = 'rgba(0,0,0,.3)'; ctx.shadowBlur = 3; ctx.shadowOffsetY = 1;
+      ctx.fillText(skin.emoji, 0, 0); ctx.restore();
     }
     return ctx.getImageData(0, 0, w, h);
   }
@@ -128,9 +126,9 @@
     return out;
   }
 
-  async function patch(skin) {
+  async function patch(skin, tintName) {
     if (!original) original = new Uint8Array(await (await fetch('game.swf?v=1', {cache: 'force-cache'})).arrayBuffer());
-    const src = original, tint = PENGUIN[skin.id];
+    const src = original, tint = PODIUM[tintName] || null;
     if (src[0] !== 0x46) throw new Error('Format de jeu inattendu');
     const nbits = src[8] >> 3, headerEnd = 8 + Math.ceil((5 + 4 * nbits) / 8) + 4;
     const parts = [src.subarray(0, headerEnd)], dv = new DataView(src.buffer, src.byteOffset, src.byteLength);
@@ -144,7 +142,7 @@
       const peng = tint && PENGUIN_IDS.has(id) && (code === 35 || (code === 36 && body[2] === 5));
       if (yeti || peng) {
         const img = await decode(code, body);
-        const nb = await encodeLossless(id, yeti ? yetiFrame(img, skin.emoji) : tintPenguin(img, tint));
+        const nb = await encodeLossless(id, yeti ? yetiFrame(img, skin) : tintPenguin(img, tint));
         const head = new Uint8Array(6), hv = new DataView(head.buffer);
         hv.setUint16(0, (36 << 6) | 63, true); hv.setUint32(2, nb.length, true);
         parts.push(head, nb);
@@ -161,11 +159,12 @@
     list: SKINS,
     unlocked(best) { return SKINS.filter(s => (best || 0) >= s.min); },
     byId(id) { return SKINS.find(s => s.id === id) || SKINS[0]; },
-    async build(id) {
-      const skin = this.byId(id);
-      if (!skin.emoji) return null; // jeu d'origine
-      if (!cache.has(id)) cache.set(id, patch(skin).catch(e => { cache.delete(id); throw e; }));
-      return cache.get(id);
+    async build(id, tintName) {
+      const skin = this.byId(id), tint = PODIUM[tintName] ? tintName : null;
+      if (!skin.emoji && !tint) return null; // jeu d'origine
+      const key = skin.id + '|' + (tint || '');
+      if (!cache.has(key)) cache.set(key, patch(skin, tint).catch(e => { cache.delete(key); throw e; }));
+      return cache.get(key);
     },
   });
 })();
