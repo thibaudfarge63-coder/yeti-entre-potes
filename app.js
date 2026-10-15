@@ -14,6 +14,7 @@
   const validScore = s => s && typeof s.id === 'string' && Number.isInteger(s.player) && s.player>0 && Number.isFinite(s.score) && s.score>=0 && !Number.isNaN(Date.parse(s.played_at));
   let outbox = Array.isArray(saved.outbox) ? saved.outbox.filter(validScore) : [];
   let selectedPlayer = Number.isInteger(saved.player) && saved.player>0 ? saved.player : null;
+  let online = new Set();
   let dailyResults = [], snapshotIds = new Set(), savedSkins = new Map(), totals = new Map();
   let serverScores = [], connected = false, privateAccess = false, activeRound = null, playerApi = null, loadingGame = false;
   let flushing = null, gameLoaded = false, period = 'all', analysisPlayer = 'all', historyPlayer = 'all', historyLimit = 30, toastTimer, lastSaveError = '';
@@ -110,8 +111,10 @@
   function renderProfiles() {
     const busy=activeRound||loadingGame?'disabled':'';
     const add=`<button class="profile-button add-player" data-add-player type="button" ${busy}><span aria-hidden="true">+</span>Add user</button>`;
-    $('profiles').innerHTML=PLAYERS.map(p=>`<button class="profile-button ${selectedPlayer===p.id?'active':''}" data-player="${p.id}" type="button" aria-pressed="${selectedPlayer===p.id}" ${busy}><span class="player-dot" style="background:${p.color}"></span>${escape(p.name)}</button>`).join('')+add;
-    $('cover-profiles').innerHTML=PLAYERS.map(p=>`<button class="profile-button" data-player="${p.id}" type="button"><span class="player-dot" style="background:${p.color}"></span>${escape(p.name)}</button>`).join('')+add;
+    const on=p=>online.has(p.id)?'<span class="online-dot" aria-hidden="true"></span>':'',onTitle=p=>online.has(p.id)?` title="${escape(p.name)} est en ligne"`:'';
+    $('profiles').innerHTML=PLAYERS.map(p=>`<button class="profile-button ${online.has(p.id)?'is-online':''} ${selectedPlayer===p.id?'active':''}" data-player="${p.id}" type="button" aria-pressed="${selectedPlayer===p.id}"${onTitle(p)} ${busy}><span class="player-dot" style="background:${p.color}"></span>${escape(p.name)}${on(p)}</button>`).join('')+add;
+    $('cover-profiles').innerHTML=PLAYERS.map(p=>`<button class="profile-button ${online.has(p.id)?'is-online':''}" data-player="${p.id}" type="button"${onTitle(p)}><span class="player-dot" style="background:${p.color}"></span>${escape(p.name)}${on(p)}</button>`).join('')+add;
+    const label=document.querySelector('.player-label');if(label)label.innerHTML='Je joue avec'+(online.size?` <span class="online-count" title="${escape(PLAYERS.filter(p=>online.has(p.id)).map(p=>p.name).join(', '))}"><i></i>${online.size} en ligne</span>`:'');
     $('round-tag').textContent=activeRound?'Lancer en cours…':modeLabel();
     $('round-tag').classList.toggle('mode-on',playMode.kind!=='free');
     if(typeof renderModeBanner==='function')renderModeBanner();
@@ -120,7 +123,7 @@
   }
   async function choosePlayer(id) {
     if(activeRound||loadingGame||privateAccess)return;
-    selectedPlayer=id;playMode={kind:'free'};persist();renderProfiles();renderCompet();
+    selectedPlayer=id;playMode={kind:'free'};persist();online.add(id);renderProfiles();renderCompet();pingPresence();
     duels.filter(d=>d.status==='pending'&&d.opponent===id&&!inviteShown.has(d.id)).forEach(queueInvite);$('game-cover').hidden=true;if(typeof renderChat==='function')renderChat();
     renderSkins();
     if(!gameLoaded||loadedSkin!==gameKey(id))await loadGame();else showToast('Tu joues avec '+player(id).name+'.');
@@ -645,11 +648,21 @@
     try{const v=await request('/api/version');if(Number(v.chat)>chatLast)await loadChat();}catch(_){}finally{chatTicking=false;}
   },1000);
   setInterval(poll,2000);
+  // Qui est en ligne : chaque page ouverte signale son joueur toutes les 5 s (vu il y a moins de 30 s = en ligne).
+  let presenceBusy=false;
+  async function pingPresence(){
+    if(presenceBusy||document.hidden||privateAccess||!lastStateSig)return;presenceBusy=true;
+    try{const r=await request('/api/presence',{player:selectedPlayer||0});
+      if(r&&Array.isArray(r.online)){const next=new Set(r.online.map(Number));if([...next].join()!==[...online].join()){online=next;renderProfiles();}}}
+    catch(_){}finally{presenceBusy=false;}
+  }
+  setInterval(pingPresence,5000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)pingPresence();});
   setInterval(()=>{if(chatHour()!==chatHourShown)renderChat();},15000);
   renderPlayerOptions();renderProfiles();render();renderSaveStatus();
   (async()=>{
     const fragment=new URLSearchParams(location.hash.slice(1));const code=fragment.get('club');
     if(code){try{await request('/api/unlock',{code});history.replaceState(null,'',location.pathname+location.search);}catch(error){$('access-error').textContent=error.message||'Le lien privé n’est pas reconnu.';}}
-    await refresh();await flushScores();renderChat();loadChat();
+    await refresh();await flushScores();renderChat();loadChat();pingPresence();
   })();
 })();

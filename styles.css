@@ -401,3 +401,10 @@ body.fs-lock .chat-fab,body.fs-lock .chat-panel:not([hidden]),body.fs-lock .chat
 .duel-ans{display:flex;gap:6px;margin-left:auto}
 .duel-ans .br-btn.small{margin-left:0}
 @media(max-width:600px){.duel-ans{width:100%}.duel-ans .br-btn{flex:1}}
+
+/* Qui est en ligne */
+.profile-button{position:relative}
+.online-dot{position:absolute;top:2px;right:2px;width:9px;height:9px;border-radius:50%;background:#2fbf5b;border:2px solid #fff;animation:online-pulse 2s ease-out infinite}
+@keyframes online-pulse{0%{box-shadow:0 0 0 0 #2fbf5b99}70%{box-shadow:0 0 0 6px #2fbf5b00}100%{box-shadow:0 0 0 0 #2fbf5b00}}
+.online-count{display:inline-flex;align-items:center;gap:5px;margin-left:8px;padding:2px 8px;border-radius:20px;background:#e3f6e8;color:#1f7a3f;font-weight:700;font-size:10px}
+.online-count i{width:7px;height:7px;border-radius:50%;background:#2fbf5b;display:inline-block}
