@@ -14,6 +14,7 @@
   const validScore = s => s && typeof s.id === 'string' && Number.isInteger(s.player) && s.player>0 && Number.isFinite(s.score) && s.score>=0 && !Number.isNaN(Date.parse(s.played_at));
   let outbox = Array.isArray(saved.outbox) ? saved.outbox.filter(validScore) : [];
   let selectedPlayer = Number.isInteger(saved.player) && saved.player>0 ? saved.player : null;
+  let dailyResults = [], snapshotIds = new Set(), savedSkins = new Map(), totals = new Map();
   let serverScores = [], connected = false, privateAccess = false, activeRound = null, playerApi = null, loadingGame = false;
   let flushing = null, gameLoaded = false, period = 'all', analysisPlayer = 'all', historyPlayer = 'all', historyLimit = 30, toastTimer, lastSaveError = '';
 
@@ -29,6 +30,8 @@
       const name=String(p&&(p.name??p.display_name??p.pseudo)||'').trim();
       if(!Number.isInteger(id)||id<=0||!name)return null;
       const color=typeof p.color==='string'&&/^#[0-9a-f]{3,8}$/i.test(p.color)?p.color:(DEFAULT_PLAYERS.find(d=>d.id===id)?.color||PALETTE[(id-1)%PALETTE.length]);
+      if(Array.isArray(p.skins))savedSkins.set(id,p.skins.map(String));
+      if(Number.isFinite(Number(p.total)))totals.set(id,Number(p.total));
       return {id,name:name.slice(0,24),color};
     }).filter(Boolean).sort((a,b)=>a.id-b.id);
     if(!parsed.length)return;
@@ -174,8 +177,11 @@
       if(!data||!Array.isArray(data.scores))throw new Error('Historique indisponible.');
       setPlayers(data.players);
       if(Array.isArray(data.duels))setDuels(data.duels);
-      const sig=JSON.stringify([data.players,data.scores.length,data.scores.length?data.scores[data.scores.length-1].id:'',(data.duels||[]).map(d=>d.id+(d.status||''))]);const same=sig===lastStateSig;lastStateSig=sig;
+      if(Array.isArray(data.daily))dailyResults=data.daily.map(r=>({day:String(r.day).slice(0,10),player:Number(r.player),n:Number(r.n)||0,total:Number(r.total)||0}));
+      const sig=JSON.stringify([data.players,data.scores.length,data.scores.length?data.scores[data.scores.length-1].id:'',data.duels||[],data.daily||[]]);const same=sig===lastStateSig;lastStateSig=sig;
       serverScores=data.scores.map(s=>({...s,player:Number(s.player),score:Number(s.score)})).filter(validScore);
+      snapshotIds=new Set(serverScores.map(s=>s.id));
+      saveSkins();
       privateAccess=false;$('access-overlay').hidden=true;if(!connected||!same)setConnection(true);if(!same)render();
       if(selectedPlayer&&!gameLoaded&&!loadingGame){$('game-cover').hidden=true;loadGame();}
       return true;
@@ -193,10 +199,13 @@
         while(outbox.length) {
           const batch=outbox.slice(0,100),result=await request('/api/scores',{scores:batch});
           if(!result||!Array.isArray(result.accepted))throw new Error('Le serveur n’a pas confirmé la sauvegarde.');
-          const accepted=new Set(result.accepted);if(!batch.some(s=>accepted.has(s.id)))throw new Error('Aucun lancer confirmé.');
+          const accepted=new Set(result.accepted),rejected=new Set(Array.isArray(result.rejected)?result.rejected:[]);
+          if(!batch.some(s=>accepted.has(s.id)||rejected.has(s.id)))throw new Error('Aucun lancer confirmé.');
           batch.filter(s=>accepted.has(s.id)).forEach(s=>{if(!serverScores.some(r=>r.id===s.id))serverScores.push(s);});
-          outbox=outbox.filter(s=>!accepted.has(s.id));persist();lastSaveError='';setConnection(true);render();
+          if(rejected.size)showToast(`${rejected.size} lancer${rejected.size>1?'s':''} refusé${rejected.size>1?'s':''} par le serveur (données invalides), supprimé${rejected.size>1?'s':''}.`);
+          outbox=outbox.filter(s=>!accepted.has(s.id)&&!rejected.has(s.id));persist();lastSaveError='';setConnection(true);render();
         }
+        saveSkins();
         return true;
       } catch(error) {
         lastSaveError=error.message||'Enregistrement momentanément indisponible.';
@@ -308,7 +317,24 @@
   let loadedSkin=null,skinChoices={};
   try{skinChoices=JSON.parse(localStorage.getItem('yeti-skins')||'{}')||{};}catch(_){}
   function bestOf(id){return stats(allScores().filter(s=>s.player===id)).best||0;}
-  function skinState(id){return window.YetiSkins&&id?window.YetiSkins.evaluate(allScores().filter(s=>s.player===id),player(id).name):null;}
+  function skinState(id){
+    if(!window.YetiSkins||!id)return null;
+    const mine=allScores().filter(s=>s.player===id),total=(totals.get(id)||0)+mine.filter(s=>!snapshotIds.has(s.id)).length;
+    return window.YetiSkins.evaluate(mine,player(id).name,{total,saved:savedSkins.get(id)||[]});
+  }
+  // Les skins débloqués sont enregistrés sur le serveur : la purge de l'historique ne les fait jamais perdre.
+  const skinsSending=new Set();
+  function saveSkins(){
+    if(!window.YetiSkins||!snapshotIds.size)return; // attendre l'état du serveur
+    for(const p of PLAYERS){
+      const st=skinState(p.id);if(!st)continue;
+      const saved=new Set(savedSkins.get(p.id)||[]);
+      const fresh=[...st.unlocked].filter(id=>!saved.has(id)&&/^[a-z0-9]{2,20}$/.test(id)&&['record','defi','ultra'].includes(window.YetiSkins.byId(id).kind));
+      if(!fresh.length||skinsSending.has(p.id))continue;
+      skinsSending.add(p.id);
+      request('/api/skins',{player:p.id,skins:fresh}).then(()=>savedSkins.set(p.id,[...saved,...fresh])).catch(()=>{}).finally(()=>skinsSending.delete(p.id));
+    }
+  }
   function podiumOf(id){
     if(!id)return null;
     const bests=PLAYERS.map(p=>({id:p.id,best:stats(allScores().filter(s=>s.player===p.id)).best})).filter(r=>r.best!==null).sort((a,b)=>b.best-a.best);
@@ -354,12 +380,17 @@
   // ---------- Compétitions : battle royale quotidienne + duels ----------
   let playMode={kind:'free'},duels=[],knownDuels=null,brView='day',competTab='br',duelOpp=null;
   const POINTS=[10,8,6,5,4,3,2,1],DUEL_N=5,DAILY_N=10;
-  const avgOf=l=>l.length?l.reduce((a,s)=>a+s.score,0)/l.length:null;
-  const dailyOf=(pid,day)=>allScores().filter(s=>s.mode==='daily'&&s.ref===day&&s.player===pid);
-  const duelOf=(d,pid)=>allScores().filter(s=>s.mode==='duel'&&s.ref===String(d.id)&&s.player===pid);
+  // Le serveur ne garde que 300 lancers (+ les 10 meilleurs de chacun) : les compétitions se basent sur
+  // les compteurs du serveur (daily / duels.c_n…) + les lancers locaux pas encore comptés par le serveur.
+  // Résultat : {length: nombre de lancers, avg: moyenne}.
+  const avgOf=l=>l.length?l.avg:null;
+  const tally=(base,sum,extra)=>{const n=base+extra.length,t=sum+extra.reduce((a,s)=>a+s.score,0);return {length:n,avg:n?t/n:null};};
+  const unsynced=ok=>allScores().filter(s=>!snapshotIds.has(s.id)&&ok(s));
+  const dailyOf=(pid,day)=>{const r=dailyResults.find(x=>x.player===pid&&x.day===day);return tally(r?r.n:0,r?r.total:0,unsynced(s=>s.mode==='daily'&&s.ref===day&&s.player===pid));};
+  const duelOf=(d,pid)=>{const c=pid===d.challenger;return tally(c?d.c_n:d.o_n,c?d.c_sum:d.o_sum,unsynced(s=>s.mode==='duel'&&s.ref===String(d.id)&&s.player===pid));};
   let duelStatus=new Map(),inviteQueue=[],inviteShown=new Set();
   function setDuels(list){
-    duels=list.map(d=>({...d,id:Number(d.id),challenger:Number(d.challenger),opponent:Number(d.opponent),throws:Number(d.throws)||DUEL_N,status:d.status||'accepted'}));
+    duels=list.map(d=>({...d,id:Number(d.id),challenger:Number(d.challenger),opponent:Number(d.opponent),throws:Number(d.throws)||DUEL_N,status:d.status||'accepted',c_n:Number(d.c_n)||0,c_sum:Number(d.c_sum)||0,o_n:Number(d.o_n)||0,o_sum:Number(d.o_sum)||0}));
     const first=knownDuels===null;if(first)knownDuels=new Set();
     for(const d of duels){
       const prev=duelStatus.get(d.id);duelStatus.set(d.id,d.status);
@@ -394,7 +425,7 @@
     rows.sort((a,b)=>(b.n>=DAILY_N)-(a.n>=DAILY_N)||b.avg-a.avg);return rows;
   }
   function monthRanking(month){
-    const days=[...new Set(allScores().filter(s=>s.mode==='daily'&&s.ref&&s.ref.startsWith(month)).map(s=>s.ref))];
+    const days=[...new Set([...dailyResults.map(r=>r.day),...unsynced(s=>s.mode==='daily'&&s.ref).map(s=>s.ref)].filter(d=>d.startsWith(month)))];
     const t=new Map(PLAYERS.map(p=>[p.id,{p,pts:0,sessions:0,sum:0,wins:0}]));
     for(const day of days){dayRanking(day).filter(r=>r.n>=DAILY_N).forEach((r,i)=>{const e=t.get(r.p.id);if(!e)return;e.pts+=POINTS[i]||0;e.sessions++;e.sum+=r.avg;if(i===0)e.wins++;});}
     return [...t.values()].filter(e=>e.sessions).sort((a,b)=>b.pts-a.pts||b.sum/b.sessions-a.sum/a.sessions);

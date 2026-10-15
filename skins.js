@@ -45,11 +45,11 @@
     {id:'jackpot',kind:'defi', emoji:'🤑', fur:['#0f4d25','#9bf0a8'], name:'Le jackpot',     tag:'Faire pile 111, 222, 333 ou 444 m', test:l => l.some(s => [111, 222, 333, 444].includes(Math.floor(s.score)))},
     {id:'owl',    kind:'defi', emoji:'🦉', fur:['#2a2238','#b9a7d6'], name:'Le noctambule',  tag:'Un lancer entre minuit et 5 h', test:l => l.some(s => parisHour(s.played_at) < 5)},
     {id:'ghost',  kind:'defi', emoji:'👻', fur:['#555b66','#ffffff'], name:'Le revenant',    tag:'Revenir après 7 jours sans jouer', test:l => l.some((s, i) => i && Date.parse(s.played_at) - Date.parse(l[i - 1].played_at) >= 7 * 864e5)},
-    {id:'turtle', kind:'defi', emoji:'🐢', fur:['#1f4a2a','#9ed39b'], name:'Le marathonien', tag:'50 lancers au compteur', test:l => l.length >= 50},
-    {id:'fossil', kind:'defi', emoji:'🦖', fur:['#2f3d12','#c8e06a'], name:'Le fossile',     tag:'100 lancers au compteur', test:l => l.length >= 100},
+    {id:'turtle', kind:'defi', emoji:'🐢', fur:['#1f4a2a','#9ed39b'], name:'Le marathonien', tag:'50 lancers au compteur', test:(l, x) => Math.max(l.length, x.total) >= 50},
+    {id:'fossil', kind:'defi', emoji:'🦖', fur:['#2f3d12','#c8e06a'], name:'Le fossile',     tag:'100 lancers au compteur', test:(l, x) => Math.max(l.length, x.total) >= 100},
     {id:'boss',   kind:'defi', emoji:'😎', fur:['#101820','#8fa6bd'], name:'Le boss',        tag:'10 lancers ≥ 300 m', test:l => count(l, v => v >= 300) >= 10},
-    {id:'bizut',   kind:'defi', emoji:'🐣', name:'Le bizut',         tag:'Faire son tout premier lancer', test:l => l.length >= 1},
-    {id:'ten',     kind:'defi', emoji:'🔟', name:'La dizaine',       tag:'10 lancers au compteur', test:l => l.length >= 10},
+    {id:'bizut',   kind:'defi', emoji:'🐣', name:'Le bizut',         tag:'Faire son tout premier lancer', test:(l, x) => Math.max(l.length, x.total) >= 1},
+    {id:'ten',     kind:'defi', emoji:'🔟', name:'La dizaine',       tag:'10 lancers au compteur', test:(l, x) => Math.max(l.length, x.total) >= 10},
     {id:'nice',    kind:'defi', emoji:'😏', name:'Nice',             tag:'Faire pile 69 m', test:l => l.some(s => fl(s) === 69)},
     {id:'clover',  kind:'defi', emoji:'🍀', name:'Le trèfle',        tag:'Faire pile 77 m', test:l => l.some(s => fl(s) === 77)},
     {id:'pi',      kind:'defi', emoji:'🧮', name:'Le matheux',       tag:'Faire 314 m (comme π)', test:l => l.some(s => fl(s) === 314)},
@@ -298,12 +298,17 @@
     list: SKINS,
     byId(id) { return SKINS.find(s => s.id === id) || SKINS[0]; },
     // scores : lancers d'un joueur. Renvoie les skins débloqués et l'éventuelle malédiction en cours.
-    evaluate(scores, ownerName) {
+    // extra.total : lancers à vie (le serveur ne garde qu'une partie de l'historique)
+    // extra.saved : skins déjà débloqués et enregistrés sur le serveur, gardés pour toujours.
+    evaluate(scores, ownerName, extra) {
       const list = [...scores].sort((a, b) => Date.parse(a.played_at) - Date.parse(b.played_at) || String(a.id).localeCompare(String(b.id)));
+      const ctx = {total: Number(extra && extra.total) || 0};
       const best = list.reduce((m, s) => Math.max(m, s.score), 0), unlocked = new Set(['yeti']);
+      const saved = new Set(extra && Array.isArray(extra.saved) ? extra.saved : []);
       for (const k of SKINS) {
         if (k.kind === 'record' && best >= k.min) unlocked.add(k.id);
-        if ((k.kind === 'defi' || k.kind === 'ultra') && k.test(list)) unlocked.add(k.id);
+        if ((k.kind === 'defi' || k.kind === 'ultra') && k.test(list, ctx)) unlocked.add(k.id);
+        if ((k.kind === 'record' || k.kind === 'defi' || k.kind === 'ultra') && saved.has(k.id)) unlocked.add(k.id);
         if (k.kind === 'perso' && ownerName && ownerName.trim().toLowerCase() === k.owner) unlocked.add(k.id);
       }
       const curse = SKINS.find(k => k.kind === 'curse' && k.test(list)) || null;
