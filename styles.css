@@ -269,9 +269,20 @@ body.fs-lock{overflow:hidden}
   .ranking-row .rank-number,.ranking-row .ranking-avatar,.ranking-row>div:not(.ranking-score),.ranking-row .ranking-score{grid-area:auto}
   .ranking-row .ranking-avatar{width:32px;height:32px}
 }
-/* Photos plus grandes, même disposition */
-.ranking-row{grid-template-columns:25px 50px minmax(0,1fr) auto;gap:12px}
-.ranking-avatar{width:50px;height:50px}
-.ranking-avatar-empty{font-size:18px}
-@media(max-width:860px){.ranking-row{grid-template-columns:20px 44px minmax(0,1fr);gap:4px 10px}.ranking-row .ranking-avatar{width:44px;height:44px}}
-@media(max-width:600px){.ranking-row{grid-template-columns:24px 46px minmax(0,1fr) auto;gap:10px}.ranking-row .ranking-avatar{width:46px;height:46px}}
+/* Photos plus grandes, tout aligné sur la même ligne */
+.ranking-row{grid-template-columns:24px 44px minmax(0,1fr) auto;column-gap:12px;align-items:center}
+.ranking-row .rank-number,.ranking-row .ranking-avatar,.ranking-row .ranking-score{align-self:center}
+.ranking-avatar{width:44px;height:44px}
+.ranking-avatar-empty{font-size:17px}
+.ranking-name{margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:860px){
+  .ranking-row{grid-template-columns:20px 40px minmax(0,1fr);grid-template-areas:"rank pic name" "rank pic score";column-gap:10px;row-gap:2px}
+  .ranking-row .ranking-avatar{width:40px;height:40px}
+  .ranking-row>div:not(.ranking-score){align-self:end}
+  .ranking-row .ranking-score{align-self:start;padding-top:0}
+}
+@media(max-width:600px){
+  .ranking-row{grid-template-columns:22px 42px minmax(0,1fr) auto;grid-template-areas:none;column-gap:10px}
+  .ranking-row .ranking-avatar{width:42px;height:42px}
+  .ranking-row>div:not(.ranking-score),.ranking-row .ranking-score{align-self:center}
+}
