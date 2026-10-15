@@ -610,10 +610,14 @@
       chatLast=Math.max(chatLast,...chatMsgs.filter(m=>!m.temp).map(m=>m.id),0);renderChat();
     }catch(_){}finally{chatLoading=false;}
   }
+  // Le chat est vidé à chaque heure pile (côté serveur) : on retire aussi les vieux messages affichés.
+  const chatHour=()=>Math.floor(Date.now()/3600000)*3600000;
+  let chatHourShown=chatHour();
   function renderChat(){
+    chatHourShown=chatHour();chatMsgs=chatMsgs.filter(m=>m.temp||!(Date.parse(m.at)<chatHourShown));
     const list=$('chat-list'),stick=list.scrollHeight-list.scrollTop-list.clientHeight<60,today=dayKey(new Date());
     list.innerHTML=chatMsgs.length?chatMsgs.map(m=>{const p=player(m.player),mine=m.player===selectedPlayer,d=new Date(m.at||Date.now());
-      return `<div class="chat-msg ${mine?'mine':''} ${m.temp?'temp':''}"><div class="chat-meta"><i class="player-dot" style="background:${p.color}"></i><b>${escape(p.name)}</b><time>${dayKey(d)===today?'':chatDay.format(d)+' '}${chatTime.format(d)}</time></div><p>${escape(m.body)}</p></div>`;}).join(''):'<p class="chat-empty">Pas encore de message. Lance les hostilités.</p>';
+      return `<div class="chat-msg ${mine?'mine':''} ${m.temp?'temp':''}"><div class="chat-meta"><i class="player-dot" style="background:${p.color}"></i><b>${escape(p.name)}</b><time>${dayKey(d)===today?'':chatDay.format(d)+' '}${chatTime.format(d)}</time></div><p>${escape(m.body)}</p></div>`;}).join(''):'<p class="chat-empty">Pas encore de message. Lance les hostilités.<br><small>Le chat se vide à chaque heure pile.</small></p>';
     if(stick||chatOpen)list.scrollTop=list.scrollHeight;
     if(chatOpen){chatRead=chatLast;try{localStorage.setItem('yeti-chat-read',String(chatRead));}catch(_){}}
     const unread=chatMsgs.filter(m=>!m.temp&&m.id>chatRead&&m.player!==selectedPlayer).length;
@@ -641,6 +645,7 @@
     try{const v=await request('/api/version');if(Number(v.chat)>chatLast)await loadChat();}catch(_){}finally{chatTicking=false;}
   },1000);
   setInterval(poll,2000);
+  setInterval(()=>{if(chatHour()!==chatHourShown)renderChat();},15000);
   renderPlayerOptions();renderProfiles();render();renderSaveStatus();
   (async()=>{
     const fragment=new URLSearchParams(location.hash.slice(1));const code=fragment.get('club');
