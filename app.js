@@ -15,12 +15,21 @@
   let outbox = Array.isArray(saved.outbox) ? saved.outbox.filter(validScore) : [];
   let selectedPlayer = Number.isInteger(saved.player) && saved.player>0 ? saved.player : null;
   let online = new Set();
+  // Connexion par mot de passe : le joueur mémorisé n'est réactivé qu'après vérification de sa session.
+  let pendingPlayer = selectedPlayer, authed = null, bans = {};
+  selectedPlayer = null;
+  const SESSION = 'yeti-session-v1';
+  let memSession = null;
+  function getSession(){ try { return JSON.parse(localStorage.getItem(SESSION) || 'null') || memSession; } catch (_) { return memSession; } }
+  function setSession(s){ memSession = s; try { if (s) localStorage.setItem(SESSION, JSON.stringify(s)); else localStorage.removeItem(SESSION); } catch (_) {} }
+  const hhmm = d => new Intl.DateTimeFormat('fr-FR',{timeZone:'Europe/Paris',hour:'2-digit',minute:'2-digit'}).format(new Date(d)).replace(':','h');
+  const banLeft = id => !!bans[id] && Date.parse(bans[id]) > Date.now();
   let dailyResults = [], snapshotIds = new Set(), savedSkins = new Map(), totals = new Map();
   let serverScores = [], connected = false, privateAccess = false, activeRound = null, playerApi = null, loadingGame = false;
   let flushing = null, gameLoaded = false, period = 'all', analysisPlayer = 'all', historyPlayer = 'all', historyLimit = 30, toastTimer, lastSaveError = '';
 
   function persist() {
-    try { localStorage.setItem(STORAGE, JSON.stringify({player:selectedPlayer,outbox})); storageAvailable = true; }
+    try { localStorage.setItem(STORAGE, JSON.stringify({player:selectedPlayer??pendingPlayer,outbox})); storageAvailable = true; }
     catch (_) { storageAvailable = false; }
   }
   function player(id) { return PLAYERS.find(p=>p.id===id) || {id,name:'Joueur '+id,color:'#97a898'}; }
@@ -33,7 +42,8 @@
       const color=typeof p.color==='string'&&/^#[0-9a-f]{3,8}$/i.test(p.color)?p.color:(DEFAULT_PLAYERS.find(d=>d.id===id)?.color||PALETTE[(id-1)%PALETTE.length]);
       if(Array.isArray(p.skins))savedSkins.set(id,p.skins.map(String));
       if(Number.isFinite(Number(p.total)))totals.set(id,Number(p.total));
-      return {id,name:name.slice(0,24),color};
+      if(p.banned_until)bans[id]=p.banned_until;else if(p.banned_until===null)delete bans[id];
+      return {id,name:name.slice(0,24),color,locked:!!p.locked,admin:!!p.admin};
     }).filter(Boolean).sort((a,b)=>a.id-b.id);
     if(!parsed.length)return;
     PLAYERS=parsed;renderPlayerOptions();
@@ -111,9 +121,10 @@
   function renderProfiles() {
     const busy=activeRound||loadingGame?'disabled':'';
     const add=`<button class="profile-button add-player" data-add-player type="button" ${busy}><span aria-hidden="true">+</span>Add user</button>`;
-    const on=p=>online.has(p.id)?'<span class="online-dot" aria-hidden="true"></span>':'',onTitle=p=>online.has(p.id)?` title="${escape(p.name)} est en ligne"`:'';
-    $('profiles').innerHTML=PLAYERS.map(p=>`<button class="profile-button ${online.has(p.id)?'is-online':''} ${selectedPlayer===p.id?'active':''}" data-player="${p.id}" type="button" aria-pressed="${selectedPlayer===p.id}"${onTitle(p)} ${busy}><span class="player-dot" style="background:${p.color}"></span>${escape(p.name)}${on(p)}</button>`).join('')+add;
-    $('cover-profiles').innerHTML=PLAYERS.map(p=>`<button class="profile-button ${online.has(p.id)?'is-online':''}" data-player="${p.id}" type="button"${onTitle(p)}><span class="player-dot" style="background:${p.color}"></span>${escape(p.name)}${on(p)}</button>`).join('')+add;
+    const on=p=>banLeft(p.id)?'<span class="ban-mark" aria-hidden="true">⛔</span>':online.has(p.id)?'<span class="online-dot" aria-hidden="true"></span>':'',onTitle=p=>banLeft(p.id)?` title="${escape(p.name)} est banni jusqu’à ${hhmm(bans[p.id])}"`:online.has(p.id)?` title="${escape(p.name)} est en ligne"`:'';
+    $('profiles').innerHTML=PLAYERS.map(p=>`<button class="profile-button ${online.has(p.id)?'is-online':''} ${banLeft(p.id)?'is-banned':''} ${selectedPlayer===p.id?'active':''}" data-player="${p.id}" type="button" aria-pressed="${selectedPlayer===p.id}"${onTitle(p)} ${busy}><span class="player-dot" style="background:${p.color}"></span>${escape(p.name)}${on(p)}</button>`).join('')+add;
+    $('cover-profiles').innerHTML=PLAYERS.map(p=>`<button class="profile-button ${online.has(p.id)?'is-online':''} ${banLeft(p.id)?'is-banned':''}" data-player="${p.id}" type="button"${onTitle(p)}><span class="player-dot" style="background:${p.color}"></span>${escape(p.name)}${on(p)}</button>`).join('')+add;
+    const me=authed&&selectedPlayer===authed?player(authed):null;$('admin-open').hidden=!(me&&me.admin);
     const label=document.querySelector('.player-label');if(label)label.innerHTML='Je joue avec'+(online.size?` <span class="online-count" title="${escape(PLAYERS.filter(p=>online.has(p.id)).map(p=>p.name).join(', '))}"><i></i>${online.size} en ligne</span>`:'');
     $('round-tag').textContent=activeRound?'Lancer en cours…':modeLabel();
     $('round-tag').classList.toggle('mode-on',playMode.kind!=='free');
@@ -121,9 +132,11 @@
     $('restart-game').disabled=!gameLoaded||!!activeRound||loadingGame;
     if(typeof renderSkins==='function')renderSkins();
   }
-  async function choosePlayer(id) {
+  async function choosePlayer(id, trusted) {
     if(activeRound||loadingGame||privateAccess)return;
-    selectedPlayer=id;playMode={kind:'free'};persist();online.add(id);renderProfiles();renderCompet();pingPresence();
+    if(banLeft(id)){showToast(`⛔ ${player(id).name} est banni jusqu’à ${hhmm(bans[id])}.`);return;}
+    if(!trusted&&authed!==id){const ok=await askPassword(id);if(!ok)return;}
+    authed=id;selectedPlayer=id;playMode={kind:'free'};persist();online.add(id);renderProfiles();renderCompet();pingPresence();
     duels.filter(d=>d.status==='pending'&&d.opponent===id&&!inviteShown.has(d.id)).forEach(queueInvite);$('game-cover').hidden=true;if(typeof renderChat==='function')renderChat();
     renderSkins();
     if(!gameLoaded||loadedSkin!==gameKey(id))await loadGame();else showToast('Tu joues avec '+player(id).name+'.');
@@ -594,7 +607,7 @@
   let chatMsgs=[],chatLast=0,chatOpen=false,chatLoading=false,chatRead=0,chatInit=false,peekTimer;
   function chatPeek(m){
     const p=player(m.player),el=$('chat-peek');
-    el.innerHTML=`<i class="player-dot" style="background:${p.color}"></i><b>${escape(p.name)}</b> : ${escape(m.body)}`;el.hidden=false;
+    el.innerHTML=`<i class="player-dot" style="background:${p.color}"></i><b>${escape(p.name)}</b> : ${mentionsMe(m)?'🔔 ':''}${escape(plainBody(m.body))}`;el.hidden=false;
     $('chat-fab').classList.remove('ping');void $('chat-fab').offsetWidth;$('chat-fab').classList.add('ping');
     clearTimeout(peekTimer);peekTimer=setTimeout(()=>el.hidden=true,4500);
   }
@@ -608,6 +621,8 @@
       const fresh=[];for(const m of list){if(!known.has(Number(m.id))){const n={...m,id:Number(m.id),player:Number(m.player)};chatMsgs.push(n);fresh.push(n);}}
       const others=chatInit?fresh.filter(m=>m.player!==selectedPlayer):[];chatInit=true;
       if(others.length&&!chatOpen)chatPeek(others[others.length-1]);
+      const tag=others.filter(mentionsMe).pop();
+      if(tag){showToast(`🔔 ${player(tag.player).name} t’a tagué : ${plainBody(tag.body).slice(0,80)}`);try{navigator.vibrate&&navigator.vibrate([80,60,80]);}catch(_){}}
       chatMsgs=chatMsgs.filter(m=>!m.temp||!list.some(x=>Number(x.player)===m.player&&x.body===m.body));
       chatMsgs.sort((a,b)=>(a.temp?1e15:a.id)-(b.temp?1e15:b.id));chatMsgs=chatMsgs.slice(-150);
       chatLast=Math.max(chatLast,...chatMsgs.filter(m=>!m.temp).map(m=>m.id),0);renderChat();
@@ -620,17 +635,18 @@
     chatHourShown=chatHour();chatMsgs=chatMsgs.filter(m=>m.temp||!(Date.parse(m.at)<chatHourShown));
     const list=$('chat-list'),stick=list.scrollHeight-list.scrollTop-list.clientHeight<60,today=dayKey(new Date());
     list.innerHTML=chatMsgs.length?chatMsgs.map(m=>{const p=player(m.player),mine=m.player===selectedPlayer,d=new Date(m.at||Date.now());
-      return `<div class="chat-msg ${mine?'mine':''} ${m.temp?'temp':''}"><div class="chat-meta"><i class="player-dot" style="background:${p.color}"></i><b>${escape(p.name)}</b><time>${dayKey(d)===today?'':chatDay.format(d)+' '}${chatTime.format(d)}</time></div><p>${escape(m.body)}</p></div>`;}).join(''):'<p class="chat-empty">Pas encore de message. Lance les hostilités.<br><small>Le chat se vide à chaque heure pile.</small></p>';
+      const media=mediaOf(m.body);
+      return `<div class="chat-msg ${mine?'mine':''} ${m.temp?'temp':''} ${media?'media':''} ${!mine&&mentionsMe(m)?'tagged':''}"><div class="chat-meta"><i class="player-dot" style="background:${p.color}"></i><b>${escape(p.name)}</b><time>${dayKey(d)===today?'':chatDay.format(d)+' '}${chatTime.format(d)}</time></div>${media||`<p>${richBody(m.body)}</p>`}</div>`;}).join(''):'<p class="chat-empty">Pas encore de message. Lance les hostilités.<br><small>Le chat se vide à chaque heure pile.</small></p>';
     if(stick||chatOpen)list.scrollTop=list.scrollHeight;
     if(chatOpen){chatRead=chatLast;try{localStorage.setItem('yeti-chat-read',String(chatRead));}catch(_){}}
     const unread=chatMsgs.filter(m=>!m.temp&&m.id>chatRead&&m.player!==selectedPlayer).length;
     $('chat-badge').hidden=!unread;$('chat-badge').textContent=unread>9?'9+':String(unread);
     const can=!!selectedPlayer&&!privateAccess;
-    $('chat-input').disabled=!can;$('chat-send').disabled=!can;
+    $('chat-input').disabled=!can;$('chat-send').disabled=!can;$('chat-pick').disabled=!can;if(!can)closePicker();
     $('chat-input').placeholder=can?`Écris en tant que ${player(selectedPlayer).name}…`:'Choisis ton pseudo pour écrire';
   }
   function toggleChat(open){
-    chatOpen=open;$('chat-panel').hidden=!open;$('chat-fab').setAttribute('aria-expanded',String(open));$('chat-fab').classList.toggle('open',open);
+    chatOpen=open;$('chat-panel').hidden=!open;if(typeof applyWide==='function')applyWide();if(!open){closePicker();closeMention();}$('chat-fab').setAttribute('aria-expanded',String(open));$('chat-fab').classList.toggle('open',open);
     if(open){$('chat-peek').hidden=true;renderChat();loadChat();if(!$('chat-input').disabled&&matchMedia('(pointer:fine)').matches)$('chat-input').focus();}
   }
   $('chat-fab').addEventListener('click',()=>toggleChat(!chatOpen));
@@ -638,10 +654,81 @@
   $('chat-close').addEventListener('click',()=>toggleChat(false));
   $('chat-form').addEventListener('submit',async e=>{
     e.preventDefault();const input=$('chat-input'),body=input.value.trim();if(!body||!selectedPlayer)return;
-    input.value='';const temp={id:Date.now(),temp:true,player:selectedPlayer,body,at:new Date().toISOString()};chatMsgs.push(temp);renderChat();
-    try{await request('/api/chat/send',{player:selectedPlayer,body});await loadChat();}
-    catch(error){chatMsgs=chatMsgs.filter(m=>m!==temp);renderChat();input.value=body;showToast(error.message||'Message non envoyé.');}
+    input.value='';closeMention();sendChat(body);
   });
+  async function sendChat(body){
+    const input=$('chat-input');if(!selectedPlayer)return;
+    const temp={id:Date.now(),temp:true,player:selectedPlayer,body,at:new Date().toISOString()};chatMsgs.push(temp);renderChat();
+    try{await request('/api/chat/send',{player:selectedPlayer,body});await loadChat();}
+    catch(error){chatMsgs=chatMsgs.filter(m=>m!==temp);renderChat();if(!mediaOf(body))input.value=body;showToast(error.message||'Message non envoyé.');}
+  }
+  // ---------- @tags, GIF et stickers ----------
+  const GIFS=['1f602','1f923','1f62d','1f525','1f480','1f921','1f973','1f60e','1f92f','1f631','1f97a','1f644','1f62c','1f914','1f44f','1f4af','1f389','1f4a9','1f976','1f975','1f92a','1f634','1f621','1f618','1f60d','1f440','1f44b','1f64f','1f4aa','1f92e','1f47b','1f680','1f3c6','1f427','1f9ad','2744_fe0f','1f37b','1f60f','1f971','1f910','1f92b','1f608','1f4a5','1f198','1f947','1f622','1f633','1f929'];
+  const STICKERS=['🦭','🐧','❄️','🏔️','🥶','🏆','🥇','👑','🐐','🔥','💀','🤡','💩','😂','🤣','😭','😎','🤯','😤','🙄','🫡','👀','💪','🎯','🍺','🥳','🎉','❤️','👍','👎','🤌','🙏','😱','🤫','🫠','🧊','⛷️','💸','🚀','🧠'];
+  const gifUrl=c=>`https://fonts.gstatic.com/s/e/notoemoji/latest/${c}/512.webp`;
+  function mediaOf(body){
+    let m=/^\[g:([0-9a-f_]{2,24})\]$/.exec(body||'');if(m&&GIFS.includes(m[1]))return `<img class="chat-gif" src="${gifUrl(m[1])}" alt="GIF" loading="lazy" width="120" height="120">`;
+    m=/^\[s:(.{1,12})\]$/u.exec(body||'');if(m&&STICKERS.includes(m[1]))return `<span class="chat-sticker" role="img" aria-label="sticker">${m[1]}</span>`;
+    return '';
+  }
+  function plainBody(body){if(/^\[g:/.test(body||''))return 'a envoyé un GIF';const m=/^\[s:(.{1,12})\]$/u.exec(body||'');return m?m[1]:String(body||'');}
+  const reEsc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  function mentionRe(){const names=PLAYERS.map(p=>p.name).sort((a,b)=>b.length-a.length).map(reEsc);return names.length?new RegExp('@('+names.join('|')+')(?![\\p{L}\\p{N}_])','giu'):null;}
+  function mentionsMe(m){if(!selectedPlayer||m.player===selectedPlayer)return false;const me=player(selectedPlayer).name.toLocaleLowerCase('fr');const re=mentionRe();if(!re)return false;for(const x of String(m.body||'').matchAll(re))if(x[1].toLocaleLowerCase('fr')===me)return true;return /@(tous|all|everyone)(?![\p{L}\p{N}_])/iu.test(m.body||'');}
+  function richBody(body){
+    const re=mentionRe(),me=selectedPlayer?player(selectedPlayer).name.toLocaleLowerCase('fr'):'';let out='',last=0;const text=String(body||'');
+    const esc=t=>escape(t).replace(/@(tous|all|everyone)(?![\p{L}\p{N}_])/giu,'<span class="mention me">@$1</span>');
+    if(re)for(const x of text.matchAll(re)){out+=esc(text.slice(last,x.index));const isMe=x[1].toLocaleLowerCase('fr')===me;const p=PLAYERS.find(q=>q.name.toLocaleLowerCase('fr')===x[1].toLocaleLowerCase('fr'));out+=`<span class="mention ${isMe?'me':''}" style="--mc:${p?p.color:'#1b4e3b'}">@${escape(p?p.name:x[1])}</span>`;last=x.index+x[0].length;}
+    return out+esc(text.slice(last));
+  }
+  // Suggestions quand on tape @
+  let mentionSel=0,mentionItems=[];
+  function mentionQuery(){const i=$('chat-input'),pos=i.selectionStart??i.value.length,before=i.value.slice(0,pos);const m=/(^|\s)@([\p{L}\p{N}_-]{0,24})$/u.exec(before);return m?{q:m[2],start:pos-m[2].length-1,pos}:null;}
+  function closeMention(){$('chat-mention').hidden=true;mentionItems=[];}
+  function renderMention(){
+    const q=mentionQuery();if(!q){closeMention();return;}
+    const n=q.q.toLocaleLowerCase('fr').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    mentionItems=[...PLAYERS.filter(p=>p.id!==selectedPlayer&&p.name.toLocaleLowerCase('fr').normalize('NFD').replace(/[\u0300-\u036f]/g,'').startsWith(n)),...('tous'.startsWith(n)?[{id:0,name:'tous',color:'#f08b50'}]:[])].slice(0,8);
+    if(!mentionItems.length){closeMention();return;}
+    mentionSel=Math.min(mentionSel,mentionItems.length-1);
+    $('chat-mention').innerHTML=mentionItems.map((p,i)=>`<button type="button" role="option" aria-selected="${i===mentionSel}" class="${i===mentionSel?'on':''}" data-mention="${i}">${p.id?avatar(p):'<span class="ranking-avatar ranking-avatar-empty" style="--ring:#f08b50">📣</span>'}<span>@${escape(p.name)}</span>${online.has(p.id)?'<i class="online-mini"></i>':''}</button>`).join('');
+    $('chat-mention').hidden=false;
+  }
+  function pickMention(i){
+    const p=mentionItems[i],q=mentionQuery();if(!p||!q)return;const input=$('chat-input');
+    const ins='@'+p.name+' ';input.value=input.value.slice(0,q.start)+ins+input.value.slice(q.pos);
+    const c=q.start+ins.length;input.focus();input.setSelectionRange(c,c);closeMention();
+  }
+  $('chat-input').addEventListener('input',()=>{mentionSel=0;renderMention();});
+  $('chat-input').addEventListener('click',renderMention);
+  $('chat-input').addEventListener('keydown',e=>{
+    if($('chat-mention').hidden)return;
+    if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();mentionSel=(mentionSel+(e.key==='ArrowDown'?1:-1)+mentionItems.length)%mentionItems.length;renderMention();}
+    else if(e.key==='Enter'||e.key==='Tab'){e.preventDefault();pickMention(mentionSel);}
+    else if(e.key==='Escape'){e.preventDefault();closeMention();}
+  });
+  $('chat-mention').addEventListener('mousedown',e=>e.preventDefault());
+  $('chat-mention').addEventListener('click',e=>{const b=e.target.closest('[data-mention]');if(b)pickMention(Number(b.dataset.mention));});
+  $('chat-input').addEventListener('blur',()=>setTimeout(closeMention,150));
+  // Sélecteur GIF / stickers
+  let pickTab='gif';
+  function renderPicker(){
+    document.querySelectorAll('[data-pick-tab]').forEach(b=>b.classList.toggle('active',b.dataset.pickTab===pickTab));
+    $('chat-picker-grid').className='chat-picker-grid '+pickTab;
+    $('chat-picker-grid').innerHTML=pickTab==='gif'?GIFS.map(c=>`<button type="button" data-send="[g:${c}]"><img src="${gifUrl(c)}" alt="" loading="lazy" width="56" height="56"></button>`).join(''):STICKERS.map(s=>`<button type="button" data-send="[s:${s}]">${s}</button>`).join('');
+  }
+  function closePicker(){$('chat-picker').hidden=true;$('chat-pick').setAttribute('aria-expanded','false');}
+  $('chat-pick').addEventListener('click',()=>{const open=$('chat-picker').hidden;if(open){renderPicker();$('chat-picker').hidden=false;$('chat-pick').setAttribute('aria-expanded','true');}else closePicker();});
+  document.querySelectorAll('[data-pick-tab]').forEach(b=>b.addEventListener('click',()=>{pickTab=b.dataset.pickTab;renderPicker();}));
+  $('chat-picker-grid').addEventListener('click',e=>{const b=e.target.closest('[data-send]');if(!b)return;closePicker();sendChat(b.dataset.send);});
+  // Chat agrandi : moitié de l'écran (à droite sur ordi, en bas sur téléphone), le jeu reste visible.
+  let chatWide=false;try{chatWide=localStorage.getItem('yeti-chat-wide')==='1';}catch(_){}
+  function applyWide(){
+    const on=chatWide&&chatOpen;document.body.classList.toggle('chat-wide',on);
+    $('chat-wide').textContent=chatWide?'⤡':'⤢';$('chat-wide').setAttribute('aria-label',chatWide?'Réduire le chat':'Agrandir le chat');$('chat-wide').title=chatWide?'Réduire le chat':'Agrandir le chat (moitié d’écran)';
+    if(on)setTimeout(()=>{$('game-stage').scrollIntoView({behavior:'smooth',block:'start'});const l=$('chat-list');l.scrollTop=l.scrollHeight;},60);
+  }
+  $('chat-wide').addEventListener('click',()=>{chatWide=!chatWide;try{localStorage.setItem('yeti-chat-wide',chatWide?'1':'0');}catch(_){}applyWide();});
   let chatTicking=false;
   setInterval(async()=>{ // chat ouvert : vérification chaque seconde
     if(!chatOpen||chatTicking||document.hidden||privateAccess)return;chatTicking=true;
@@ -653,16 +740,93 @@
   async function pingPresence(){
     if(presenceBusy||document.hidden||privateAccess||!lastStateSig)return;presenceBusy=true;
     try{const r=await request('/api/presence',{player:selectedPlayer||0});
+      if(r&&r.bans&&typeof r.bans==='object'){const key=JSON.stringify(r.bans);if(key!==JSON.stringify(bans)){bans=r.bans;renderProfiles();if(!$('admin-overlay').hidden)renderAdmin();}}
+      if(selectedPlayer&&banLeft(selectedPlayer))kick(selectedPlayer);
       if(r&&Array.isArray(r.online)){const next=new Set(r.online.map(Number));if([...next].join()!==[...online].join()){online=next;renderProfiles();}}}
     catch(_){}finally{presenceBusy=false;}
   }
   setInterval(pingPresence,5000);
+  // ---------- Mot de passe par joueur ----------
+  let pinResolve=null;
+  function askPassword(id){
+    const p=player(id),create=!p.locked,o=$('pin-overlay');
+    if(pinResolve){const r=pinResolve;pinResolve=null;r(false);}
+    $('pin-eyebrow').textContent=create?'PREMIÈRE CONNEXION':'CONNEXION';
+    $('pin-title').textContent=create?`Salut ${p.name} !`:`C’est bien toi, ${p.name} ?`;
+    $('pin-text').textContent=create?'Crée ton mot de passe (4 caractères minimum). Il te sera demandé à chaque fois que tu reprends ce prénom depuis la liste des joueurs.':'Entre ton mot de passe pour jouer avec ce prénom.';
+    $('pin-confirm-wrap').hidden=!create;$('pin-confirm').required=create;
+    $('pin-input').setAttribute('autocomplete',create?'new-password':'current-password');
+    $('pin-user').value=p.name;$('pin-input').value='';$('pin-confirm').value='';$('pin-error').textContent='';
+    $('pin-submit').textContent=create?'Créer mon mot de passe →':'Entrer →';$('pin-submit').disabled=false;
+    o.dataset.player=id;o.dataset.mode=create?'create':'login';o.hidden=false;
+    setTimeout(()=>$('pin-input').focus(),50);
+    return new Promise(r=>pinResolve=r);
+  }
+  function closePin(ok){$('pin-overlay').hidden=true;const r=pinResolve;pinResolve=null;if(r)r(ok);}
+  $('pin-cancel').addEventListener('click',()=>closePin(false));
+  $('pin-form').addEventListener('submit',async e=>{
+    e.preventDefault();const o=$('pin-overlay'),id=Number(o.dataset.player),create=o.dataset.mode==='create',pw=$('pin-input').value;
+    if(pw.length<4){$('pin-error').textContent='4 caractères minimum.';return;}
+    if(create&&pw!==$('pin-confirm').value){$('pin-error').textContent='Les deux mots de passe ne sont pas identiques.';return;}
+    $('pin-submit').disabled=true;$('pin-error').textContent='';
+    try{
+      const r=await request(create?'/api/password':'/api/login',{player:id,password:pw});
+      if(!r||!r.ok||!r.token){$('pin-error').textContent='Mauvais mot de passe.';$('pin-input').select();return;}
+      setSession({player:id,token:r.token});const p=PLAYERS.find(x=>x.id===id);if(p)p.locked=true;
+      closePin(true);if(create)showToast('🔒 Mot de passe créé. Garde-le bien !');
+    }catch(error){
+      const msg=error.message||'Connexion impossible pour le moment.';
+      if(create&&/déjà un mot de passe/.test(msg)){const p=PLAYERS.find(x=>x.id===id);if(p)p.locked=true;const r=pinResolve;pinResolve=null;askPassword(id).then(r);$('pin-error').textContent='Ce prénom a déjà un mot de passe.';return;}
+      $('pin-error').textContent=msg;
+    }finally{$('pin-submit').disabled=false;}
+  });
+  // Au chargement : on garde le même joueur sans redemander le mot de passe si sa session est encore valable.
+  async function ensureAuth(){
+    const id=pendingPlayer;pendingPlayer=null;
+    if(!id||!PLAYERS.some(p=>p.id===id)){persist();return;}
+    const s=getSession();
+    if(s&&s.player===id&&s.token){
+      try{const r=await request('/api/session',{player:id,token:s.token});if(r&&r.ok){await choosePlayer(id,true);return;}if(r&&r.banned_until)bans[id]=r.banned_until;}
+      catch(error){if(error.code==='unavailable'){await choosePlayer(id,true);return;}}
+    }
+    setSession(null);
+    if(banLeft(id)){persist();showBan(id);return;}
+    await choosePlayer(id);persist();
+  }
+  // ---------- Bans ----------
+  function showBan(id){$('ban-text').textContent=`${player(id).name} est banni par l’admin jusqu’à ${hhmm(bans[id])}. Pas de jeu ni de chat d’ici là.`;$('ban-overlay').hidden=false;}
+  $('ban-ok').addEventListener('click',()=>{$('ban-overlay').hidden=true;});
+  function kick(id){
+    activeRound=null;authed=null;selectedPlayer=null;setSession(null);persist();
+    if(gameLoaded){$('game-container').replaceChildren();gameLoaded=false;playerApi=null;loadedSkin=null;}
+    $('game-cover').hidden=false;renderProfiles();renderCompet();renderChat();showBan(id);
+  }
+  // ---------- Admin (bannir 1 / 5 / 15 / 60 / 120 min) ----------
+  const BAN_TIMES=[1,5,15,60,120];
+  function renderAdmin(){
+    const list=PLAYERS.filter(p=>p.id!==authed);
+    $('admin-list').innerHTML=list.map(p=>{const b=banLeft(p.id);
+      return `<div class="admin-row ${b?'banned':''}"><div class="admin-who">${avatar(p)}<span><b>${escape(p.name)}</b><small>${b?`⛔ banni jusqu’à ${hhmm(bans[p.id])}`:online.has(p.id)?'🟢 en ligne':'hors ligne'}</small></span></div><div class="admin-actions">${BAN_TIMES.map(m=>`<button type="button" data-ban="${p.id}" data-min="${m}">${m<60?m+' min':m/60+' h'}</button>`).join('')}${b?`<button type="button" class="unban" data-ban="${p.id}" data-min="0">Débannir</button>`:''}</div></div>`;}).join('')||'<p class="br-empty">Personne à virer.</p>';
+  }
+  $('admin-open').addEventListener('click',()=>{$('admin-error').textContent='';renderAdmin();$('admin-overlay').hidden=false;});
+  $('admin-close').addEventListener('click',()=>{$('admin-overlay').hidden=true;});
+  $('admin-overlay').addEventListener('click',e=>{if(e.target===e.currentTarget)$('admin-overlay').hidden=true;});
+  $('admin-list').addEventListener('click',async e=>{
+    const b=e.target.closest('[data-ban]');if(!b)return;const target=Number(b.dataset.ban),minutes=Number(b.dataset.min),s=getSession();
+    if(!s||s.player!==authed){$('admin-error').textContent='Reconnecte-toi en tant qu’admin.';return;}
+    b.disabled=true;$('admin-error').textContent='';
+    try{const r=await request('/api/ban',{admin:authed,token:s.token,target,minutes});
+      if(r.banned_until)bans[target]=r.banned_until;else delete bans[target];
+      online.delete(target);renderAdmin();renderProfiles();
+      showToast(minutes?`⛔ ${player(target).name} est viré pour ${minutes<60?minutes+' min':minutes/60+' h'}.`:`✅ ${player(target).name} est débanni.`);
+    }catch(error){$('admin-error').textContent=error.message||'Action impossible.';b.disabled=false;}
+  });
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)pingPresence();});
   setInterval(()=>{if(chatHour()!==chatHourShown)renderChat();},15000);
   renderPlayerOptions();renderProfiles();render();renderSaveStatus();
   (async()=>{
     const fragment=new URLSearchParams(location.hash.slice(1));const code=fragment.get('club');
     if(code){try{await request('/api/unlock',{code});history.replaceState(null,'',location.pathname+location.search);}catch(error){$('access-error').textContent=error.message||'Le lien privé n’est pas reconnu.';}}
-    await refresh();await flushScores();renderChat();loadChat();pingPresence();
+    await refresh();await ensureAuth();await flushScores();renderChat();loadChat();pingPresence();
   })();
 })();

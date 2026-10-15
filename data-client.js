@@ -95,7 +95,7 @@
           throw failure('L’ajout de joueurs n’est pas encore activé sur le serveur du club.', 501, 'not_supported');
         }
         if (data && data.code === '23505') throw failure('Ce joueur existe déjà.', 409, 'duplicate_player');
-        if (data && data.code === '22023' && (name === 'yeti_send_message' || name === 'yeti_create_duel' || name === 'yeti_answer_duel')) throw failure(data.message || 'Message refusé.', 400, 'invalid_message');
+        if (data && data.code === '22023' && (name === 'yeti_send_message' || name === 'yeti_create_duel' || name === 'yeti_answer_duel' || name === 'yeti_set_password' || name === 'yeti_login' || name === 'yeti_ban')) throw failure(data.message || 'Message refusé.', 400, 'invalid_message');
         if (data && data.code === '22023') {
           throw failure('Ces scores ne peuvent pas être enregistrés. Ils restent en attente.', 400, 'invalid_scores');
         }
@@ -150,7 +150,7 @@
       forgetCode(config);
       return {ok: true};
     }
-    if (path !== '/api/state' && path !== '/api/scores' && path !== '/api/players' && path !== '/api/version' && path !== '/api/chat' && path !== '/api/chat/send' && path !== '/api/duel' && path !== '/api/duel/answer' && path !== '/api/skins' && path !== '/api/presence') {
+    if (path !== '/api/state' && path !== '/api/scores' && path !== '/api/players' && path !== '/api/version' && path !== '/api/chat' && path !== '/api/chat/send' && path !== '/api/duel' && path !== '/api/duel/answer' && path !== '/api/skins' && path !== '/api/presence' && path !== '/api/password' && path !== '/api/login' && path !== '/api/session' && path !== '/api/ban') {
       throw failure('Cette action est introuvable.', 404, 'not_found');
     }
     const invitedState = await validateInvite(config);
@@ -162,6 +162,10 @@
       if (path === '/api/duel/answer') return await rpc(config, 'yeti_answer_duel', {p_room_code: code, p_duel: Number(body.duel), p_player: Number(body.player), p_accept: !!body.accept});
       if (path === '/api/duel') return await rpc(config, 'yeti_create_duel', {p_room_code: code, p_challenger: Number(body.challenger), p_opponent: Number(body.opponent)});
       if (path === '/api/chat/send') return await rpc(config, 'yeti_send_message', {p_room_code: code, p_player: Number(body.player), p_body: String(body.body || '')});
+      if (path === '/api/password') return await rpc(config, 'yeti_set_password', {p_room_code: code, p_player: Number(body.player), p_password: String(body.password || '')});
+      if (path === '/api/login') return await rpc(config, 'yeti_login', {p_room_code: code, p_player: Number(body.player), p_password: String(body.password || '')});
+      if (path === '/api/session') return await rpc(config, 'yeti_check_session', {p_room_code: code, p_player: Number(body.player), p_token: String(body.token || '')});
+      if (path === '/api/ban') return await rpc(config, 'yeti_ban', {p_room_code: code, p_admin: Number(body.admin), p_token: String(body.token || ''), p_target: Number(body.target), p_minutes: Number(body.minutes)});
       if (path === '/api/presence') return await rpc(config, 'yeti_presence', {p_room_code: code, p_player: Number(body && body.player) || null});
       if (path === '/api/skins') return await rpc(config, 'yeti_save_skins', {p_room_code: code, p_player: Number(body.player), p_skins: Array.isArray(body.skins) ? body.skins.map(String).slice(0, 100) : []});
       if (path === '/api/version') return await rpc(config, 'yeti_get_version', {p_room_code: code});
