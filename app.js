@@ -132,6 +132,7 @@
   }
   async function flushScores() {
     if(flushing)return flushing;
+    if(!outbox.length){renderSaveStatus();return true;}
     flushing=(async()=>{
       try {
         while(outbox.length) {
@@ -195,6 +196,7 @@
   $('profiles').addEventListener('click',e=>{const button=e.target.closest('[data-player]');if(button)choosePlayer(Number(button.dataset.player));});
   $('cover-profiles').addEventListener('click',e=>{const button=e.target.closest('[data-player]');if(button)choosePlayer(Number(button.dataset.player));});
   $('restart-game').addEventListener('click',loadGame);
+  $('share-link').addEventListener('click',async()=>{try{const url=window.YetiData.getInviteUrl();await navigator.clipboard.writeText(url);showToast('Lien privé copié. Partage-le à Loïc et Alexandre.');}catch(_){showToast('Ouvre le lien privé du club pour pouvoir le partager.');}});
   $('period-buttons').addEventListener('click',e=>{const button=e.target.closest('[data-period]');if(!button)return;period=button.dataset.period;historyLimit=30;document.querySelectorAll('[data-period]').forEach(b=>{const active=b===button;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));});$('date-control').hidden=period==='all';render();});
   $('reference-date').addEventListener('change',()=>{historyLimit=30;render();});
   $('analysis-player').addEventListener('change',e=>{analysisPlayer=e.target.value;render();});
