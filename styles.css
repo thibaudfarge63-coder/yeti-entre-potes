@@ -177,3 +177,22 @@ body.fs-lock{overflow:hidden}
 .skin-card.prime .skin-name{color:#6b4a00}
 .skin-card.prime.locked{background:linear-gradient(160deg,#faf6e4,#efe2b4)}
 @media(max-width:600px){.skin-bar{padding:14px 12px;border-radius:14px}.skin-head{flex-direction:column;gap:3px}.skin-head p{text-align:left;font-size:12px}.skin-card{flex-basis:86px}.skin-name{font-size:12px}.skin-min{font-size:10.5px}.skins{margin:0 -12px;padding:0 12px 4px}}
+/* Skins : groupes, raretés, malédiction */
+.skins{flex-direction:column;gap:12px;overflow:visible}
+.skin-group-label{display:block;font:700 10px var(--display);letter-spacing:1.3px;text-transform:uppercase;color:var(--muted);margin:0 0 7px}
+.skin-group-cards{display:flex;gap:9px;overflow-x:auto;padding-bottom:4px;scroll-snap-type:x proximity;scrollbar-width:thin}
+.skin-card.kind-defi:not(.locked){border-color:#9cc2e6;background:#eef5fc}
+.skin-card.kind-ultra{background:linear-gradient(150deg,#1b1238,#3b1f6b);border-color:#7b5cd6;color:#fff}
+.skin-card.kind-ultra .skin-min{color:#cbb8ff}
+.skin-card.kind-ultra.locked{background:linear-gradient(150deg,#2a2440,#3d3557)}
+.skin-card.kind-ultra:not(.locked){box-shadow:0 0 0 1px #b79cff,0 4px 18px #7b5cd655;animation:ultra-glow 2.4s ease-in-out infinite}
+.skin-card.kind-ultra.active{border-color:#e7dcff}
+.skin-card.kind-curse{background:#fbeee9;border-color:#e9b9a8}
+.skin-card.kind-curse .skin-min{color:#a95335}
+@keyframes ultra-glow{50%{box-shadow:0 0 0 1px #e1d3ff,0 4px 26px #a98bff88}}
+.skin-curse{display:flex;align-items:center;gap:12px;background:#fff1ea;border:1px solid #f0b79f;border-radius:12px;padding:10px 14px;margin:-2px 0 12px}
+.skin-curse .curse-emoji{font-size:30px;line-height:1}
+.skin-curse strong{display:block;font:700 13px var(--display);color:#9b3b1d}
+.skin-curse span{font-size:11px;color:#8a5a48}
+@media(max-width:600px){.skin-group-cards{margin:0 -12px;padding:0 12px 4px}.skin-group-label{font-size:11px}.skin-curse strong{font-size:14px}.skin-curse span{font-size:12px}}
+.skin-card:disabled{opacity:1}.skin-card.locked:not(.kind-curse) .skin-name{opacity:.75}

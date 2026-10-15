@@ -129,10 +129,20 @@
     const round=activeRound;activeRound=null;
     const score={id:round.id,player:round.player,played_at:new Date().toISOString(),score:Math.round(value*100)/100};
     const previous=stats(allScores().filter(s=>s.player===score.player));
-    if(window.YetiSkins){const before=previous.best||0,gained=window.YetiSkins.list.filter(k=>k.min>before&&k.min<=score.score);if(gained.length){const k=gained[gained.length-1];setTimeout(()=>showToast(`Nouveau skin débloqué : ${k.emoji||''} ${k.name} ! Choisis-le sous le jeu.`),1200);}}
+    const skinBefore=skinState(score.player);
     outbox.push(score);persist();lastSaveError='';renderProfiles();render();renderSaveStatus();
     $('last-result').hidden=false;$('last-result-name').textContent='DERNIER LANCER · '+player(score.player).name.toUpperCase();$('last-result-score').textContent=number.format(score.score);
     $('last-result-detail').textContent=previous.best===null?'Le premier lancer est posé. À vous de jouer !':score.score>previous.best?'Nouveau record personnel ! '+number.format(score.score-previous.best)+' m de mieux.':score.score===previous.best?'Record personnel égalé !':'Encore '+number.format(previous.best-score.score)+' m pour égaler ton record.';
+    const skinAfter=skinState(score.player);
+    if(skinBefore&&skinAfter){
+      const gained=window.YetiSkins.list.filter(k=>skinAfter.unlocked.has(k.id)&&!skinBefore.unlocked.has(k.id));
+      let msg='';
+      if(skinAfter.curse&&(!skinBefore.curse||skinBefore.curse.id!==skinAfter.curse.id))msg=`${skinAfter.curse.emoji} Malédiction : ${skinAfter.curse.name} ! ${skinAfter.curse.until}`;
+      else if(skinBefore.curse&&!skinAfter.curse)msg='Malédiction levée, tu retrouves ton skin.';
+      if(gained.length){const g=gained[gained.length-1];msg=(g.kind==='ultra'?'💎 ULTRA RARE débloqué : ':'Nouveau skin : ')+`${g.emoji} ${g.name} !`+(gained.length>1?` (+${gained.length-1} autre${gained.length>2?'s':''})`:'')+(msg?' · '+msg:'');}
+      if(msg)setTimeout(()=>showToast(msg),1200);
+      if(gameKey(score.player)!==loadedSkin)setTimeout(()=>{if(!activeRound&&!loadingGame&&selectedPlayer===score.player)loadGame();},3500);
+    }
     flushScores();
   }
   async function loadGame() {
@@ -257,6 +267,7 @@
   let loadedSkin=null,skinChoices={};
   try{skinChoices=JSON.parse(localStorage.getItem('yeti-skins')||'{}')||{};}catch(_){}
   function bestOf(id){return stats(allScores().filter(s=>s.player===id)).best||0;}
+  function skinState(id){return window.YetiSkins&&id?window.YetiSkins.evaluate(allScores().filter(s=>s.player===id)):null;}
   function podiumOf(id){
     if(!id)return null;
     const bests=PLAYERS.map(p=>({id:p.id,best:stats(allScores().filter(s=>s.player===p.id)).best})).filter(r=>r.best!==null).sort((a,b)=>b.best-a.best);
@@ -264,21 +275,33 @@
   }
   function gameKey(id){return skinFor(id)+'|'+(podiumOf(id)||'');}
   function skinFor(id){
-    if(!window.YetiSkins||!id)return 'yeti';
-    const k=window.YetiSkins.byId(skinChoices[id]);return bestOf(id)>=k.min?k.id:'yeti';
+    const st=skinState(id);if(!st)return 'yeti';
+    if(st.curse)return st.curse.id;
+    return st.unlocked.has(skinChoices[id])?skinChoices[id]:'yeti';
   }
+  const SKIN_GROUPS=[['base','Départ'],['record','Paliers de record'],['defi','Défis'],['ultra','Ultra rares'],['curse','Malédictions']];
   function renderSkins(){
     const box=$('skins');if(!box||!window.YetiSkins)return;
-    const best=selectedPlayer?bestOf(selectedPlayer):0,current=skinFor(selectedPlayer),list=window.YetiSkins.list;
-    const next=list.find(k=>k.min>best);
-    const pod={gold:' · 🥇 pingouin en or',silver:' · 🥈 pingouin en argent',bronze:' · 🥉 pingouin en bronze'}[podiumOf(selectedPlayer)]||'';
-    $('skin-hint').textContent=!selectedPlayer?'Choisis ton pseudo pour voir tes skins.':(next?`Record de ${player(selectedPlayer).name} : ${number.format(best)} m · prochain skin à ${next.min} m`:`${player(selectedPlayer).name} a tout débloqué. Respect.`)+pod;
-    box.innerHTML=list.map(k=>{const open=selectedPlayer&&best>=k.min,active=open&&k.id===current;
-      return `<button type="button" class="skin-card ${active?'active':''} ${open?'':'locked'} ${k.id==='prime'?'prime':''}" data-skin="${k.id}" ${open&&!activeRound&&!loadingGame?'':'disabled'} aria-pressed="${active}" title="${escape(k.tag)}"><span class="skin-emoji">${k.emoji||'<span class=\'skin-yeti\'>Y.</span>'}</span><span class="skin-name">${escape(k.name)}</span><span class="skin-min">${open?(active?'Équipé':escape(k.tag)):'🔒 '+k.min+' m'}</span></button>`;}).join('');
+    const st=skinState(selectedPlayer),current=skinFor(selectedPlayer),list=window.YetiSkins.list,busy=activeRound||loadingGame;
+    const pod={gold:' · 🥇 pingouin en or massif',silver:' · 🥈 pingouin en argent massif',bronze:' · 🥉 pingouin en bronze massif'}[podiumOf(selectedPlayer)]||'';
+    const name=selectedPlayer?player(selectedPlayer).name:'';
+    $('skin-hint').textContent=!st?'Choisis ton pseudo pour voir tes skins.':`${name} · ${st.unlocked.size}/${list.filter(k=>k.kind!=='curse').length} skins`+(st.next?` · prochain palier à ${st.next.min} m`:'')+pod;
+    $('skin-curse').hidden=!(st&&st.curse);
+    if(st&&st.curse)$('skin-curse').innerHTML=`<span class="curse-emoji">${st.curse.emoji}</span><div><strong>Malédiction : ${escape(st.curse.name)}</strong><span>${escape(st.curse.tag)}. ${escape(st.curse.until)}</span></div>`;
+    box.innerHTML=SKIN_GROUPS.map(([kind,label])=>{
+      const cards=list.filter(k=>k.kind===kind).map(k=>{
+        const curse=kind==='curse',open=!!st&&(curse?st.curse&&st.curse.id===k.id:st.unlocked.has(k.id)),active=!!st&&k.id===current;
+        const cond=k.kind==='record'?k.min+' m de record':k.tag;
+        const sub=active?(curse?'Imposé':'Équipé'):open?(curse?'En cours':escape(k.kind==='record'?k.tag:'Débloqué')):(curse?escape(cond):'🔒 '+escape(cond));
+        const can=open&&!curse&&!busy&&!(st&&st.curse);
+        return `<button type="button" class="skin-card kind-${k.kind} ${active?'active':''} ${open?'':'locked'} ${k.id==='prime'?'prime':''}" data-skin="${k.id}" ${can?'':'disabled'} aria-pressed="${active}" title="${escape(k.name+' — '+cond)}"><span class="skin-emoji">${k.emoji||'<span class=\'skin-yeti\'>Y.</span>'}</span><span class="skin-name">${escape(k.name)}</span><span class="skin-min">${sub}</span></button>`;
+      }).join('');
+      return `<div class="skin-group"><span class="skin-group-label">${label}</span><div class="skin-group-cards">${cards}</div></div>`;
+    }).join('');
   }
   async function chooseSkin(id){
     if(!selectedPlayer||activeRound||loadingGame)return;
-    const k=window.YetiSkins.byId(id);if(bestOf(selectedPlayer)<k.min)return;
+    const k=window.YetiSkins.byId(id),st=skinState(selectedPlayer);if(!st||st.curse||!st.unlocked.has(id))return;
     skinChoices[selectedPlayer]=id;try{localStorage.setItem('yeti-skins',JSON.stringify(skinChoices));}catch(_){}
     renderSkins();if(gameLoaded&&loadedSkin!==gameKey(selectedPlayer)){await loadGame();showToast(`${k.emoji||''} ${k.name} est sur la banquise.`);}
   }

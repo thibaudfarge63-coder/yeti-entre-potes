@@ -4,22 +4,55 @@
 
   // Échelle calibrée sur les scores du club (médiane ≈ 230 m, 90 % ≈ 300 m, record ≈ 400 m, 500 m quasi inatteignable).
   // Chaque skin garde le corps animé du yéti (bras, jambes, lancer) : fourrure recolorée + tête emoji.
+  // kind : 'base' | 'record' (record perso) | 'defi' (formule) | 'ultra' (ultra rare) | 'curse' (imposé automatiquement)
+  const parisHour = d => Number(new Intl.DateTimeFormat('fr-FR', {timeZone: 'Europe/Paris', hour: '2-digit', hourCycle: 'h23'}).format(new Date(d)));
+  const streak = (list, n, ok) => { let run = 0; for (const s of list) { run = ok(s.score) ? run + 1 : 0; if (run >= n) return true; } return false; };
+  const count = (list, ok) => list.filter(s => ok(s.score)).length;
+  const last = (list, n, ok) => list.length >= n && list.slice(-n).every(s => ok(s.score));
   const SKINS = [
-    {id:'yeti',    min:0,   emoji:null, fur:null,                  name:'Le Yéti',             tag:'L’original'},
-    {id:'poop',    min:50,  emoji:'💩', fur:['#2e1b0e','#b9844f'], name:'Le caca',             tag:'Fallait bien commencer'},
-    {id:'pig',     min:100, emoji:'🐷', fur:['#6e2f3f','#ffc7d4'], name:'Le cochon',           tag:'Groin groin'},
-    {id:'frog',    min:150, emoji:'🐸', fur:['#173f17','#a6e07c'], name:'La grenouille',       tag:'Ça saute'},
-    {id:'panda',   min:200, emoji:'🐼', fur:['#101010','#f4f4f4'], name:'Le panda',            tag:'Mange, dort, lance'},
-    {id:'monkey',  min:250, emoji:'🐵', fur:['#3b220f','#cf9a6a'], name:'Le singe',            tag:'Retour aux origines'},
-    {id:'clown',   min:300, emoji:'🤡', fur:['#4b1470','#ffc9f0'], name:'Le clown',            tag:'On rigole moins'},
-    {id:'tiger',   min:330, emoji:'🐯', fur:['#6b2f00','#ffb24a'], name:'Le tigre',            tag:'Œil du tigre'},
-    {id:'lion',    min:360, emoji:'🦁', fur:['#5c3d08','#f6cf63'], name:'Le lion',             tag:'Roi de la banquise'},
-    {id:'alien',   min:400, emoji:'👽', fur:['#124a2b','#a9f2c4'], name:'L’alien',             tag:'Gros crack confirmé'},
-    {id:'robot',   min:450, emoji:'🤖', fur:['#26313b','#d3dee8'], name:'Le robot',            tag:'Suspicion de triche'},
-    {id:'prime',   min:500, emoji:'👑', fur:['#4f3300','#ffe98a'], hat:true, name:'PRIME',      tag:'Le roi des yétis'},
+    {id:'yeti',   kind:'base',   emoji:null, fur:null,                  name:'Le Yéti',          tag:'L’original'},
+    // Paliers de record
+    {id:'pig',    kind:'record', min:50,  emoji:'🐷', fur:['#6e2f3f','#ffc7d4'], name:'Le cochon',      tag:'Groin groin'},
+    {id:'frog',   kind:'record', min:100, emoji:'🐸', fur:['#173f17','#a6e07c'], name:'La grenouille',  tag:'Ça saute'},
+    {id:'panda',  kind:'record', min:150, emoji:'🐼', fur:['#101010','#f4f4f4'], name:'Le panda',       tag:'Mange, dort, lance'},
+    {id:'monkey', kind:'record', min:200, emoji:'🐵', fur:['#3b220f','#cf9a6a'], name:'Le singe',       tag:'Retour aux origines'},
+    {id:'bear',   kind:'record', min:250, emoji:'🐻', fur:['#2d1709','#a8713f'], name:'L’ours',         tag:'Câlin brutal'},
+    {id:'clown',  kind:'record', min:300, emoji:'🤡', fur:['#4b1470','#ffc9f0'], name:'Le clown',       tag:'On rigole moins'},
+    {id:'tiger',  kind:'record', min:330, emoji:'🐯', fur:['#6b2f00','#ffb24a'], name:'Le tigre',       tag:'Œil du tigre'},
+    {id:'lion',   kind:'record', min:360, emoji:'🦁', fur:['#5c3d08','#f6cf63'], name:'Le lion',        tag:'Roi de la banquise'},
+    {id:'fox',    kind:'record', min:380, emoji:'🦊', fur:['#6e2a00','#ff9a4a'], name:'Le renard',      tag:'Malin comme pas deux'},
+    {id:'alien',  kind:'record', min:400, emoji:'👽', fur:['#124a2b','#a9f2c4'], name:'L’alien',        tag:'Gros crack confirmé'},
+    {id:'dragon', kind:'record', min:420, emoji:'🐲', fur:['#0d3d1f','#7ee08f'], name:'Le dragon',      tag:'Crache du feu'},
+    {id:'unicorn',kind:'record', min:440, emoji:'🦄', fur:['#5a2a7a','#f6d6ff'], name:'La licorne',     tag:'Ça n’existe pas'},
+    {id:'robot',  kind:'record', min:460, emoji:'🤖', fur:['#26313b','#d3dee8'], name:'Le robot',       tag:'Suspicion de triche'},
+    {id:'ogre',   kind:'record', min:480, emoji:'👹', fur:['#5a0b0b','#ff7b6b'], name:'L’ogre',         tag:'Il a faim de mètres'},
+    {id:'prime',  kind:'record', min:500, emoji:'👑', fur:['#4f3300','#ffe98a'], hat:true, name:'PRIME', tag:'Le roi des yétis'},
+    // Défis
+    {id:'sniper', kind:'defi', emoji:'🎯', fur:['#3a0d12','#ff8a8a'], name:'Le sniper',      tag:'5 lancers de suite ≥ 250 m', test:l => streak(l, 5, v => v >= 250)},
+    {id:'fire',   kind:'defi', emoji:'🔥', fur:['#5a1500','#ffb14a'], name:'En feu',         tag:'3 lancers de suite ≥ 300 m', test:l => streak(l, 3, v => v >= 300)},
+    {id:'yoyo',   kind:'defi', emoji:'🎢', fur:['#1d3a6e','#9ec5ff'], name:'Le yo-yo',       tag:'< 50 m puis ≥ 350 m juste après', test:l => l.some((s, i) => i && l[i - 1].score < 50 && s.score >= 350)},
+    {id:'jackpot',kind:'defi', emoji:'🤑', fur:['#0f4d25','#9bf0a8'], name:'Le jackpot',     tag:'Faire pile 111, 222, 333 ou 444 m', test:l => l.some(s => [111, 222, 333, 444].includes(Math.floor(s.score)))},
+    {id:'owl',    kind:'defi', emoji:'🦉', fur:['#2a2238','#b9a7d6'], name:'Le noctambule',  tag:'Un lancer entre minuit et 5 h', test:l => l.some(s => parisHour(s.played_at) < 5)},
+    {id:'ghost',  kind:'defi', emoji:'👻', fur:['#555b66','#ffffff'], name:'Le revenant',    tag:'Revenir après 7 jours sans jouer', test:l => l.some((s, i) => i && Date.parse(s.played_at) - Date.parse(l[i - 1].played_at) >= 7 * 864e5)},
+    {id:'turtle', kind:'defi', emoji:'🐢', fur:['#1f4a2a','#9ed39b'], name:'Le marathonien', tag:'50 lancers au compteur', test:l => l.length >= 50},
+    {id:'fossil', kind:'defi', emoji:'🦖', fur:['#2f3d12','#c8e06a'], name:'Le fossile',     tag:'100 lancers au compteur', test:l => l.length >= 100},
+    {id:'boss',   kind:'defi', emoji:'😎', fur:['#101820','#8fa6bd'], name:'Le boss',        tag:'10 lancers ≥ 300 m', test:l => count(l, v => v >= 300) >= 10},
+    // Ultra rares
+    {id:'ninja',  kind:'ultra', emoji:'🥷', fur:['#0a0a0a','#5c5c66'], name:'Le ninja',   tag:'2 lancers ≥ 400 m', test:l => count(l, v => v >= 400) >= 2},
+    {id:'vampire',kind:'ultra', emoji:'🧛', fur:['#2a0008','#c2183a'], name:'Le vampire', tag:'3 lancers ≥ 400 m', test:l => count(l, v => v >= 400) >= 3},
+    {id:'genie',  kind:'ultra', emoji:'🧞', fur:['#06284f','#5ec8ff'], name:'Le génie',   tag:'5 lancers ≥ 400 m', test:l => count(l, v => v >= 400) >= 5},
+    {id:'cosmic', kind:'ultra', emoji:'🌌', fur:['#14063a','#c9a6ff'], name:'Le cosmique',tag:'10 lancers ≥ 400 m', test:l => count(l, v => v >= 400) >= 10},
+    // Malédictions (imposées, priorité dans l'ordre)
+    {id:'poop',   kind:'curse', emoji:'💩', fur:['#2e1b0e','#b9844f'], name:'Le caca',    tag:'3 lancers de suite < 50 m', until:'Fais 50 m ou plus pour t’en débarrasser.', test:l => last(l, 3, v => v < 50)},
+    {id:'snail',  kind:'curse', emoji:'🐌', fur:['#4a3a1a','#d9c48c'], name:'L’escargot', tag:'5 lancers de suite < 150 m', until:'Fais 150 m ou plus pour t’en débarrasser.', test:l => last(l, 5, v => v < 150)},
   ];
   // Couleur du pingouin selon le podium du club : [ombres, lumières].
-  const PODIUM = {gold:['#4a3000','#fff6c2'], silver:['#3f444c','#f4f6f9'], bronze:['#3d200a','#eab27c']};
+  // Pingouin trophée : métal complet (bec et pattes compris), 4 teintes de l'ombre au reflet.
+  const PODIUM = {
+    gold:   ['#3b2400','#a8740a','#f2c230','#fffbe0'],
+    silver: ['#22262c','#7d8692','#d3d9e0','#ffffff'],
+    bronze: ['#2a1205','#8a4a1c','#d08a4e','#ffe2c4'],
+  };
   const YETI_IDS = new Set(), PENGUIN_IDS = new Set();
   for (let id = 168; id <= 297; id++) YETI_IDS.add(id);
   for (let id = 106; id <= 132; id++) PENGUIN_IDS.add(id);
@@ -114,14 +147,15 @@
   }
 
   function hex(c) { const n = parseInt(c.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; }
-  function tintPenguin(img, [dark, light]) {
-    const d = hex(dark), l = hex(light), out = new ImageData(new Uint8ClampedArray(img.data), img.width, img.height);
-    for (let p = 0; p < out.data.length; p += 4) {
-      if (!out.data[p + 3]) continue;
-      const r = out.data[p], g = out.data[p + 1], b = out.data[p + 2];
-      if (r > 150 && g > 110 && b < 90) continue; // garde le bec et les pattes orange
-      const t = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-      for (let k = 0; k < 3; k++) out.data[p + k] = Math.round(d[k] + (l[k] - d[k]) * t);
+  function tintPenguin(img, stops) {
+    const c = stops.map(hex), out = new ImageData(new Uint8ClampedArray(img.data), img.width, img.height), o = out.data;
+    for (let p = 0; p < o.length; p += 4) {
+      if (!o[p + 3]) continue;
+      let t = (0.299 * o[p] + 0.587 * o[p + 1] + 0.114 * o[p + 2]) / 255;
+      t = 0.42 + 0.58 * Math.min(1, Math.max(0, (t - 0.05) / 0.85)); // le dos noir devient du métal, pas une ombre
+      t = t < 0.5 ? 2 * t * t : 1 - 2 * (1 - t) * (1 - t); // contraste façon métal poli
+      const f = t * 3, i = Math.min(2, Math.floor(f)), u = f - i;
+      for (let k = 0; k < 3; k++) o[p + k] = Math.round(c[i][k] + (c[i + 1][k] - c[i][k]) * u);
     }
     return out;
   }
@@ -157,8 +191,19 @@
 
   window.YetiSkins = Object.freeze({
     list: SKINS,
-    unlocked(best) { return SKINS.filter(s => (best || 0) >= s.min); },
     byId(id) { return SKINS.find(s => s.id === id) || SKINS[0]; },
+    // scores : lancers d'un joueur. Renvoie les skins débloqués et l'éventuelle malédiction en cours.
+    evaluate(scores) {
+      const list = [...scores].sort((a, b) => Date.parse(a.played_at) - Date.parse(b.played_at) || String(a.id).localeCompare(String(b.id)));
+      const best = list.reduce((m, s) => Math.max(m, s.score), 0), unlocked = new Set(['yeti']);
+      for (const k of SKINS) {
+        if (k.kind === 'record' && best >= k.min) unlocked.add(k.id);
+        if ((k.kind === 'defi' || k.kind === 'ultra') && k.test(list)) unlocked.add(k.id);
+      }
+      const curse = SKINS.find(k => k.kind === 'curse' && k.test(list)) || null;
+      const next = SKINS.find(k => k.kind === 'record' && k.min > best) || null;
+      return {best, unlocked, curse, next};
+    },
     async build(id, tintName) {
       const skin = this.byId(id), tint = PODIUM[tintName] ? tintName : null;
       if (!skin.emoji && !tint) return null; // jeu d'origine
