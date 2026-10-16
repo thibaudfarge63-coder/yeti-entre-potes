@@ -24,6 +24,8 @@
   function setSession(s){ memSession = s; try { if (s) localStorage.setItem(SESSION, JSON.stringify(s)); else localStorage.removeItem(SESSION); } catch (_) {} }
   const hhmm = d => new Intl.DateTimeFormat('fr-FR',{timeZone:'Europe/Paris',hour:'2-digit',minute:'2-digit'}).format(new Date(d)).replace(':','h');
   const banLeft = id => !!bans[id] && Date.parse(bans[id]) > Date.now();
+  const banPerm = id => !!bans[id] && new Date(bans[id]).getUTCFullYear() >= 9000;
+  const banText = id => banPerm(id) ? 'exclu définitivement' : `banni jusqu’à ${hhmm(bans[id])}`;
   let dailyResults = [], snapshotIds = new Set(), savedSkins = new Map(), totals = new Map();
   let serverScores = [], connected = false, privateAccess = false, activeRound = null, playerApi = null, loadingGame = false;
   let flushing = null, gameLoaded = false, period = 'all', analysisPlayer = 'all', historyPlayer = 'all', historyLimit = 30, toastTimer, lastSaveError = '';
@@ -130,7 +132,7 @@
   function renderProfiles() {
     const busy=activeRound||loadingGame?'disabled':'';
     const add=`<button class="profile-button add-player" data-add-player type="button" ${busy}><span aria-hidden="true">+</span>Add user</button>`;
-    const on=p=>banLeft(p.id)?'<span class="ban-mark" aria-hidden="true">⛔</span>':online.has(p.id)?'<span class="online-dot" aria-hidden="true"></span>':'',onTitle=p=>banLeft(p.id)?` title="${escape(p.name)} est banni jusqu’à ${hhmm(bans[p.id])}"`:online.has(p.id)?` title="${escape(p.name)} est en ligne"`:'';
+    const on=p=>banLeft(p.id)?'<span class="ban-mark" aria-hidden="true">⛔</span>':online.has(p.id)?'<span class="online-dot" aria-hidden="true"></span>':'',onTitle=p=>banLeft(p.id)?` title="${escape(p.name)} est ${banText(p.id)}"`:online.has(p.id)?` title="${escape(p.name)} est en ligne"`:'';
     $('profiles').innerHTML=PLAYERS.map(p=>`<button class="profile-button ${online.has(p.id)?'is-online':''} ${banLeft(p.id)?'is-banned':''} ${selectedPlayer===p.id?'active':''}" data-player="${p.id}" type="button" aria-pressed="${selectedPlayer===p.id}"${onTitle(p)} ${busy}><span class="player-dot" style="background:${p.color}"></span>${escape(p.name)}${on(p)}</button>`).join('')+add;
     $('cover-profiles').innerHTML=PLAYERS.map(p=>`<button class="profile-button ${online.has(p.id)?'is-online':''} ${banLeft(p.id)?'is-banned':''}" data-player="${p.id}" type="button"${onTitle(p)}><span class="player-dot" style="background:${p.color}"></span>${escape(p.name)}${on(p)}</button>`).join('')+add;
     const me=authed&&selectedPlayer===authed?player(authed):null;$('admin-open').hidden=!(me&&me.admin);
@@ -143,7 +145,7 @@
   }
   async function choosePlayer(id, trusted) {
     if(activeRound||loadingGame||privateAccess)return;
-    if(banLeft(id)){showToast(`⛔ ${player(id).name} est banni jusqu’à ${hhmm(bans[id])}.`);return;}
+    if(banLeft(id)){showToast(`⛔ ${player(id).name} est ${banText(id)}.`);return;}
     if(!trusted&&authed!==id){const ok=await askPassword(id);if(!ok)return;}
     authed=id;selectedPlayer=id;topPlayer=id;playMode={kind:'free'};persist();renderTop();if(typeof syncPush==='function')syncPush(false);online.add(id);renderProfiles();renderCompet();pingPresence();
     duels.filter(d=>d.status==='pending'&&d.opponent===id&&!inviteShown.has(d.id)).forEach(queueInvite);$('game-cover').hidden=true;if(typeof renderChat==='function')renderChat();
@@ -960,7 +962,7 @@
     await choosePlayer(id);persist();
   }
   // ---------- Bans ----------
-  function showBan(id){$('ban-text').textContent=`${player(id).name} est banni par l’admin jusqu’à ${hhmm(bans[id])}. Pas de jeu ni de chat d’ici là.`;$('ban-overlay').hidden=false;}
+  function showBan(id){$('ban-text').textContent=`${player(id).name} est ${banPerm(id)?'exclu définitivement par l’admin. Plus de jeu ni de chat.':`banni par l’admin jusqu’à ${hhmm(bans[id])}. Pas de jeu ni de chat d’ici là.`}`;$('ban-overlay').hidden=false;}
   $('ban-ok').addEventListener('click',()=>{$('ban-overlay').hidden=true;});
   function kick(id){
     activeRound=null;authed=null;selectedPlayer=null;setSession(null);persist();if(typeof renderAppButtons==='function')renderAppButtons();
@@ -972,19 +974,20 @@
   function renderAdmin(){
     const list=PLAYERS.filter(p=>p.id!==authed);
     $('admin-list').innerHTML=list.map(p=>{const b=banLeft(p.id);
-      return `<div class="admin-row ${b?'banned':''}"><div class="admin-who">${avatar(p)}<span><b>${escape(p.name)}</b><small>${b?`⛔ banni jusqu’à ${hhmm(bans[p.id])}`:online.has(p.id)?'🟢 en ligne':'hors ligne'}</small></span></div><div class="admin-actions">${BAN_TIMES.map(m=>`<button type="button" data-ban="${p.id}" data-min="${m}">${m<60?m+' min':m/60+' h'}</button>`).join('')}${b?`<button type="button" class="unban" data-ban="${p.id}" data-min="0">Débannir</button>`:''}</div></div>`;}).join('')||'<p class="br-empty">Personne à virer.</p>';
+      return `<div class="admin-row ${b?'banned':''}"><div class="admin-who">${avatar(p)}<span><b>${escape(p.name)}</b><small>${b?`⛔ ${banText(p.id)}`:online.has(p.id)?'🟢 en ligne':'hors ligne'}</small></span></div><div class="admin-actions">${BAN_TIMES.map(m=>`<button type="button" data-ban="${p.id}" data-min="${m}">${m<60?m+' min':m/60+' h'}</button>`).join('')}${banPerm(p.id)&&b?'':`<button type="button" class="perm" data-ban="${p.id}" data-min="-1">🚫 Définitif</button>`}${b?`<button type="button" class="unban" data-ban="${p.id}" data-min="0">Débannir</button>`:''}</div></div>`;}).join('')||'<p class="br-empty">Personne à virer.</p>';
   }
   $('admin-open').addEventListener('click',()=>{$('admin-error').textContent='';renderAdmin();$('admin-overlay').hidden=false;});
   $('admin-close').addEventListener('click',()=>{$('admin-overlay').hidden=true;});
   $('admin-overlay').addEventListener('click',e=>{if(e.target===e.currentTarget)$('admin-overlay').hidden=true;});
   $('admin-list').addEventListener('click',async e=>{
     const b=e.target.closest('[data-ban]');if(!b)return;const target=Number(b.dataset.ban),minutes=Number(b.dataset.min),s=getSession();
+    if(minutes===-1&&!b.dataset.sure){b.dataset.sure='1';b.textContent='Confirmer l’exclusion ?';b.classList.add('sure');setTimeout(()=>{if(b.isConnected){delete b.dataset.sure;b.textContent='🚫 Définitif';b.classList.remove('sure');}},4000);return;}
     if(!s||s.player!==authed){$('admin-error').textContent='Reconnecte-toi en tant qu’admin.';return;}
     b.disabled=true;$('admin-error').textContent='';
     try{const r=await request('/api/ban',{admin:authed,token:s.token,target,minutes});
       if(r.banned_until)bans[target]=r.banned_until;else delete bans[target];
       online.delete(target);renderAdmin();renderProfiles();
-      showToast(minutes?`⛔ ${player(target).name} est viré pour ${minutes<60?minutes+' min':minutes/60+' h'}.`:`✅ ${player(target).name} est débanni.`);
+      showToast(minutes===-1?`🚫 ${player(target).name} est exclu définitivement.`:minutes?`⛔ ${player(target).name} est viré pour ${minutes<60?minutes+' min':minutes/60+' h'}.`:`✅ ${player(target).name} est débanni.`);
     }catch(error){$('admin-error').textContent=error.message||'Action impossible.';b.disabled=false;}
   });
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)pingPresence();});
