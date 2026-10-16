@@ -511,3 +511,9 @@ body.chat-wide .chat-fab,body.chat-wide .chat-peek{display:none!important}
 .install-card .brand-mark img{width:100%;height:100%;border-radius:12px;display:block}
 .install-card .hint{font-size:11px;color:var(--muted)}
 @media(max-width:860px){.app-actions{order:3;margin:0}}
+
+/* Traînées du pingouin */
+.trail-preview{display:block;position:relative;width:100%;height:26px;border-radius:13px;background:var(--tg,#eef2ea);margin:4px 0 6px}
+.trail-preview.none{background:repeating-linear-gradient(45deg,#eef2ea 0 6px,#f8faf5 6px 12px)}
+.trail-preview i{position:absolute;right:-2px;top:50%;transform:translateY(-50%);font-style:normal;font-size:20px;filter:drop-shadow(0 1px 1px #0003)}
+.trail-card.locked .trail-preview{filter:grayscale(1);opacity:.45}

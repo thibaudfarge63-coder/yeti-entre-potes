@@ -187,9 +187,10 @@
       const ruffle=window.RufflePlayer?.newest();if(!ruffle)throw new Error('Le moteur du jeu n’a pas pu être chargé.');
       $('game-container').replaceChildren();const element=ruffle.createPlayer();$('game-container').appendChild(element);
       playerApi=element.ruffle(1);
-      const skinId=skinFor(selectedPlayer),podium=podiumOf(selectedPlayer),key=skinId+'|'+(podium||'');let data=null;
+      const skinId=skinFor(selectedPlayer),podium=podiumOf(selectedPlayer),trail=trailFor(selectedPlayer),key=skinId+'|'+(podium||'')+'|'+trail;let data=null;
       try{data=window.YetiSkins?await window.YetiSkins.build(skinId,podium):null;}catch(_){data=null;showToast('Le skin n’a pas pu être appliqué, jeu d’origine chargé.');}
-      await playerApi.load({...(data?{data}:{url:'game.swf'}),autoplay:'on',quality:'medium',backgroundColor:'#c9e8f7',allowScriptAccess:false,allowNetworking:'none',openUrlMode:'deny',splashScreen:false,contextMenu:'off',warnOnUnsupportedContent:false});
+      const tr=TRAILS.find(t=>t.id===trail);
+      await playerApi.load({...(data?{data}:{url:'game.swf?v=2'}),parameters:{yetiTrail:tr?tr.cfg:'none'},autoplay:'on',quality:'medium',backgroundColor:'#c9e8f7',allowScriptAccess:false,allowNetworking:'none',openUrlMode:'deny',splashScreen:false,contextMenu:'off',warnOnUnsupportedContent:false});
       playerApi.traceObserver=handleTrace;gameLoaded=true;loadedSkin=key;
     } catch(error) {
       gameLoaded=false;showToast(error.message||'Le jeu ne démarre pas. Réessaie en rechargeant la page.');$('game-cover').hidden=false;
@@ -358,6 +359,7 @@
       const st=skinState(p.id);if(!st)continue;
       const saved=new Set(savedSkins.get(p.id)||[]);
       const fresh=[...st.unlocked].filter(id=>!saved.has(id)&&/^[a-z0-9]{2,20}$/.test(id)&&['record','defi','ultra'].includes(window.YetiSkins.byId(id).kind));
+      for(const id of trailState(p.id).unlocked)if(!saved.has(id)&&!fresh.includes(id))fresh.push(id);
       if(!fresh.length||skinsSending.has(p.id))continue;
       skinsSending.add(p.id);
       request('/api/skins',{player:p.id,skins:fresh}).then(()=>savedSkins.set(p.id,[...saved,...fresh])).catch(()=>{}).finally(()=>skinsSending.delete(p.id));
@@ -368,7 +370,60 @@
     const bests=PLAYERS.map(p=>({id:p.id,best:stats(allScores().filter(s=>s.player===p.id)).best})).filter(r=>r.best!==null).sort((a,b)=>b.best-a.best);
     const i=bests.findIndex(r=>r.id===id);return ['gold','silver','bronze'][i]||null;
   }
-  function gameKey(id){return skinFor(id)+'|'+(podiumOf(id)||'');}
+  function gameKey(id){return skinFor(id)+'|'+(podiumOf(id)||'')+'|'+trailFor(id);}
+  // ---------- Traînées derrière le pingouin (débloquées en duel 1v1 et en Battle royale) ----------
+  // cfg est lu par le jeu (game.swf) : c = couleurs (de la queue vers le pingouin), w = épaisseur, n = longueur,
+  // a = opacité, s = étincelles par image, y = couleurs qui défilent.
+  const TRAILS=[
+    {id:'trsmoke',kind:'duel',need:1,emoji:'💨',name:'Fumée',cfg:'c=8d969b.c9d0d3.ffffff;w=13;n=16;a=60;s=0;y=0'},
+    {id:'trbubble',kind:'duel',need:3,emoji:'🫧',name:'Bulles',cfg:'c=6ec8ff.b8e8ff.ffffff;w=8;n=18;a=70;s=3;y=0'},
+    {id:'trfire',kind:'duel',need:5,emoji:'🔥',name:'Flammes',cfg:'c=c81e00.ff5a00.ff9d00.ffe14d;w=15;n=18;a=92;s=1;y=0'},
+    {id:'trvolt',kind:'duel',need:10,emoji:'⚡',name:'Électrique',cfg:'c=00e5ff.ffffff.7c4dff;w=7;n=22;a=95;s=2;y=1'},
+    {id:'trtoxic',kind:'duel',need:20,emoji:'☢️',name:'Toxique',cfg:'c=1faa00.3aff00.c6ff00;w=13;n=20;a=88;s=2;y=1'},
+    {id:'trrainbow',kind:'duel',need:35,emoji:'🌈',name:'Arc-en-ciel',cfg:'c=ff2a2a.ff8a00.ffe600.33dd00.00aaff.8a2be2;w=13;n=26;a=95;s=3;y=1'},
+    {id:'trconfetti',kind:'podium',need:1,emoji:'🎊',name:'Confettis',cfg:'c=ff4fa3.ffd400.30d5c8.7c4dff.ff6a00;w=7;n=18;a=95;s=4;y=1'},
+    {id:'trbronze',kind:'podium',need:3,emoji:'🥉',name:'Bronze',cfg:'c=6b3e14.cd7f32.f3b67c;w=12;n=20;a=92;s=1;y=0'},
+    {id:'trgold',kind:'win',need:1,emoji:'🥇',name:'Or',cfg:'c=a87400.ffd700.fff6a8;w=13;n=22;a=95;s=3;y=0'},
+    {id:'trsilver',kind:'podium',need:6,emoji:'🥈',name:'Argent',cfg:'c=6f767d.c0c7ce.ffffff;w=12;n=22;a=92;s=2;y=0'},
+    {id:'trcomet',kind:'win',need:3,emoji:'☄️',name:'Comète',cfg:'c=1e3cff.6fb6ff.ffffff;w=17;n=30;a=90;s=4;y=0'},
+    {id:'trneon',kind:'podium',need:10,emoji:'💖',name:'Néon',cfg:'c=ff00c8.ff6bf0.ffffff;w=9;n=24;a=100;s=1;y=0'},
+    {id:'trgalaxy',kind:'win',need:7,emoji:'🌌',name:'Galaxie',cfg:'c=2b0057.7c4dff.ff6bf0.ffffff;w=15;n=28;a=95;s=5;y=1'},
+  ];
+  const trailCols=t=>t.cfg.split(';')[0].slice(2).split('.').map(c=>'#'+c);
+  const trailCond=t=>t.kind==='duel'?`${t.need} duel${t.need>1?'s':''} 1v1 gagné${t.need>1?'s':''}`:t.kind==='win'?`${t.need} victoire${t.need>1?'s':''} en Battle royale`:`${t.need} podium${t.need>1?'s':''} en Battle royale`;
+  let trailChoices={};try{trailChoices=JSON.parse(localStorage.getItem('yeti-trails')||'{}')||{};}catch(_){}
+  // Duels gagnés et podiums de Battle royale (journées terminées seulement : un podium du jour peut encore changer).
+  function compStats(pid){
+    let duelWins=0,podiums=0,wins=0;
+    try{
+      for(const d of duels){if(d.challenger!==pid&&d.opponent!==pid)continue;const st=duelState(d);if(st.done&&st.winner===pid)duelWins++;}
+      const today=dayKey(new Date());
+      for(const day of new Set(dailyResults.map(r=>r.day))){if(day>=today)continue;const i=dayRanking(day).filter(r=>r.n>=DAILY_N).findIndex(r=>r.p.id===pid);if(i>=0&&i<3){podiums++;if(i===0)wins++;}}
+    }catch(_){}
+    return {duelWins,podiums,wins};
+  }
+  function trailState(pid){
+    const c=compStats(pid),saved=new Set(savedSkins.get(pid)||[]),unlocked=new Set();
+    for(const t of TRAILS){const have=t.kind==='duel'?c.duelWins:t.kind==='win'?c.wins:c.podiums;if(have>=t.need||saved.has(t.id))unlocked.add(t.id);}
+    return {...c,unlocked};
+  }
+  function trailFor(id){if(!id)return 'none';const ch=trailChoices[id];return ch&&ch!=='none'&&trailState(id).unlocked.has(ch)?ch:'none';}
+  function trailCards(){
+    if(!selectedPlayer)return '';
+    const st=trailState(selectedPlayer),cur=trailFor(selectedPlayer),busy=activeRound||loadingGame;
+    const none=`<button type="button" class="skin-card trail-card ${cur==='none'?'active':''}" data-trail="none" ${busy?'disabled':''} aria-pressed="${cur==='none'}"><span class="trail-preview none"></span><span class="skin-name">Aucune</span><span class="skin-min">${cur==='none'?'✓ Équipé':'Sans traînée'}</span></button>`;
+    const cards=TRAILS.map(t=>{const open=st.unlocked.has(t.id),active=t.id===cur,have=t.kind==='duel'?st.duelWins:t.kind==='win'?st.wins:st.podiums;
+      const sub=open?(active?'✓ Équipé · ':'✓ ')+trailCond(t):`🔒 ${trailCond(t)} (${Math.min(have,t.need)}/${t.need})`;
+      return `<button type="button" class="skin-card trail-card kind-${t.kind} ${active?'active':''} ${open?'':'locked'}" data-trail="${t.id}" ${open&&!busy?'':'disabled'} aria-pressed="${active}" title="${escape(t.name+' — '+trailCond(t))}"><span class="trail-preview" style="--tg:linear-gradient(90deg,transparent,${trailCols(t).join(',')})"><i>${t.emoji}</i></span><span class="skin-name">${escape(t.name)}</span><span class="skin-min">${escape(sub)}</span></button>`;}).join('');
+    return `<div class="skin-group trail-group"><span class="skin-group-label">Traînées · ${st.duelWins} duel${st.duelWins>1?'s':''} gagné${st.duelWins>1?'s':''} · ${st.podiums} podium${st.podiums>1?'s':''} BR (${st.wins} 🥇)</span><div class="skin-group-cards">${none}${cards}</div></div>`;
+  }
+  async function chooseTrail(id){
+    if(!selectedPlayer||activeRound||loadingGame)return;
+    if(id!=='none'&&!trailState(selectedPlayer).unlocked.has(id))return;
+    trailChoices[selectedPlayer]=id;try{localStorage.setItem('yeti-trails',JSON.stringify(trailChoices));}catch(_){}
+    renderSkins();
+    if(gameLoaded&&loadedSkin!==gameKey(selectedPlayer)){await loadGame();const t=TRAILS.find(x=>x.id===id);showToast(t?`${t.emoji} Traînée ${t.name} équipée : lance le pingouin pour la voir !`:'Traînée retirée.');}
+  }
   function skinFor(id){
     const st=skinState(id);if(!st)return 'yeti';
     if(st.curse)return st.curse.id;
@@ -396,7 +451,7 @@
         return `<button type="button" class="skin-card kind-${k.kind} ${active?'active':''} ${open?'':'locked'} ${k.id==='prime'?'prime':''}" data-skin="${k.id}" ${can?'':'disabled'} aria-pressed="${active}" title="${escape(k.name+' — '+k.tag+' · '+cond)}"><span class="skin-emoji">${k.photo?`<img class="skin-photo" src="${k.photo}" alt="">`:k.emoji||'<span class=\'skin-yeti\'>Y.</span>'}</span><span class="skin-name">${escape(k.name)}</span><span class="skin-min">${sub}</span></button>`;
       }).join('');
       return `<div class="skin-group"><span class="skin-group-label">${label}</span><div class="skin-group-cards">${cards}</div></div>`;
-    }).join('');
+    }).join('')+trailCards();
     if(box._html!==html){box.innerHTML=html;box._html=html;}
   }
   async function chooseSkin(id){
@@ -587,7 +642,7 @@
   });
   $('restart-game').addEventListener('click',loadGame);
   $('party').addEventListener('click',()=>{$('party').hidden=true;});
-  $('skins').addEventListener('click',e=>{const b=e.target.closest('[data-skin]');if(b&&!b.disabled)chooseSkin(b.dataset.skin);});
+  $('skins').addEventListener('click',e=>{const t=e.target.closest('[data-trail]');if(t&&!t.disabled){chooseTrail(t.dataset.trail);return;}const b=e.target.closest('[data-skin]');if(b&&!b.disabled)chooseSkin(b.dataset.skin);});
   const isPhone=()=>matchMedia('(pointer:coarse)').matches&&Math.min(screen.width,screen.height)<=820;
   document.documentElement.classList.toggle('is-phone',isPhone());
   $('fullscreen-game').hidden=!isPhone();
