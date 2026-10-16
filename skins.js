@@ -262,7 +262,7 @@
   }
 
   async function patch(skin, tintName) {
-    if (!original) original = new Uint8Array(await (await fetch('game.swf?v=2', {cache: 'force-cache'})).arrayBuffer());
+    if (!original) original = new Uint8Array(await (await fetch('game.swf?v=3', {cache: 'force-cache'})).arrayBuffer());
     const src = original, tint = PODIUM[tintName] || null;
     if (src[0] !== 0x46) throw new Error('Format de jeu inattendu');
     const nbits = src[8] >> 3, headerEnd = 8 + Math.ceil((5 + 4 * nbits) / 8) + 4;

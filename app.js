@@ -190,7 +190,7 @@
       const skinId=skinFor(selectedPlayer),podium=podiumOf(selectedPlayer),trail=trailFor(selectedPlayer),key=skinId+'|'+(podium||'')+'|'+trail;let data=null;
       try{data=window.YetiSkins?await window.YetiSkins.build(skinId,podium):null;}catch(_){data=null;showToast('Le skin n’a pas pu être appliqué, jeu d’origine chargé.');}
       const tr=TRAILS.find(t=>t.id===trail);
-      await playerApi.load({...(data?{data}:{url:'game.swf?v=2'}),parameters:{yetiTrail:tr?tr.cfg:'none'},autoplay:'on',quality:'medium',backgroundColor:'#c9e8f7',allowScriptAccess:false,allowNetworking:'none',openUrlMode:'deny',splashScreen:false,contextMenu:'off',warnOnUnsupportedContent:false});
+      await playerApi.load({...(data?{data}:{url:'game.swf?v=3'}),parameters:{yetiTrail:tr?tr.cfg:'none'},autoplay:'on',quality:'medium',backgroundColor:'#c9e8f7',allowScriptAccess:false,allowNetworking:'none',openUrlMode:'deny',splashScreen:false,contextMenu:'off',warnOnUnsupportedContent:false});
       playerApi.traceObserver=handleTrace;gameLoaded=true;loadedSkin=key;
     } catch(error) {
       gameLoaded=false;showToast(error.message||'Le jeu ne démarre pas. Réessaie en rechargeant la page.');$('game-cover').hidden=false;
