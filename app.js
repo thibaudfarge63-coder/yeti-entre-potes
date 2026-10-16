@@ -388,23 +388,37 @@
     {id:'trcomet',kind:'win',need:3,emoji:'☄️',name:'Comète',cfg:'c=1e3cff.6fb6ff.ffffff;w=17;n=30;a=90;s=4;y=0'},
     {id:'trneon',kind:'podium',need:10,emoji:'💖',name:'Néon',cfg:'c=ff00c8.ff6bf0.ffffff;w=9;n=24;a=100;s=1;y=0'},
     {id:'trgalaxy',kind:'win',need:7,emoji:'🌌',name:'Galaxie',cfg:'c=2b0057.7c4dff.ff6bf0.ffffff;w=15;n=28;a=95;s=5;y=1'},
+    // Ultra rares : il faut être un monstre.
+    {id:'trplasma',ultra:true,kind:'duel',need:50,emoji:'🔮',name:'Plasma',cfg:'c=ff00e6.7a00ff.00f0ff.ffffff;w=20;n=34;a=100;s=6;y=1'},
+    {id:'trinvinc',ultra:true,kind:'dstreak',need:10,emoji:'🛡️',name:'L’invincible',cfg:'c=ffffff.fff6a8.ffd700.ffffff;w=22;n=36;a=100;s=7;y=1'},
+    {id:'traurora',ultra:true,kind:'podium',need:25,emoji:'🌠',name:'Aurore boréale',cfg:'c=00ff9c.00d4ff.7c4dff.ff6bf0.00ff9c;w=24;n=40;a=80;s=4;y=1'},
+    {id:'trnova',ultra:true,kind:'win',need:15,emoji:'💥',name:'Supernova',cfg:'c=ffffff.fff36b.ff9d00.ff2a00.7a0000;w=26;n=34;a=100;s=8;y=1'},
+    {id:'trreign',ultra:true,kind:'bstreak',need:5,emoji:'👑',name:'Le règne',cfg:'c=4b0082.ffd700.ffffff.ffd700.4b0082;w=20;n=38;a=100;s=6;y=1'},
+    {id:'trdragon',ultra:true,kind:'duel',need:100,emoji:'🐉',name:'Souffle du dragon',cfg:'c=3a0000.c81e00.ff5a00.ffd000.ffffff;w=28;n=42;a=100;s=8;y=1'},
+    {id:'trhole',ultra:true,kind:'win',need:30,emoji:'🕳️',name:'Trou noir',cfg:'c=000000.2b0057.000000.7c4dff.000000;w=30;n=44;a=100;s=5;y=1'},
+    {id:'trdivine',ultra:true,kind:'combo',need:1,emoji:'😇',name:'Le divin',cfg:'c=ffffff.fffbe0.ffe9a8.ffffff.d8f6ff;w=30;n=48;a=100;s=10;y=1'},
   ];
+  // Le divin : 50 duels gagnés ET 20 victoires en Battle royale.
+  const trailHave=(t,c)=>t.kind==='duel'?c.duelWins:t.kind==='win'?c.wins:t.kind==='dstreak'?c.duelStreak:t.kind==='bstreak'?c.winStreak:t.kind==='combo'?(c.duelWins>=50&&c.wins>=20?1:0):c.podiums;
   const trailCols=t=>t.cfg.split(';')[0].slice(2).split('.').map(c=>'#'+c);
-  const trailCond=t=>t.kind==='duel'?`${t.need} duel${t.need>1?'s':''} 1v1 gagné${t.need>1?'s':''}`:t.kind==='win'?`${t.need} victoire${t.need>1?'s':''} en Battle royale`:`${t.need} podium${t.need>1?'s':''} en Battle royale`;
+  const trailCond=t=>t.kind==='combo'?'50 duels gagnés + 20 victoires en Battle royale':t.kind==='dstreak'?`${t.need} duels gagnés d’affilée`:t.kind==='bstreak'?`${t.need} jours d’affilée 1er en Battle royale`:t.kind==='duel'?`${t.need} duel${t.need>1?'s':''} 1v1 gagné${t.need>1?'s':''}`:t.kind==='win'?`${t.need} victoire${t.need>1?'s':''} en Battle royale`:`${t.need} podium${t.need>1?'s':''} en Battle royale`;
   let trailChoices={};try{trailChoices=JSON.parse(localStorage.getItem('yeti-trails')||'{}')||{};}catch(_){}
   // Duels gagnés et podiums de Battle royale (journées terminées seulement : un podium du jour peut encore changer).
   function compStats(pid){
-    let duelWins=0,podiums=0,wins=0;
+    let duelWins=0,podiums=0,wins=0,duelStreak=0,winStreak=0;
     try{
-      for(const d of duels){if(d.challenger!==pid&&d.opponent!==pid)continue;const st=duelState(d);if(st.done&&st.winner===pid)duelWins++;}
-      const today=dayKey(new Date());
-      for(const day of new Set(dailyResults.map(r=>r.day))){if(day>=today)continue;const i=dayRanking(day).filter(r=>r.n>=DAILY_N).findIndex(r=>r.p.id===pid);if(i>=0&&i<3){podiums++;if(i===0)wins++;}}
+      let run=0;
+      for(const d of [...duels].sort((a,b)=>a.id-b.id)){if(d.challenger!==pid&&d.opponent!==pid)continue;const st=duelState(d);if(!st.done)continue;if(st.winner===pid){duelWins++;run++;duelStreak=Math.max(duelStreak,run);}else run=0;}
+      const today=dayKey(new Date());let prev=null;run=0;
+      for(const day of [...new Set(dailyResults.map(r=>r.day))].sort()){if(day>=today)continue;const i=dayRanking(day).filter(r=>r.n>=DAILY_N).findIndex(r=>r.p.id===pid);
+        if(i>=0&&i<3){podiums++;if(i===0)wins++;}
+        if(i===0){run=prev&&shiftDay(prev,1)===day?run+1:1;winStreak=Math.max(winStreak,run);prev=day;}else{run=0;prev=null;}}
     }catch(_){}
-    return {duelWins,podiums,wins};
+    return {duelWins,podiums,wins,duelStreak,winStreak};
   }
   function trailState(pid){
     const c=compStats(pid),saved=new Set(savedSkins.get(pid)||[]),unlocked=new Set();
-    for(const t of TRAILS){const have=t.kind==='duel'?c.duelWins:t.kind==='win'?c.wins:c.podiums;if(have>=t.need||saved.has(t.id))unlocked.add(t.id);}
+    for(const t of TRAILS){if(trailHave(t,c)>=t.need||saved.has(t.id))unlocked.add(t.id);}
     return {...c,unlocked};
   }
   function trailFor(id){if(!id)return 'none';const ch=trailChoices[id];return ch&&ch!=='none'&&trailState(id).unlocked.has(ch)?ch:'none';}
@@ -412,17 +426,19 @@
     if(!selectedPlayer)return '';
     const st=trailState(selectedPlayer),cur=trailFor(selectedPlayer),busy=activeRound||loadingGame;
     const none=`<button type="button" class="skin-card trail-card ${cur==='none'?'active':''}" data-trail="none" ${busy?'disabled':''} aria-pressed="${cur==='none'}"><span class="trail-preview none"></span><span class="skin-name">Aucune</span><span class="skin-min">${cur==='none'?'✓ Équipé':'Sans traînée'}</span></button>`;
-    const cards=TRAILS.map(t=>{const open=st.unlocked.has(t.id),active=t.id===cur,have=t.kind==='duel'?st.duelWins:t.kind==='win'?st.wins:st.podiums;
-      const sub=open?(active?'✓ Équipé · ':'✓ ')+trailCond(t):`🔒 ${trailCond(t)} (${Math.min(have,t.need)}/${t.need})`;
-      return `<button type="button" class="skin-card trail-card kind-${t.kind} ${active?'active':''} ${open?'':'locked'}" data-trail="${t.id}" ${open&&!busy?'':'disabled'} aria-pressed="${active}" title="${escape(t.name+' — '+trailCond(t))}"><span class="trail-preview" style="--tg:linear-gradient(90deg,transparent,${trailCols(t).join(',')})"><i>${t.emoji}</i></span><span class="skin-name">${escape(t.name)}</span><span class="skin-min">${escape(sub)}</span></button>`;}).join('');
-    return `<div class="skin-group trail-group"><span class="skin-group-label">Traînées · ${st.duelWins} duel${st.duelWins>1?'s':''} gagné${st.duelWins>1?'s':''} · ${st.podiums} podium${st.podiums>1?'s':''} BR (${st.wins} 🥇)</span><div class="skin-group-cards">${none}${cards}</div></div>`;
+    const card=t=>{const open=st.unlocked.has(t.id),active=t.id===cur,have=trailHave(t,st);
+      const sub=open?(active?'✓ Équipé · ':'✓ ')+trailCond(t):`🔒 ${trailCond(t)} (${t.kind==='combo'?`${Math.min(st.duelWins,50)}/50 · ${Math.min(st.wins,20)}/20`:`${Math.min(have,t.need)}/${t.need}`})`;
+      return `<button type="button" class="skin-card trail-card ${t.ultra?'kind-ultra':'kind-'+t.kind} ${active?'active':''} ${open?'':'locked'}" data-trail="${t.id}" ${open&&!busy?'':'disabled'} aria-pressed="${active}" title="${escape(t.name+' — '+trailCond(t))}"><span class="trail-preview" style="--tg:linear-gradient(90deg,transparent,${trailCols(t).join(',')})"><i>${t.emoji}</i></span><span class="skin-name">${escape(t.name)}</span><span class="skin-min">${escape(sub)}</span></button>`;};
+    const cards=TRAILS.filter(t=>!t.ultra).map(card).join(''),ultra=TRAILS.filter(t=>t.ultra).map(card).join('');
+    return `<div class="skin-group trail-group"><span class="skin-group-label">Traînées · ${st.duelWins} duel${st.duelWins>1?'s':''} gagné${st.duelWins>1?'s':''} · ${st.podiums} podium${st.podiums>1?'s':''} BR (${st.wins} 🥇)</span><div class="skin-group-cards">${none}${cards}</div></div>`
+      +`<div class="skin-group trail-group"><span class="skin-group-label">Traînées ultra rares 💎 · meilleure série : ${st.duelStreak} duel${st.duelStreak>1?'s':''} · ${st.winStreak} jour${st.winStreak>1?'s':''} 1er</span><div class="skin-group-cards">${ultra}</div></div>`;
   }
   async function chooseTrail(id){
     if(!selectedPlayer||activeRound||loadingGame)return;
     if(id!=='none'&&!trailState(selectedPlayer).unlocked.has(id))return;
     trailChoices[selectedPlayer]=id;try{localStorage.setItem('yeti-trails',JSON.stringify(trailChoices));}catch(_){}
     renderSkins();
-    if(gameLoaded&&loadedSkin!==gameKey(selectedPlayer)){await loadGame();const t=TRAILS.find(x=>x.id===id);showToast(t?`${t.emoji} Traînée ${t.name} équipée : lance le pingouin pour la voir !`:'Traînée retirée.');}
+    if(gameLoaded&&loadedSkin!==gameKey(selectedPlayer)){await loadGame();const t=TRAILS.find(x=>x.id===id);showToast(t?`${t.ultra?'💎 ':''}${t.emoji} Traînée ${t.name} équipée : lance le pingouin pour la voir !`:'Traînée retirée.');}
   }
   function skinFor(id){
     const st=skinState(id);if(!st)return 'yeti';
