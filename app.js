@@ -389,19 +389,19 @@
     {id:'trneon',kind:'podium',need:10,emoji:'💖',name:'Néon',cfg:'c=ff00c8.ff6bf0.ffffff;w=9;n=24;a=100;s=1;y=0'},
     {id:'trgalaxy',kind:'win',need:7,emoji:'🌌',name:'Galaxie',cfg:'c=2b0057.7c4dff.ff6bf0.ffffff;w=15;n=28;a=95;s=5;y=1'},
     // Ultra rares : il faut être un monstre.
-    {id:'trplasma',ultra:true,kind:'duel',need:50,emoji:'🔮',name:'Plasma',cfg:'c=ff00e6.7a00ff.00f0ff.ffffff;w=20;n=34;a=100;s=6;y=1'},
-    {id:'trinvinc',ultra:true,kind:'dstreak',need:10,emoji:'🛡️',name:'L’invincible',cfg:'c=ffffff.fff6a8.ffd700.ffffff;w=22;n=36;a=100;s=7;y=1'},
-    {id:'traurora',ultra:true,kind:'podium',need:25,emoji:'🌠',name:'Aurore boréale',cfg:'c=00ff9c.00d4ff.7c4dff.ff6bf0.00ff9c;w=24;n=40;a=80;s=4;y=1'},
-    {id:'trnova',ultra:true,kind:'win',need:15,emoji:'💥',name:'Supernova',cfg:'c=ffffff.fff36b.ff9d00.ff2a00.7a0000;w=26;n=34;a=100;s=8;y=1'},
+    {id:'trsonic',ultra:true,kind:'best',need:500,emoji:'🚀',name:'Mur du son',cfg:'c=ffffff.00f0ff.7a00ff.ff00e6.ffffff;w=22;n=36;a=100;s=7;y=1'},
+    {id:'trorbit',ultra:true,kind:'best',need:530,emoji:'🛰️',name:'Hors orbite',cfg:'c=000000.1e3cff.00f0ff.ffffff.fff36b;w=26;n=40;a=100;s=8;y=1'},
+    {id:'trwall',ultra:true,kind:'floor',need:450,emoji:'🧱',name:'La muraille',cfg:'c=00ff9c.00d4ff.7c4dff.ff6bf0.00ff9c;w=24;n=40;a=85;s=5;y=1'},
+    {id:'trmarathon',ultra:true,kind:'throws',need:2000,emoji:'🏃',name:'Le marathon',cfg:'c=ffffff.fff36b.ff9d00.ff2a00.7a0000;w=24;n=34;a=100;s=8;y=1'},
     {id:'trreign',ultra:true,kind:'bstreak',need:5,emoji:'👑',name:'Le règne',cfg:'c=4b0082.ffd700.ffffff.ffd700.4b0082;w=20;n=38;a=100;s=6;y=1'},
     {id:'trdragon',ultra:true,kind:'duel',need:100,emoji:'🐉',name:'Souffle du dragon',cfg:'c=3a0000.c81e00.ff5a00.ffd000.ffffff;w=28;n=42;a=100;s=8;y=1'},
     {id:'trhole',ultra:true,kind:'win',need:30,emoji:'🕳️',name:'Trou noir',cfg:'c=000000.2b0057.000000.7c4dff.000000;w=30;n=44;a=100;s=5;y=1'},
     {id:'trdivine',ultra:true,kind:'combo',need:1,emoji:'😇',name:'Le divin',cfg:'c=ffffff.fffbe0.ffe9a8.ffffff.d8f6ff;w=30;n=48;a=100;s=10;y=1'},
   ];
   // Le divin : 50 duels gagnés ET 20 victoires en Battle royale.
-  const trailHave=(t,c)=>t.kind==='duel'?c.duelWins:t.kind==='win'?c.wins:t.kind==='dstreak'?c.duelStreak:t.kind==='bstreak'?c.winStreak:t.kind==='combo'?(c.duelWins>=50&&c.wins>=20?1:0):c.podiums;
+  const trailHave=(t,c)=>t.kind==='duel'?c.duelWins:t.kind==='win'?c.wins:t.kind==='dstreak'?c.duelStreak:t.kind==='bstreak'?c.winStreak:t.kind==='combo'?(c.duelWins>=50&&c.wins>=20?1:0):t.kind==='best'?c.best:t.kind==='floor'?c.floor:t.kind==='throws'?c.throws:c.podiums;
   const trailCols=t=>t.cfg.split(';')[0].slice(2).split('.').map(c=>'#'+c);
-  const trailCond=t=>t.kind==='combo'?'50 duels gagnés + 20 victoires en Battle royale':t.kind==='dstreak'?`${t.need} duels gagnés d’affilée`:t.kind==='bstreak'?`${t.need} jours d’affilée 1er en Battle royale`:t.kind==='duel'?`${t.need} duel${t.need>1?'s':''} 1v1 gagné${t.need>1?'s':''}`:t.kind==='win'?`${t.need} victoire${t.need>1?'s':''} en Battle royale`:`${t.need} podium${t.need>1?'s':''} en Battle royale`;
+  const trailCond=t=>t.kind==='best'?`Un lancer à ${t.need} m ou plus`:t.kind==='floor'?`Ton 10e meilleur score à ${t.need} m ou plus`:t.kind==='throws'?`${number.format(t.need)} lancers au total`:t.kind==='combo'?'50 duels gagnés + 20 victoires en Battle royale':t.kind==='dstreak'?`${t.need} duels gagnés d’affilée`:t.kind==='bstreak'?`${t.need} jours d’affilée 1er en Battle royale`:t.kind==='duel'?`${t.need} duel${t.need>1?'s':''} 1v1 gagné${t.need>1?'s':''}`:t.kind==='win'?`${t.need} victoire${t.need>1?'s':''} en Battle royale`:`${t.need} podium${t.need>1?'s':''} en Battle royale`;
   let trailChoices={};try{trailChoices=JSON.parse(localStorage.getItem('yeti-trails')||'{}')||{};}catch(_){}
   // Duels gagnés et podiums de Battle royale (journées terminées seulement : un podium du jour peut encore changer).
   function compStats(pid){
@@ -414,7 +414,10 @@
         if(i>=0&&i<3){podiums++;if(i===0)wins++;}
         if(i===0){run=prev&&shiftDay(prev,1)===day?run+1:1;winStreak=Math.max(winStreak,run);prev=day;}else{run=0;prev=null;}}
     }catch(_){}
-    return {duelWins,podiums,wins,duelStreak,winStreak};
+    let best=0,floor=0,throws=0;
+    try{const top=topOf(pid);best=top.length?Math.floor(top[0].score):0;floor=top.length>=10?Math.floor(top[9].score):0;
+      throws=(totals.get(pid)||0)+allScores().filter(s=>s.player===pid&&notCounted(s)).length;}catch(_){}
+    return {duelWins,podiums,wins,duelStreak,winStreak,best,floor,throws};
   }
   function trailState(pid){
     const c=compStats(pid),saved=new Set(savedSkins.get(pid)||[]),unlocked=new Set();
@@ -427,7 +430,7 @@
     const st=trailState(selectedPlayer),cur=trailFor(selectedPlayer),busy=activeRound||loadingGame;
     const none=`<button type="button" class="skin-card trail-card ${cur==='none'?'active':''}" data-trail="none" ${busy?'disabled':''} aria-pressed="${cur==='none'}"><span class="trail-preview none"></span><span class="skin-name">Aucune</span><span class="skin-min">${cur==='none'?'✓ Équipé':'Sans traînée'}</span></button>`;
     const card=t=>{const open=st.unlocked.has(t.id),active=t.id===cur,have=trailHave(t,st);
-      const sub=open?(active?'✓ Équipé · ':'✓ ')+trailCond(t):`🔒 ${trailCond(t)} (${t.kind==='combo'?`${Math.min(st.duelWins,50)}/50 · ${Math.min(st.wins,20)}/20`:`${Math.min(have,t.need)}/${t.need}`})`;
+      const sub=open?(active?'✓ Équipé · ':'✓ ')+trailCond(t):`🔒 ${trailCond(t)} (${t.kind==='combo'?`${Math.min(st.duelWins,50)}/50 · ${Math.min(st.wins,20)}/20`:`${number.format(Math.min(have,t.need))}/${number.format(t.need)}${t.kind==='best'||t.kind==='floor'?' m':''}`})`;
       return `<button type="button" class="skin-card trail-card ${t.ultra?'kind-ultra':'kind-'+t.kind} ${active?'active':''} ${open?'':'locked'}" data-trail="${t.id}" ${open&&!busy?'':'disabled'} aria-pressed="${active}" title="${escape(t.name+' — '+trailCond(t))}"><span class="trail-preview" style="--tg:linear-gradient(90deg,transparent,${trailCols(t).join(',')})"><i>${t.emoji}</i></span><span class="skin-name">${escape(t.name)}</span><span class="skin-min">${escape(sub)}</span></button>`;};
     const cards=TRAILS.filter(t=>!t.ultra).map(card).join(''),ultra=TRAILS.filter(t=>t.ultra).map(card).join('');
     return `<div class="skin-group trail-group"><span class="skin-group-label">Traînées · ${st.duelWins} duel${st.duelWins>1?'s':''} gagné${st.duelWins>1?'s':''} · ${st.podiums} podium${st.podiums>1?'s':''} BR (${st.wins} 🥇)</span><div class="skin-group-cards">${none}${cards}</div></div>`
