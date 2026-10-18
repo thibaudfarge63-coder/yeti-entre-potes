@@ -12,14 +12,16 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Yeti rich club">
-  <link rel="stylesheet" href="styles.css?v=20261016-46">
+  <link rel="stylesheet" href="styles.css?v=20261016-47">
   <script>window.RufflePlayer = window.RufflePlayer || {}; window.RufflePlayer.config = {autoplay:"on",unmuteOverlay:"visible",backgroundColor:"#c9e8f7",contextMenu:"off",warnOnUnsupportedContent:false};</script>
   <script src="ruffle/ruffle.js" defer></script>
-  <script src="config.js?v=20261016-46" defer></script>
-  <script src="data-client.js?v=20261016-46" defer></script>
-  <script src="costumes.js?v=20261016-46" defer></script>
-  <script src="skins.js?v=20261016-46" defer></script>
-  <script src="app.js?v=20261016-46" defer></script>
+  <script src="config.js?v=20261016-47" defer></script>
+  <script src="data-client.js?v=20261016-47" defer></script>
+  <script src="costumes.js?v=20261016-47" defer></script>
+  <script src="skins.js?v=20261016-47" defer></script>
+  <script src="chess-engine.js?v=1" defer></script>
+  <script src="games.js?v=20261016-47" defer></script>
+  <script src="app.js?v=20261016-47" defer></script>
 </head>
 <body>
   <div class="page-shell">
@@ -38,8 +40,8 @@
         <div class="compet-grid">
           <article class="br-card compet-panel" data-panel="br"><div class="card-title"><div><h3>🏟️ Battle royale</h3><p id="br-date"></p></div><div class="br-tabs" id="br-tabs"><button type="button" data-br="day" class="active">Aujourd’hui</button><button type="button" data-br="month">Ce mois-ci</button></div></div>
             <div class="br-me" id="br-me"></div><div class="br-table" id="br-table"></div></article>
-          <article class="duel-card compet-panel" data-panel="duel" hidden><div class="card-title"><div><h3>⚔️ Duels 1v1</h3><p>5 lancers chacun, la meilleure moyenne gagne.</p></div></div>
-            <form class="duel-new" id="duel-new"><p class="duel-pick-label">Choisis ton adversaire :</p><div class="duel-pick" id="duel-pick" role="radiogroup" aria-label="Adversaire"></div><button type="submit" id="duel-go" disabled>Choisis un adversaire</button></form>
+          <article class="duel-card compet-panel" data-panel="duel" hidden><div class="card-title"><div><h3>⚔️ Duels 1v1</h3><p id="duel-desc">Yéti, échecs ou bataille navale : choisis ton jeu.</p></div></div>
+            <form class="duel-new" id="duel-new"><p class="duel-pick-label">Choisis le jeu :</p><div class="duel-games" id="duel-games" role="radiogroup" aria-label="Jeu"><button type="button" class="duel-game on" data-game="yeti" role="radio" aria-checked="true"><span>🏔️</span><b>Yéti</b><small>5 lancers chacun</small></button><button type="button" class="duel-game" data-game="chess" role="radio" aria-checked="false"><span>♟️</span><b>Échecs</b><small>Partie complète</small></button><button type="button" class="duel-game" data-game="naval" role="radio" aria-checked="false"><span>🚢</span><b>Bataille navale</b><small>Coule ses 5 bateaux</small></button></div><p class="duel-pick-label">Choisis ton adversaire :</p><div class="duel-pick" id="duel-pick" role="radiogroup" aria-label="Adversaire"></div><button type="submit" id="duel-go" disabled>Choisis un adversaire</button></form>
             <div class="duel-list" id="duel-list"></div></article>
         </div>
       </section>
@@ -54,6 +56,7 @@
               <div class="game-cover" id="game-cover"><div class="cover-mountain" aria-hidden="true">▲</div><span class="eyebrow">LE SOMMET VOUS ATTEND</span><h2>Choisis ton pseudo.</h2><p>Chaque lancer sera ajouté à ton historique.</p><p class="cover-hint-mobile">Touche ton prénom juste au-dessus ↑</p><div class="cover-profiles" id="cover-profiles"></div></div>
               <div id="game-loading" class="game-loading" hidden><span class="spinner"></span><p>Le Yéti s’échauffe…</p></div>
             </div>
+            <div class="board-stage" id="board-stage" hidden></div>
             <div class="game-footer"><p><span aria-hidden="true">↖</span> <span class="hint-desktop">Clique dans le jeu pour lancer.</span><span class="hint-phone">Touche le jeu pour lancer.</span> Ton score est enregistré automatiquement.</p><div class="game-actions"><button type="button" id="fullscreen-game" class="fs-button" hidden>⛶ Plein écran</button><button type="button" id="restart-game" class="text-button" disabled>Relancer le jeu <span aria-hidden="true">↻</span></button></div></div>
           </div>
           <section class="top-card" aria-labelledby="top-title"><div class="top-head"><h3 id="top-title">🏆 Top 10 de chacun</h3><p id="top-sub">Les 10 meilleurs lancers de chaque joueur, Battle royale et duels compris.</p></div><div class="top-tabs" id="top-tabs" role="tablist" aria-label="Choisir un joueur"></div><ol class="top-list" id="top-list"></ol></section>
@@ -86,6 +89,6 @@
   <section class="chat-panel" id="chat-panel" hidden aria-label="Chat du club"><header class="chat-head"><div><strong>Le chat du club</strong><span id="chat-sub">Tout le club voit tes messages</span></div><div class="chat-head-actions"><button type="button" class="chat-close chat-wide-btn" id="chat-wide" aria-label="Agrandir le chat" title="Agrandir le chat (moitié d’écran)">⤢</button><button type="button" class="chat-close" id="chat-close" aria-label="Fermer le chat">✕</button></div></header><div class="chat-list" id="chat-list" aria-live="polite"><p class="chat-empty">Pas encore de message. Lance les hostilités.</p></div><div class="chat-mention" id="chat-mention" hidden role="listbox" aria-label="Taguer un joueur"></div><div class="chat-picker" id="chat-picker" hidden><div class="chat-picker-tabs"><button type="button" class="active" data-pick-tab="gif">GIF</button><button type="button" data-pick-tab="sticker">Stickers</button></div><div class="chat-picker-grid" id="chat-picker-grid"></div></div><form class="chat-form" id="chat-form"><button type="button" class="chat-pick-btn" id="chat-pick" aria-label="GIF et stickers" aria-expanded="false" disabled>😊</button><input id="chat-input" type="text" maxlength="280" autocomplete="off" placeholder="Choisis ton pseudo pour écrire" disabled><button type="submit" id="chat-send" disabled aria-label="Envoyer">➤</button></form></section>
   <canvas class="confetti" id="confetti" hidden aria-hidden="true"></canvas>
   <div class="party" id="party" hidden role="alert"><div class="party-card"><span class="party-eyebrow">🎉 NOUVEAU RECORD ABSOLU 🎉</span><strong id="party-name"></strong><span class="party-score" id="party-score"></span><span class="party-prev" id="party-prev"></span></div></div>
-  <div class="duel-invite" id="duel-invite" hidden role="dialog" aria-modal="true" aria-labelledby="di-title"><div class="di-card"><div class="di-vs" id="di-vs"></div><p class="di-eyebrow">⚔️ DÉFI EN DUEL</p><h2 id="di-title"></h2><p class="di-text">5 lancers chacun, la meilleure moyenne gagne.</p><div class="di-actions"><button type="button" class="di-no" id="di-no">Refuser</button><button type="button" class="di-yes" id="di-yes">Accepter</button></div></div></div>
+  <div class="duel-invite" id="duel-invite" hidden role="dialog" aria-modal="true" aria-labelledby="di-title"><div class="di-card"><div class="di-vs" id="di-vs"></div><p class="di-eyebrow">⚔️ DÉFI EN DUEL</p><h2 id="di-title"></h2><p class="di-text" id="di-text">5 lancers chacun, la meilleure moyenne gagne.</p><div class="di-actions"><button type="button" class="di-no" id="di-no">Refuser</button><button type="button" class="di-yes" id="di-yes">Accepter</button></div></div></div>
 </body>
 </html>

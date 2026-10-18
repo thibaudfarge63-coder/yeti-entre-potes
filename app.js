@@ -147,6 +147,7 @@
     if(activeRound||loadingGame||privateAccess)return;
     if(banLeft(id)){showToast(`⛔ ${player(id).name} est ${banText(id)}.`);return;}
     if(!trusted&&authed!==id){const ok=await askPassword(id);if(!ok)return;}
+    if(window.YetiGames&&YetiGames.openId&&selectedPlayer!==id)YetiGames.close();
     authed=id;selectedPlayer=id;topPlayer=id;playMode={kind:'free'};persist();renderTop();if(typeof syncPush==='function')syncPush(false);online.add(id);renderProfiles();renderCompet();pingPresence();
     duels.filter(d=>d.status==='pending'&&d.opponent===id&&!inviteShown.has(d.id)).forEach(queueInvite);$('game-cover').hidden=true;if(typeof renderChat==='function')renderChat();
     renderSkins();
@@ -204,6 +205,7 @@
       const data=await request('/api/state');
       if(!data||!Array.isArray(data.scores))throw new Error('Historique indisponible.');
       setPlayers(data.players);
+      if(Array.isArray(data.groups))GROUPS=data.groups.map(g=>({tag:String(g.tag),members:(g.members||[]).map(Number)}));
       if(Array.isArray(data.duels))setDuels(data.duels);
       if(Array.isArray(data.daily))dailyResults=data.daily.map(r=>({day:String(r.day).slice(0,10),player:Number(r.player),n:Number(r.n)||0,total:Number(r.total)||0}));
       const sig=JSON.stringify([data.players,data.scores.map(s=>s.id).join(),data.duels||[],data.daily||[]]);const same=sig===lastStateSig;lastStateSig=sig;
@@ -482,7 +484,9 @@
     renderSkins();if(gameLoaded&&loadedSkin!==gameKey(selectedPlayer)){await loadGame();showToast(`${k.emoji||''} ${k.name} est sur la banquise.`);}
   }
   // ---------- Compétitions : battle royale quotidienne + duels ----------
-  let playMode={kind:'free'},duels=[],knownDuels=null,brView='day',competTab='br',duelOpp=null;
+  let playMode={kind:'free'},duels=[],knownDuels=null,brView='day',competTab='br',duelOpp=null,duelGame='yeti',GROUPS=[];
+  const GAME_INFO={yeti:{icon:'🏔️',name:'Yéti',label:'en duel',text:'5 lancers chacun, la meilleure moyenne gagne.'},chess:{icon:'♟️',name:'Échecs',label:'aux échecs',text:'Une vraie partie d’échecs, chacun joue à son rythme. Le jeu s’ouvre à la place du Yéti.'},naval:{icon:'🚢',name:'Bataille navale',label:'à la bataille navale',text:'Place tes 5 bateaux et coule les siens. Le jeu s’ouvre à la place du Yéti.'}};
+  const gameOf=d=>d.game||'yeti';
   const POINTS=[10,8,6,5,4,3,2,1],DUEL_N=5,DAILY_N=10;
   // Le serveur ne garde que 300 lancers (+ les 10 meilleurs de chacun) : les compétitions se basent sur
   // les compteurs du serveur (daily / duels.c_n…) + les lancers locaux pas encore comptés par le serveur.
@@ -494,29 +498,34 @@
   const duelOf=(d,pid)=>{const c=pid===d.challenger;return tally(c?d.c_n:d.o_n,c?d.c_sum:d.o_sum,unsynced(s=>s.mode==='duel'&&s.ref===String(d.id)&&s.player===pid));};
   let duelStatus=new Map(),inviteQueue=[],inviteShown=new Set();
   function setDuels(list){
-    duels=list.map(d=>({...d,id:Number(d.id),challenger:Number(d.challenger),opponent:Number(d.opponent),throws:Number(d.throws)||DUEL_N,status:d.status||'accepted',c_n:Number(d.c_n)||0,c_sum:Number(d.c_sum)||0,o_n:Number(d.o_n)||0,o_sum:Number(d.o_sum)||0}));
+    const prevTurn=new Map(duels.map(d=>[d.id,d.turn]));
+    duels=list.map(d=>({...d,id:Number(d.id),challenger:Number(d.challenger),opponent:Number(d.opponent),throws:Number(d.throws)||DUEL_N,status:d.status||'accepted',c_n:Number(d.c_n)||0,c_sum:Number(d.c_sum)||0,o_n:Number(d.o_n)||0,o_sum:Number(d.o_sum)||0,
+      game:d.game||'yeti',winner:d.winner===undefined||d.winner===null?null:Number(d.winner),finished_at:d.finished_at||null,turn:d.turn===undefined||d.turn===null?null:Number(d.turn),placed:(d.placed||[]).map(Number),ply:Number(d.ply)||0}));
     const first=knownDuels===null;if(first)knownDuels=new Set();
     for(const d of duels){
       const prev=duelStatus.get(d.id);duelStatus.set(d.id,d.status);
       if(!knownDuels.has(d.id)){knownDuels.add(d.id);}
       if(d.status==='pending'&&d.opponent===selectedPlayer&&!inviteShown.has(d.id))queueInvite(d);
       if(!first&&prev==='pending'&&d.challenger===selectedPlayer){
-        if(d.status==='accepted')showToast(`✅ ${player(d.opponent).name} a accepté ton duel ! Clique sur « Jouer » dans Duels 1v1.`);
+        if(d.status==='accepted'&&d.game!=='yeti'){showToast(`✅ ${player(d.opponent).name} a accepté ton défi ${GAME_INFO[d.game].label} !`);if(!activeRound&&!(window.YetiGames&&YetiGames.openId))openBoard(d.id);}
+        else if(d.status==='accepted')showToast(`✅ ${player(d.opponent).name} a accepté ton duel ! Clique sur « Jouer » dans Duels 1v1.`);
         if(d.status==='refused')showToast(`❌ ${player(d.opponent).name} a refusé ton duel.`);
       }
+      if(!first&&d.game!=='yeti'&&d.turn===selectedPlayer&&prevTurn.has(d.id)&&prevTurn.get(d.id)!==selectedPlayer&&!(window.YetiGames&&YetiGames.openId===d.id)){const o=d.challenger===selectedPlayer?d.opponent:d.challenger;showToast(`${GAME_INFO[d.game].icon} À toi de jouer contre ${player(o).name} !`);}
     }
   }
   function queueInvite(d){inviteShown.add(d.id);inviteQueue.push(d.id);if(inviteQueue.length===1)showInvite();}
   function showInvite(){
     const d=duels.find(x=>x.id===inviteQueue[0]);if(!d||d.status!=='pending'||d.opponent!==selectedPlayer){inviteQueue.shift();if(inviteQueue.length)showInvite();else $('duel-invite').hidden=true;return;}
     const c=player(d.challenger),me=player(d.opponent);
-    $('di-vs').innerHTML=`${avatar(c)}<span>VS</span>${avatar(me)}`;$('di-title').textContent=`${c.name} te défie !`;$('duel-invite').hidden=false;
+    const gi=GAME_INFO[gameOf(d)];$('di-vs').innerHTML=`${avatar(c)}<span>${gi.icon}</span>${avatar(me)}`;$('di-title').textContent=d.game==='yeti'?`${c.name} te défie !`:`${c.name} te défie ${gi.label} !`;$('di-text').textContent=gi.text;$('duel-invite').hidden=false;
   }
   async function answerDuel(id,accept){
     if(!selectedPlayer)return;
     try{await request('/api/duel/answer',{duel:id,player:selectedPlayer,accept});
       const d=duels.find(x=>x.id===id);if(d)d.status=accept?'accepted':'refused';duelStatus.set(id,d?d.status:'');
-      if(accept){competTab='duel';setMode({kind:'duel',id});showToast(`⚔️ Duel accepté ! Tes 5 prochains lancers comptent.`);if(!gameLoaded)loadGame();}
+      if(accept&&d&&d.game!=='yeti'){competTab='duel';showToast(`${GAME_INFO[d.game].icon} Défi accepté, c’est parti !`);openBoard(id);}
+      else if(accept){competTab='duel';setMode({kind:'duel',id});showToast(`⚔️ Duel accepté ! Tes 5 prochains lancers comptent.`);if(!gameLoaded)loadGame();}
       else showToast('Défi refusé.');
       await refresh();
     }catch(error){showToast(error.message||'Réponse impossible pour le moment.');}
@@ -535,6 +544,7 @@
     return [...t.values()].filter(e=>e.sessions).sort((a,b)=>b.pts-a.pts||b.sum/b.sessions-a.sum/a.sessions);
   }
   function duelState(d){
+    if(d.game&&d.game!=='yeti'){const z={length:0,avg:null};return {a:z,b:z,aa:null,ba:null,done:!!d.finished_at&&d.status==='accepted',winner:d.finished_at?d.winner:null};}
     const a=duelOf(d,d.challenger),b=duelOf(d,d.opponent),done=d.status==='accepted'&&a.length>=d.throws&&b.length>=d.throws,aa=avgOf(a),ba=avgOf(b);
     return {a,b,aa,ba,done,winner:done?(aa>ba?d.challenger:ba>aa?d.opponent:0):null};
   }
@@ -588,19 +598,21 @@
     // duels
     if(duelOpp===me||!PLAYERS.some(p=>p.id===duelOpp))duelOpp=null;
     $('duel-pick').innerHTML=me?PLAYERS.filter(p=>p.id!==me).map(p=>`<button type="button" class="duel-opp ${duelOpp===p.id?'on':''}" data-opp="${p.id}" role="radio" aria-checked="${duelOpp===p.id}">${avatar(p)}<span>${escape(p.name)}</span></button>`).join(''):'<p class="br-empty">Choisis ton pseudo pour défier quelqu’un.</p>';
-    $('duel-go').disabled=!me||!duelOpp;$('duel-go').textContent=duelOpp?`⚔️ Défier ${player(duelOpp).name}`:'Choisis un adversaire';
+    $('duel-go').disabled=!me||!duelOpp;$('duel-go').textContent=duelOpp?`${GAME_INFO[duelGame].icon} Défier ${player(duelOpp).name}${duelGame==='yeti'?'':' '+GAME_INFO[duelGame].label}`:'Choisis un adversaire';
+    document.querySelectorAll('#duel-games [data-game]').forEach(b=>{const on=b.dataset.game===duelGame;b.classList.toggle('on',on);b.setAttribute('aria-checked',String(on));});
+    $('duel-desc').textContent=GAME_INFO[duelGame].text;
     // onglets
     document.querySelectorAll('.compet-tab').forEach(t=>{const on=t.dataset.tab===competTab;t.classList.toggle('active',on);t.setAttribute('aria-selected',String(on));});
     document.querySelectorAll('.compet-panel').forEach(p=>p.hidden=p.dataset.panel!==competTab);
-    const todo=me?duels.filter(d=>((d.challenger===me||d.opponent===me)&&d.status==='accepted'&&duelOf(d,me).length<d.throws)||(d.status==='pending'&&d.opponent===me)).length:0;
+    const todo=me?duels.filter(d=>d.game!=='yeti'?((d.status==='pending'&&d.opponent===me)||boardTodo(d,me)):((d.challenger===me||d.opponent===me)&&d.status==='accepted'&&duelOf(d,me).length<d.throws)||(d.status==='pending'&&d.opponent===me)).length:0;
     $('ct-duel-badge').hidden=!todo;$('ct-duel-badge').textContent=todo;
     const inv=me?duels.filter(d=>d.status==='pending'&&d.opponent===me).length:0;
     $('ct-duel-sub').textContent=inv?`${inv} défi${inv>1?'s':''} reçu${inv>1?'s':''} !`:todo?`${todo} duel${todo>1?'s':''} à jouer`:'Défie un pote';
     const myDay=me?dailyOf(me,today).length:0;
     $('ct-br-sub').textContent=!me?'Session du jour · 10 lancers':myDay>=DAILY_N?'✅ Session du jour faite':myDay?`Session en cours ${myDay}/${DAILY_N}`:'▶ Ta session du jour t’attend';
     const mineD=duels.filter(d=>d.challenger===me||d.opponent===me).sort((a,b)=>b.id-a.id).slice(0,8);
-    const others=duels.filter(d=>d.challenger!==me&&d.opponent!==me&&d.status==='accepted').map(d=>({d,st:duelState(d)})).filter(x=>x.st.done).sort((a,b)=>b.d.id-a.d.id).slice(0,4);
-    const line=(d,st)=>{const A=player(d.challenger),B=player(d.opponent),fa=st.a.length,fb=st.b.length;
+    const others=duels.filter(d=>d.challenger!==me&&d.opponent!==me&&d.status==='accepted').map(d=>({d,st:duelState(d)})).filter(x=>x.st.done||(x.d.game!=='yeti'&&!x.d.finished_at)).sort((a,b)=>b.d.id-a.d.id).slice(0,5);
+    const line=(d,st)=>{if(d.game!=='yeti')return boardLine(d,st,me);const A=player(d.challenger),B=player(d.opponent),fa=st.a.length,fb=st.b.length;
       const sc=(p,l,av,win)=>`<span class="duel-side ${win?'win':''}">${avatar(p)}<span><b>${escape(p.name)}</b><small>${l}/${d.throws}${av!==null?` · ${oneDecimal.format(av)} m`:''}</small></span></span>`;
       let status='';const myN=me?duelOf(d,me).length:0,isMine=d.challenger===me||d.opponent===me;
       if(d.status==='refused')status='<span class="duel-st lose">❌ Refusé</span>';
@@ -611,10 +623,46 @@
       return `<div class="duel-row">${sc(A,fa,st.aa,st.winner===d.challenger)}<span class="duel-vs">VS</span>${sc(B,fb,st.ba,st.winner===d.opponent)}${status}</div>`;};
     $('duel-list').innerHTML=(mineD.length?mineD.map(d=>line(d,duelState(d))).join(''):`<p class="br-empty">${me?'Aucun duel pour toi. Défie quelqu’un !':'Choisis ton pseudo pour voir tes duels.'}</p>`)+(others.length?'<p class="duel-sep">Derniers duels du club</p>'+others.map(x=>line(x.d,x.st)).join(''):'');
   }
+  function boardTodo(d,me){if(d.status!=='accepted'||d.finished_at||(d.challenger!==me&&d.opponent!==me))return false;if(d.game==='naval'&&d.turn===null)return !d.placed.includes(me);return d.turn===me;}
+  function boardLine(d,st,me){
+    const A=player(d.challenger),B=player(d.opponent),gi=GAME_INFO[d.game],isMine=d.challenger===me||d.opponent===me,open=window.YetiGames&&YetiGames.openId===d.id;
+    const side=(p,win)=>`<span class="duel-side ${win?'win':''}">${avatar(p)}<span><b>${escape(p.name)}</b><small>${gi.icon} ${gi.name}</small></span></span>`;
+    let status='';
+    if(d.status==='refused')status='<span class="duel-st lose">❌ Refusé</span>';
+    else if(d.status==='pending')status=d.opponent===me?`<span class="duel-ans"><button type="button" class="br-btn small ghost" data-answer="0" data-id="${d.id}">Refuser</button><button type="button" class="br-btn small" data-answer="1" data-id="${d.id}">Accepter</button></span>`:'<span class="duel-st">⏳ En attente de réponse</span>';
+    else if(st.done)status=`<span class="duel-res">${st.winner===0?'<span class="duel-st">🤝 Nulle</span>':isMine?(st.winner===me?'<span class="duel-st win">🏆 Gagné</span>':'<span class="duel-st lose">Perdu</span>'):`<span class="duel-st">🏆 ${escape(player(st.winner).name)}</span>`}<button type="button" class="br-btn small ghost" data-board="${d.id}">Revoir</button></span>`;
+    else if(open)status='<span class="duel-st live">En cours…</span>';
+    else if(isMine)status=`<button type="button" class="br-btn small ${boardTodo(d,me)?'':'ghost'}" data-board="${d.id}">${boardTodo(d,me)?'▶ À toi de jouer':'Ouvrir la partie'}</button>`;
+    else status=`<button type="button" class="br-btn small ghost" data-board="${d.id}">👁️ Regarder</button>`;
+    return `<div class="duel-row game-${d.game}">${side(A,st.winner===d.challenger)}<span class="duel-vs">VS</span>${side(B,st.winner===d.opponent)}${status}</div>`;
+  }
+  // ---------- Échecs / bataille navale : la partie remplace la fenêtre du Yéti ----------
+  let audioCtx=null;
+  function sound(kind){try{audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='triangle';o.frequency.value=kind==='capture'?220:330;g.gain.setValueAtTime(.18,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+.12);o.connect(g).connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+.13);}catch(_){}}
+  function openBoard(id){
+    if(!window.YetiGames){showToast('Le module de jeux n’est pas chargé, recharge la page.');return;}
+    if(activeRound){showToast('Termine ton lancer avant d’ouvrir la partie.');return;}
+    YetiGames.open(id,{root:$('board-stage'),request,player:pid=>player(pid),avatar,escape,toast:showToast,sound,
+      session:()=>{const s=getSession();return s&&authed&&s.player===authed?s:null;},
+      onOpen:()=>{$('game-stage').hidden=true;document.querySelector('.game-footer').hidden=true;try{if(playerApi){if(playerApi.suspend)playerApi.suspend();else if(playerApi.pause)playerApi.pause();}}catch(_){}
+        renderCompet();$('board-stage').scrollIntoView({behavior:'smooth',block:'start'});},
+      onClose:()=>{$('game-stage').hidden=false;document.querySelector('.game-footer').hidden=false;try{if(playerApi){if(playerApi.resume)playerApi.resume();else if(playerApi.play)playerApi.play();}}catch(_){}renderCompet();},
+      onFinished:()=>{refresh();},
+      rematch:(game,opp)=>{if(!opp)return;YetiGames.close();createGame(game,opp);}});
+  }
+  async function createGame(game,opp){
+    const s=getSession();if(!s||s.player!==authed||authed!==selectedPlayer){showToast('Reconnecte-toi pour lancer un défi.');return;}
+    const r=await request('/api/game/create',{player:selectedPlayer,token:s.token,opponent:opp,game});
+    if(r&&r.id&&knownDuels)knownDuels.add(Number(r.id));
+    await refresh();competTab='duel';renderCompet();
+    showToast(`${GAME_INFO[game].icon} Défi ${GAME_INFO[game].label} envoyé à ${player(opp).name}, en attente de sa réponse…`);
+  }
+  $('duel-games').addEventListener('click',e=>{const b=e.target.closest('[data-game]');if(!b)return;duelGame=b.dataset.game;renderCompet();});
   $('br-tabs').addEventListener('click',e=>{const b=e.target.closest('[data-br]');if(b){brView=b.dataset.br;renderCompet();}});
   $('br-me').addEventListener('click',e=>{const b=e.target.closest('[data-mode]');if(!b||b.disabled)return;setMode({kind:b.dataset.mode});if(b.dataset.mode==='daily'){showToast('🏟️ Session du jour lancée : tes 10 prochains lancers comptent !');if(!gameLoaded)loadGame();$('game-stage').scrollIntoView({behavior:'smooth',block:'center'});}});
-  $('duel-list').addEventListener('click',e=>{const a=e.target.closest('[data-answer]');if(a){answerDuel(Number(a.dataset.id),a.dataset.answer==='1');return;}const b=e.target.closest('[data-duel]');if(!b||b.disabled)return;setMode({kind:'duel',id:Number(b.dataset.duel)});showToast('⚔️ Duel lancé : tes 5 prochains lancers comptent !');if(!gameLoaded)loadGame();$('game-stage').scrollIntoView({behavior:'smooth',block:'center'});});
+  $('duel-list').addEventListener('click',e=>{const a=e.target.closest('[data-answer]');if(a){answerDuel(Number(a.dataset.id),a.dataset.answer==='1');return;}const g=e.target.closest('[data-board]');if(g){openBoard(Number(g.dataset.board));return;}const b=e.target.closest('[data-duel]');if(!b||b.disabled)return;setMode({kind:'duel',id:Number(b.dataset.duel)});showToast('⚔️ Duel lancé : tes 5 prochains lancers comptent !');if(!gameLoaded)loadGame();$('game-stage').scrollIntoView({behavior:'smooth',block:'center'});});
   $('duel-new').addEventListener('submit',async e=>{e.preventDefault();const opp=duelOpp;if(!selectedPlayer||!opp)return;$('duel-go').disabled=true;
+    if(duelGame!=='yeti'){try{await createGame(duelGame,opp);}catch(error){showToast(error.message||'Impossible de lancer le défi.');}finally{duelOpp=null;renderCompet();}return;}
     try{const r=await request('/api/duel',{challenger:selectedPlayer,opponent:opp});await refresh();showToast(`⚔️ Défi envoyé à ${player(opp).name}, en attente de sa réponse…`);if(r&&r.id){knownDuels&&knownDuels.add(Number(r.id));}}
     catch(error){showToast(error.message||'Impossible de créer le duel.');}finally{duelOpp=null;renderCompet();}});
   $('duel-pick').addEventListener('click',e=>{const b=e.target.closest('[data-opp]');if(!b)return;const id=Number(b.dataset.opp);duelOpp=duelOpp===id?null:id;renderCompet();});
@@ -776,10 +824,13 @@
   function plainBody(body){if(/^\[g:/.test(body||''))return 'a envoyé un GIF';const m=/^\[s:(.{1,12})\]$/u.exec(body||'');return m?m[1]:String(body||'');}
   const reEsc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
   function mentionRe(){const names=PLAYERS.map(p=>p.name).sort((a,b)=>b.length-a.length).map(reEsc);return names.length?new RegExp('@('+names.join('|')+')(?![\\p{L}\\p{N}_])','giu'):null;}
-  function mentionsMe(m){if(!selectedPlayer||m.player===selectedPlayer)return false;const me=player(selectedPlayer).name.toLocaleLowerCase('fr');const re=mentionRe();if(!re)return false;for(const x of String(m.body||'').matchAll(re))if(x[1].toLocaleLowerCase('fr')===me)return true;return /@(tous|all|everyone)(?![\p{L}\p{N}_])/iu.test(m.body||'');}
+  // Tags spéciaux : @tous, @here (les connectés) et les groupes (@lesarabes…).
+  function specialRe(){const tags=['tous','all','everyone','here',...GROUPS.map(g=>g.tag)].sort((a,b)=>b.length-a.length).map(reEsc);return new RegExp('@('+tags.join('|')+')(?![\\p{L}\\p{N}_])','giu');}
+  function specialHitsMe(tag){tag=tag.toLowerCase();if(['tous','all','everyone','here'].includes(tag))return true;const g=GROUPS.find(x=>x.tag.toLowerCase()===tag);return !!(g&&selectedPlayer&&g.members.includes(selectedPlayer));}
+  function mentionsMe(m){if(!selectedPlayer||m.player===selectedPlayer)return false;const me=player(selectedPlayer).name.toLocaleLowerCase('fr');const body=String(m.body||'');const re=mentionRe();if(re)for(const x of body.matchAll(re))if(x[1].toLocaleLowerCase('fr')===me)return true;for(const x of body.matchAll(specialRe()))if(specialHitsMe(x[1]))return true;return false;}
   function richBody(body){
     const re=mentionRe(),me=selectedPlayer?player(selectedPlayer).name.toLocaleLowerCase('fr'):'';let out='',last=0;const text=String(body||'');
-    const esc=t=>escape(t).replace(/@(tous|all|everyone)(?![\p{L}\p{N}_])/giu,'<span class="mention me">@$1</span>');
+    const sre=specialRe();const esc=t=>{let o='',l=0;for(const x of t.matchAll(sre)){o+=escape(t.slice(l,x.index))+`<span class="mention group ${specialHitsMe(x[1])?'me':''}">@${escape(x[1])}</span>`;l=x.index+x[0].length;}return o+escape(t.slice(l));};
     if(re)for(const x of text.matchAll(re)){out+=esc(text.slice(last,x.index));const isMe=x[1].toLocaleLowerCase('fr')===me;const p=PLAYERS.find(q=>q.name.toLocaleLowerCase('fr')===x[1].toLocaleLowerCase('fr'));out+=`<span class="mention ${isMe?'me':''}" style="--mc:${p?p.color:'#1b4e3b'}">@${escape(p?p.name:x[1])}</span>`;last=x.index+x[0].length;}
     return out+esc(text.slice(last));
   }
@@ -790,10 +841,11 @@
   function renderMention(){
     const q=mentionQuery();if(!q){closeMention();return;}
     const n=q.q.toLocaleLowerCase('fr').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-    mentionItems=[...PLAYERS.filter(p=>p.id!==selectedPlayer&&p.name.toLocaleLowerCase('fr').normalize('NFD').replace(/[\u0300-\u036f]/g,'').startsWith(n)),...('tous'.startsWith(n)?[{id:0,name:'tous',color:'#f08b50'}]:[])].slice(0,8);
+    const groupItems=[...GROUPS.map(g=>({id:0,name:g.tag,ico:'👥',sub:g.members.map(id=>player(id)).filter(Boolean).map(p=>p.name).join(', ')})),{id:0,name:'here',ico:'🟢',sub:'les connectés'},{id:0,name:'tous',ico:'📣',sub:'tout le club'}].filter(g=>g.name.toLowerCase().startsWith(n));
+    mentionItems=[...PLAYERS.filter(p=>p.id!==selectedPlayer&&p.name.toLocaleLowerCase('fr').normalize('NFD').replace(/[\u0300-\u036f]/g,'').startsWith(n)),...groupItems].slice(0,10);
     if(!mentionItems.length){closeMention();return;}
     mentionSel=Math.min(mentionSel,mentionItems.length-1);
-    $('chat-mention').innerHTML=mentionItems.map((p,i)=>`<button type="button" role="option" aria-selected="${i===mentionSel}" class="${i===mentionSel?'on':''}" data-mention="${i}">${p.id?avatar(p):'<span class="ranking-avatar ranking-avatar-empty" style="--ring:#f08b50">📣</span>'}<span>@${escape(p.name)}</span>${online.has(p.id)?'<i class="online-mini"></i>':''}</button>`).join('');
+    $('chat-mention').innerHTML=mentionItems.map((p,i)=>`<button type="button" role="option" aria-selected="${i===mentionSel}" class="${i===mentionSel?'on':''}" data-mention="${i}">${p.id?avatar(p):`<span class="ranking-avatar ranking-avatar-empty" style="--ring:#f08b50">${p.ico||'📣'}</span>`}<span>@${escape(p.name)}${p.sub?`<small class="mention-sub">${escape(p.sub)}</small>`:''}</span>${online.has(p.id)?'<i class="online-mini"></i>':''}</button>`).join('');
     $('chat-mention').hidden=false;
   }
   function pickMention(i){
@@ -861,8 +913,10 @@
   // Notification touchée : ouvre le chat ou le Top 10.
   function openFromUrl(url,clean){
     let what='';try{what=new URL(url,location.href).searchParams.get('open')||'';}catch(_){}
-    if(clean&&what){const u=new URL(location.href);u.searchParams.delete('open');history.replaceState(history.state,'',u.pathname+u.search+u.hash);}
+    if(clean&&what){const u=new URL(location.href);u.searchParams.delete('open');u.searchParams.delete('id');history.replaceState(history.state,'',u.pathname+u.search+u.hash);}
     if(what==='chat')toggleChat(true);
+    if(what==='duel'||what==='game'){competTab='duel';renderCompet();const c=$('compet');if(c)c.scrollIntoView({behavior:'smooth',block:'start'});}
+    if(what==='game'){let gid=0;try{gid=Number(new URL(url,location.href).searchParams.get('id'))||0;}catch(_){}if(gid){const go=()=>{if(selectedPlayer&&lastStateSig)openBoard(gid);else setTimeout(go,800);};go();}}
     if(what==='top'){const c=document.querySelector('.top-card');if(c)c.scrollIntoView({behavior:'smooth',block:'center'});}
   }
   window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;renderAppButtons();});

@@ -95,7 +95,7 @@
           throw failure('L’ajout de joueurs n’est pas encore activé sur le serveur du club.', 501, 'not_supported');
         }
         if (data && data.code === '23505') throw failure('Ce joueur existe déjà.', 409, 'duplicate_player');
-        if (data && data.code === '22023' && (name === 'yeti_send_message' || name === 'yeti_create_duel' || name === 'yeti_answer_duel' || name === 'yeti_set_password' || name === 'yeti_login' || name === 'yeti_ban' || name === 'yeti_push_subscribe')) throw failure(data.message || 'Message refusé.', 400, 'invalid_message');
+        if (data && data.code === '22023' && (name === 'yeti_send_message' || name === 'yeti_create_duel' || name === 'yeti_answer_duel' || name === 'yeti_set_password' || name === 'yeti_login' || name === 'yeti_ban' || name === 'yeti_push_subscribe' || name === 'yeti_create_game' || name === 'yeti_game_state' || name === 'yeti_game_move')) throw failure(data.message || 'Message refusé.', 400, 'invalid_message');
         if (data && data.code === '22023') {
           throw failure('Ces scores ne peuvent pas être enregistrés. Ils restent en attente.', 400, 'invalid_scores');
         }
@@ -150,7 +150,7 @@
       forgetCode(config);
       return {ok: true};
     }
-    if (path !== '/api/state' && path !== '/api/scores' && path !== '/api/players' && path !== '/api/version' && path !== '/api/chat' && path !== '/api/chat/send' && path !== '/api/duel' && path !== '/api/duel/answer' && path !== '/api/skins' && path !== '/api/presence' && path !== '/api/password' && path !== '/api/login' && path !== '/api/session' && path !== '/api/ban' && path !== '/api/push') {
+    if (path !== '/api/state' && path !== '/api/scores' && path !== '/api/players' && path !== '/api/version' && path !== '/api/chat' && path !== '/api/chat/send' && path !== '/api/duel' && path !== '/api/duel/answer' && path !== '/api/skins' && path !== '/api/presence' && path !== '/api/password' && path !== '/api/login' && path !== '/api/session' && path !== '/api/ban' && path !== '/api/push' && path !== '/api/game/create' && path !== '/api/game/state' && path !== '/api/game/move') {
       throw failure('Cette action est introuvable.', 404, 'not_found');
     }
     const invitedState = await validateInvite(config);
@@ -166,6 +166,9 @@
       if (path === '/api/login') return await rpc(config, 'yeti_login', {p_room_code: code, p_player: Number(body.player), p_password: String(body.password || '')});
       if (path === '/api/session') return await rpc(config, 'yeti_check_session', {p_room_code: code, p_player: Number(body.player), p_token: String(body.token || '')});
       if (path === '/api/push') return await rpc(config, 'yeti_push_subscribe', {p_room_code: code, p_player: Number(body.player), p_token: String(body.token || ''), p_sub: body.sub || {}});
+      if (path === '/api/game/create') return await rpc(config, 'yeti_create_game', {p_room_code: code, p_player: Number(body.player), p_token: String(body.token || ''), p_opponent: Number(body.opponent), p_game: String(body.game || '')});
+      if (path === '/api/game/state') return await rpc(config, 'yeti_game_state', {p_room_code: code, p_player: Number(body.player) || null, p_token: String(body.token || ''), p_duel: Number(body.duel)});
+      if (path === '/api/game/move') return await rpc(config, 'yeti_game_move', {p_room_code: code, p_player: Number(body.player), p_token: String(body.token || ''), p_duel: Number(body.duel), p_ply: Number(body.ply) || 0, p_move: body.move || {}});
       if (path === '/api/ban') return await rpc(config, 'yeti_ban', {p_room_code: code, p_admin: Number(body.admin), p_token: String(body.token || ''), p_target: Number(body.target), p_minutes: Number(body.minutes)});
       if (path === '/api/presence') return await rpc(config, 'yeti_presence', {p_room_code: code, p_player: Number(body && body.player) || null});
       if (path === '/api/skins') return await rpc(config, 'yeti_save_skins', {p_room_code: code, p_player: Number(body.player), p_skins: Array.isArray(body.skins) ? body.skins.map(String).slice(0, 100) : []});

@@ -520,3 +520,97 @@ body.chat-wide .chat-fab,body.chat-wide .chat-peek{display:none!important}
 .admin-actions button.perm{background:#a2381f;color:#fff;border-color:#a2381f}
 .admin-actions button.perm:hover{background:#86301a}
 .admin-actions button.perm.sure{background:#5c1a0b;border-color:#5c1a0b}
+/* ---------- Choix du jeu dans les duels ---------- */
+.duel-games{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;width:100%;margin-bottom:12px}
+.duel-new .duel-game{display:flex;flex-direction:column;align-items:center;gap:1px;padding:10px 6px;border:2px solid var(--line);border-radius:12px;background:var(--paper);color:var(--ink);font:700 12px var(--font)}
+.duel-new .duel-game span{font-size:24px;line-height:1.1}.duel-new .duel-game small{font-weight:500;font-size:10px;color:var(--muted)}
+.duel-new .duel-game:hover{background:#fff}
+.duel-new .duel-game.on{border-color:var(--green);background:#e8f3df;box-shadow:0 0 0 3px #1b4e3b1f}
+.duel-res{display:flex;align-items:center;gap:6px;margin-left:auto}.duel-res .duel-st{margin-left:0}.duel-res .br-btn.small{margin-left:0}
+.mention.group{--mc:#6a3fb5}.mention-sub{display:block;font-size:10px;font-weight:500;color:var(--muted);line-height:1.2;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* ---------- Plateau (échecs / bataille navale) à la place du Yéti ---------- */
+.board-stage{background:#262421;color:#eee;border-radius:14px;padding:12px;min-height:320px;position:relative;touch-action:manipulation}
+.board-stage[hidden]{display:none}
+.gb-loading{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;min-height:300px;color:#ccc}
+.gb-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.gb-back{background:#3c3a37;color:#fff;border:0;border-radius:8px;padding:8px 12px;font:700 12px var(--font)}
+.gb-back:hover{background:#4b4946}
+.gb-title{display:flex;flex-direction:column;line-height:1.2}.gb-title b{font:700 15px var(--display)}.gb-title span{font-size:11px;color:#a9a7a3}
+.gb-status{margin-left:auto;font-weight:700;font-size:13px;background:#3c3a37;border-radius:8px;padding:7px 11px}
+.gb-status.go{background:#81b64c;color:#fff;animation:gb-pulse 1.6s ease-in-out infinite}.gb-status.end{background:#e8b33c;color:#262421}
+@keyframes gb-pulse{50%{box-shadow:0 0 0 5px #81b64c44}}
+.gb-actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px}
+.gb-btn{background:#81b64c;color:#fff;border:0;border-radius:8px;padding:9px 13px;font:700 12px var(--font);box-shadow:0 3px 0 #5d8a35}
+.gb-btn:active{transform:translateY(2px);box-shadow:0 1px 0 #5d8a35}
+.gb-btn.ghost{background:#3c3a37;box-shadow:0 3px 0 #2a2826}.gb-btn.danger{background:#5a3532;box-shadow:0 3px 0 #3d2422}
+.gb-btn.big{width:100%;padding:13px;font-size:14px}.gb-btn:disabled{opacity:.4}
+.gb-offer,.gb-idle{font-size:12px;color:#e8b33c;font-weight:700}.gb-idle{color:#a9a7a3;font-weight:500}
+@media(prefers-reduced-motion:reduce){.gb-status.go{animation:none}}
+/* échecs */
+.chess-wrap{display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:12px;align-items:start}
+.chess-main{min-width:0;max-width:min(100%,560px);width:100%;margin:0 auto}
+.gb-strip{display:flex;align-items:center;gap:8px;padding:6px 2px;min-height:44px}
+.gb-strip .ranking-avatar{width:32px;height:32px;box-shadow:0 0 0 2px var(--ring)}
+.gb-strip.turn .ranking-avatar{box-shadow:0 0 0 3px #81b64c}
+.gb-name{display:flex;flex-direction:column;line-height:1.15}.gb-name b{font-size:13px}.gb-name small{font-size:10px;color:#a9a7a3}
+.gb-taken{display:flex;align-items:center;flex-wrap:wrap;margin-left:auto;font-size:15px;line-height:1;opacity:.9}
+.gb-taken i{font-style:normal;margin-left:-3px}.gb-taken em{font-style:normal;font-size:11px;color:#a9a7a3;margin-left:4px}
+.gb-taken.from-b i{color:#1d1d1d;text-shadow:0 0 1px #fff,0 0 1px #fff}.gb-taken.from-w i{color:#fff;text-shadow:0 0 1px #000,0 0 1px #000}
+.chess-board{display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr);aspect-ratio:1;width:100%;border-radius:4px;overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:none;box-shadow:0 6px 18px #0006}
+.sq{position:relative;display:flex;align-items:center;justify-content:center;container-type:size}
+.sq.l{background:#ebecd0}.sq.d{background:#739552}
+.sq.lm.l,.sq.sel.l{background:#f5f682}.sq.lm.d,.sq.sel.d{background:#b9ca43}
+.sq.chk{background:radial-gradient(circle,#ff2a2a 0,#e8231f99 45%,transparent 75%)}
+.sq.dot:after{content:'';width:30%;height:30%;border-radius:50%;background:#0000002a;position:absolute}
+.sq.cap:after{content:'';position:absolute;inset:0;border-radius:50%;box-shadow:inset 0 0 0 5px #0000002a}
+.sq .cr,.sq .cf{position:absolute;font:700 10px var(--font);pointer-events:none}
+.sq .cr{top:2px;left:3px}.sq .cf{bottom:1px;right:3px}
+.sq.l .cr,.sq.l .cf{color:#739552}.sq.d .cr,.sq.d .cf{color:#ebecd0}
+.pc{font-family:'Segoe UI Symbol','Apple Symbols','Noto Sans Symbols 2','DejaVu Sans',serif;font-size:min(9.5vw,52px);font-size:82cqh;line-height:1;cursor:grab;position:relative;z-index:1}
+.pc.w{color:#fff;text-shadow:0 0 1px #000,0 0 1px #000,0 1px 1px #000,0 2px 3px #0005}
+.pc.b{color:#1d1d1d;text-shadow:0 0 1px #000,0 2px 3px #0004}
+.drag-ghost{position:fixed;z-index:200;pointer-events:none;transform:translate(-50%,-55%) scale(1.15);cursor:grabbing}
+.chess-side{display:flex;flex-direction:column;gap:6px;min-width:0}
+.chess-moves{background:#21201d;border-radius:8px;max-height:360px;min-height:120px;overflow:auto;padding:6px 8px;font-size:12px}
+.chess-moves ol{list-style:none;margin:0;padding:0}.chess-moves li{display:grid;grid-template-columns:28px 1fr 1fr;gap:4px;padding:2px 0}
+.chess-moves li:nth-child(odd){background:#2a2926;border-radius:4px}.chess-moves li span{color:#8b8987}
+.chess-moves b{font-weight:600}.chess-moves b.last{background:#4b4946;border-radius:3px;padding:0 3px}
+.chess-empty{color:#a9a7a3;font-size:12px;margin:6px 0}
+.chess-promo{position:absolute;inset:0;background:#000a;display:flex;align-items:center;justify-content:center;z-index:5;border-radius:14px}
+.chess-promo[hidden]{display:none}
+.promo-card{background:#fff;border-radius:12px;padding:12px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:center}
+.promo-card p{width:100%;margin:0 0 4px;text-align:center;color:#262421;font-weight:700}
+.promo-card button.pc{font-size:44px;width:62px;height:62px;border:0;border-radius:8px;background:#ebecd0;cursor:pointer}
+.promo-card button.pc:hover{background:#f5f682}.promo-x{border:0;background:none;font-size:18px;color:#666;padding:6px}
+@media(max-width:760px){.chess-wrap{grid-template-columns:1fr}.chess-moves{max-height:120px;min-height:0}}
+/* bataille navale */
+.nv-wrap{min-width:0}
+.nv-place,.nv-battle{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:14px;align-items:start}
+.nv-board{min-width:0}.nv-cap{margin:0 0 6px;font-weight:700;font-size:13px;display:flex;justify-content:space-between;gap:6px}.nv-cap small{color:#a9a7a3;font-weight:500}
+.nv-grid{display:grid;grid-template-columns:18px repeat(10,1fr);gap:2px;background:#0b2a45;border-radius:8px;padding:4px;user-select:none;-webkit-user-select:none}
+.nv-lab{font:700 9px var(--font);color:#7fb2d9;display:flex;align-items:center;justify-content:center}
+.nv-cell{aspect-ratio:1;border:0;padding:0;border-radius:3px;background:#1c5a8a;position:relative;display:block;min-width:0}
+.nv-grid.enemy .nv-cell{background:#174a73}
+.nv-grid.armed .nv-cell:not([disabled]){cursor:crosshair}
+.nv-grid.armed .nv-cell:not([disabled]):hover{background:#2b7cb8;box-shadow:inset 0 0 0 2px #ffd400}
+.nv-grid .nv-cell.ship{background:#8b97a3;border-radius:2px}
+.nv-grid .nv-cell.ship.h.s0{border-radius:40% 2px 2px 40%}.nv-grid .nv-cell.ship.h.s1{border-radius:2px 40% 40% 2px}
+.nv-grid .nv-cell.ship.v.s0{border-radius:40% 40% 2px 2px}.nv-grid .nv-cell.ship.v.s1{border-radius:2px 2px 40% 40%}
+.nv-grid .nv-cell.ship.h.s0.s1,.nv-grid .nv-cell.ship.v.s0.s1{border-radius:40%}
+.nv-grid .nv-cell.pv{background:#81b64c!important}.nv-grid .nv-cell.pv.bad{background:#c0392b!important}
+.nv-grid .nv-cell.miss:after{content:'';position:absolute;inset:36%;border-radius:50%;background:#cfe6f7}
+.nv-grid .nv-cell.hit{background:#c0392b}.nv-grid .nv-cell.hit:after{content:'✕';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:70%}
+.nv-grid .nv-cell.ship.hit{background:#c0392b}.nv-grid .nv-cell.sunk,.nv-grid .nv-cell.ship.sunk{background:#5a1a14}.nv-grid .nv-cell.sunk.hit:after{content:'☠';font-size:65%}
+.nv-grid .nv-cell.reveal{background:#8b97a3;opacity:.6}
+.nv-grid .nv-cell.aim{animation:nv-aim .5s ease-in-out infinite alternate}@keyframes nv-aim{to{background:#ffd400}}
+.nv-panel{display:flex;flex-direction:column;gap:10px}
+.nv-help,.nv-rule,.nv-wait{font-size:12px;color:#a9a7a3;margin:0}.nv-rule{margin-top:8px;text-align:center}
+.nv-ships{display:flex;flex-direction:column;gap:5px}
+.nv-ship{display:flex;align-items:center;gap:8px;background:#3c3a37;color:#fff;border:2px solid transparent;border-radius:8px;padding:6px 8px;font:600 12px var(--font);text-align:left}
+.nv-ship.on{border-color:#81b64c}.nv-ship.done{opacity:.6}.nv-ship em{margin-left:auto;font-style:normal;color:#81b64c}
+.nv-hull{display:flex;gap:2px}.nv-hull i{width:12px;height:12px;background:#8b97a3;border-radius:2px}
+.nv-tools{display:flex;gap:6px;flex-wrap:wrap}
+.nv-fog{aspect-ratio:1.05;background:repeating-linear-gradient(45deg,#174a73,#174a73 10px,#1a5280 10px,#1a5280 20px);border-radius:8px;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px}
+.nv-board.small .nv-grid{max-width:100%}
+@media(max-width:760px){.nv-place,.nv-battle{grid-template-columns:1fr}.nv-board.small{max-width:300px;margin:0 auto;width:100%}.board-stage{padding:10px;border-radius:12px}.gb-status{margin-left:0;width:100%;text-align:center}}
+.nv-grid .nv-cell:disabled{opacity:1;cursor:default}
