@@ -755,7 +755,7 @@
     }finally{polling=false;}
   }
   // ---------- Chat ----------
-  let chatMsgs=[],chatLast=0,chatOpen=false,chatLoading=false,chatRead=0,chatInit=false,peekTimer;
+  let chatReads={},chatSeenSent=0,chatMsgs=[],chatLast=0,chatOpen=false,chatLoading=false,chatRead=0,chatInit=false,peekTimer;
   function chatPeek(m){
     const p=player(m.player),el=$('chat-peek');
     el.innerHTML=`<i class="player-dot" style="background:${p.color}"></i><b>${escape(p.name)}</b> : ${mentionsMe(m)?'🔔 ':''}${escape(plainBody(m.body))}`;el.hidden=false;
@@ -780,19 +780,31 @@
     }catch(_){}finally{chatLoading=false;}
   }
   // Le chat est vidé toutes les 15 min (à :00, :15, :30, :45, côté serveur) : on retire aussi les vieux messages affichés.
+  function sendSeen(){
+    const s=getSession();if(!chatOpen||document.hidden||!chatLast||chatLast<=chatSeenSent||!s||!authed||s.player!==authed||authed!==selectedPlayer)return;
+    chatSeenSent=chatLast;chatReads[authed]=chatLast;request('/api/chat/seen',{player:authed,token:s.token,msg:chatLast}).catch(()=>{chatSeenSent=0;});
+  }
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)sendSeen();});
   function chatBottom(){const l=$('chat-list');if(l)l.scrollTop=l.scrollHeight;}
   const chatHour=()=>Math.floor(Date.now()/900000)*900000;
   let chatHourShown=chatHour();
   function renderChat(toEnd){
     chatHourShown=chatHour();chatMsgs=chatMsgs.filter(m=>m.temp||!(Date.parse(m.at)<chatHourShown));
     const list=$('chat-list'),stick=list.scrollHeight-list.scrollTop-list.clientHeight<60,today=dayKey(new Date());
+    // « Vu par » : chaque lecteur est placé sous le dernier message qu'il a lu (comme sur Insta / WhatsApp)
+    const real=chatMsgs.filter(m=>!m.temp),seenAt={};
+    for(const [pid,last] of Object.entries(chatReads)){const id=Number(pid);if(!id||id===selectedPlayer)continue;
+      let at=null;for(const m of real){if(m.id<=Number(last))at=m;else break;}
+      if(at&&at.player!==id)(seenAt[at.id]=seenAt[at.id]||[]).push(id);}
+    const seenLine=m=>{const ids=seenAt[m.id];if(!ids||m.temp)return '';const names=ids.map(i=>escape(player(i).name));
+      return `<div class="chat-seen ${m.player===selectedPlayer?'mine':''}">Vu par ${names.length>4?names.slice(0,4).join(', ')+' et '+(names.length-4)+' autre'+(names.length>5?'s':''):names.join(', ')}</div>`;};
     list.innerHTML=chatMsgs.length?chatMsgs.map(m=>{const p=player(m.player),mine=m.player===selectedPlayer,d=new Date(m.at||Date.now());
       const media=mediaOf(m.body);
-      return `<div class="chat-msg ${mine?'mine':''} ${m.temp?'temp':''} ${media?'media':''} ${!mine&&mentionsMe(m)?'tagged':''}"><div class="chat-meta"><i class="player-dot" style="background:${p.color}"></i><b>${escape(p.name)}</b><time>${dayKey(d)===today?'':chatDay.format(d)+' '}${chatTime.format(d)}</time></div>${media||`<p>${richBody(m.body)}</p>`}</div>`;}).join(''):'<p class="chat-empty">Pas encore de message. Lance les hostilités.<br><small>Le chat se vide toutes les 15 min.</small></p>';
+      return `<div class="chat-msg ${mine?'mine':''} ${m.temp?'temp':''} ${media?'media':''} ${!mine&&mentionsMe(m)?'tagged':''}"><div class="chat-meta"><i class="player-dot" style="background:${p.color}"></i><b>${escape(p.name)}</b><time>${dayKey(d)===today?'':chatDay.format(d)+' '}${chatTime.format(d)}</time></div>${media||`<p>${richBody(m.body)}</p>`}</div>${seenLine(m)}`;}).join(''):'<p class="chat-empty">Pas encore de message. Lance les hostilités.<br><small>Le chat se vide toutes les 15 min.</small></p>';
     if(stick||chatOpen||toEnd){chatBottom();
       // les GIF se chargent après coup : on redescend quand chacun arrive
       list.querySelectorAll('img').forEach(img=>{if(!img.complete)img.addEventListener('load',chatBottom,{once:true});});}
-    if(chatOpen){chatRead=chatLast;try{localStorage.setItem('yeti-chat-read',String(chatRead));}catch(_){}}
+    if(chatOpen){chatRead=chatLast;try{localStorage.setItem('yeti-chat-read',String(chatRead));}catch(_){}sendSeen();}
     const unread=chatMsgs.filter(m=>!m.temp&&m.id>chatRead&&m.player!==selectedPlayer).length;
     $('chat-badge').hidden=!unread;$('chat-badge').textContent=unread>9?'9+':String(unread);
     const can=!!selectedPlayer&&!privateAccess;
@@ -922,6 +934,7 @@
     try{const r=await request('/api/presence',{player:selectedPlayer||0});
       if(r&&r.bans&&typeof r.bans==='object'){const key=JSON.stringify(r.bans);if(key!==JSON.stringify(bans)){bans=r.bans;renderProfiles();if(!$('admin-overlay').hidden)renderAdmin();}}
       if(selectedPlayer&&banLeft(selectedPlayer))kick(selectedPlayer);
+      if(r&&r.reads&&typeof r.reads==='object'){const key=JSON.stringify(r.reads);if(key!==JSON.stringify(chatReads)){chatReads=r.reads;if(chatOpen)renderChat();}}
       if(r&&Array.isArray(r.online)){const next=new Set(r.online.map(Number));if([...next].join()!==[...online].join()){online=next;renderProfiles();}}}
     catch(_){}finally{presenceBusy=false;}
   }

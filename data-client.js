@@ -150,7 +150,7 @@
       forgetCode(config);
       return {ok: true};
     }
-    if (path !== '/api/state' && path !== '/api/scores' && path !== '/api/players' && path !== '/api/version' && path !== '/api/chat' && path !== '/api/chat/send' && path !== '/api/duel' && path !== '/api/duel/answer' && path !== '/api/skins' && path !== '/api/presence' && path !== '/api/password' && path !== '/api/login' && path !== '/api/session' && path !== '/api/ban' && path !== '/api/push' && path !== '/api/push/test' && path !== '/api/push/diag' && path !== '/api/game/create' && path !== '/api/game/state' && path !== '/api/game/move') {
+    if (path !== '/api/state' && path !== '/api/scores' && path !== '/api/players' && path !== '/api/version' && path !== '/api/chat' && path !== '/api/chat/send' && path !== '/api/chat/seen' && path !== '/api/duel' && path !== '/api/duel/answer' && path !== '/api/skins' && path !== '/api/presence' && path !== '/api/password' && path !== '/api/login' && path !== '/api/session' && path !== '/api/ban' && path !== '/api/push' && path !== '/api/push/test' && path !== '/api/push/diag' && path !== '/api/game/create' && path !== '/api/game/state' && path !== '/api/game/move') {
       throw failure('Cette action est introuvable.', 404, 'not_found');
     }
     const invitedState = await validateInvite(config);
@@ -165,6 +165,7 @@
       if (path === '/api/password') return await rpc(config, 'yeti_set_password', {p_room_code: code, p_player: Number(body.player), p_password: String(body.password || '')});
       if (path === '/api/login') return await rpc(config, 'yeti_login', {p_room_code: code, p_player: Number(body.player), p_password: String(body.password || '')});
       if (path === '/api/session') return await rpc(config, 'yeti_check_session', {p_room_code: code, p_player: Number(body.player), p_token: String(body.token || '')});
+      if (path === '/api/chat/seen') return await rpc(config, 'yeti_chat_seen', {p_room_code: code, p_player: Number(body.player), p_token: String(body.token || ''), p_msg: Number(body.msg) || 0});
       if (path === '/api/push/test') return await rpc(config, 'yeti_push_test', {p_room_code: code, p_player: Number(body.player), p_token: String(body.token || '')});
       if (path === '/api/push/diag') return await rpc(config, 'yeti_push_diag', {p_room_code: code, p_player: Number(body.player) || 0, p_step: String(body.step || ''), p_msg: String(body.msg || ''), p_ua: String(body.ua || '')});
       if (path === '/api/push') return await rpc(config, 'yeti_push_subscribe', {p_room_code: code, p_player: Number(body.player), p_token: String(body.token || ''), p_sub: body.sub || {}});
