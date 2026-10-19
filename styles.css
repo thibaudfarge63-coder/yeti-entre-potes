@@ -656,3 +656,40 @@ body.chat-wide .chat-gif.giphy{max-width:260px;max-height:260px;width:auto;heigh
 .react-bar button{border:0;background:transparent;font-size:22px;line-height:1.15;padding:4px;border-radius:50%;cursor:pointer;transition:transform .12s}
 .react-bar button:hover,.react-bar button:focus-visible{transform:scale(1.25)}
 .react-bar button.me{background:#e4ecd5}
+/* Bataille navale : bateaux dessinés, missiles, explosions, naufrages */
+.nv-grid{position:relative}
+.nv-grid.fx .nv-cell.ship,.nv-grid.fx .nv-cell.sunk,.nv-grid.fx .nv-cell.reveal{background:#1c5a8a;border-radius:3px;opacity:1}
+.nv-grid.fx.enemy .nv-cell.sunk,.nv-grid.fx.enemy .nv-cell.reveal{background:#174a73}
+.nv-grid.fx .nv-cell.hit{background:#3a2622}.nv-grid.fx .nv-cell.ship.hit{background:#1c5a8a}
+.nv-grid.fx .nv-cell.hit:after,.nv-grid.fx .nv-cell.miss:after{content:none}
+.nv-grid.fx .nv-cell.pv{background:#81b64c!important}.nv-grid.fx .nv-cell.pv.bad{background:#c0392b!important}
+.nv-fx{position:absolute;inset:0;pointer-events:none;z-index:2}
+.nv-sprite{position:absolute;filter:drop-shadow(0 2px 2px rgba(0,0,0,.5));transform-origin:50% 50%;animation:nv-bob 3.4s ease-in-out infinite}
+.nv-sprite.draft{animation-duration:2.8s}
+.nv-sprite.wait{opacity:0}
+.nv-sprite.sunk{animation:none;transform:translateY(22%) rotate(-8deg) scale(.95);filter:brightness(.45) saturate(.4);opacity:.7}
+.nv-sprite.sunk:after{content:'';position:absolute;left:-4%;right:-4%;top:40%;bottom:-10%;background:linear-gradient(rgba(23,74,115,0),rgba(23,74,115,.9));border-radius:40%}
+.nv-sprite.reveal{animation:none;opacity:.45;filter:grayscale(.7)}
+.nv-hullimg{width:100%;height:100%}.nv-hullimg.v{transform:rotate(90deg) translateY(-100%);transform-origin:0 0}
+.nv-hullimg svg{display:block;overflow:visible}
+@keyframes nv-bob{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-3%) rotate(.7deg)}}
+.nv-burn,.nv-peg{position:absolute;transition:opacity .15s}
+.nv-burn.wait,.nv-peg.wait{opacity:0}
+.nv-burn:before{content:'';position:absolute;inset:12%;border-radius:50%;background:radial-gradient(rgba(255,120,50,.75),rgba(255,90,30,0) 70%)}
+.nv-flame{position:absolute;left:22%;bottom:28%;width:56%;height:62%;border-radius:50% 50% 42% 42%;background:radial-gradient(ellipse at 50% 85%,#fff6b0 0,#ffcf40 22%,#ff8a1f 45%,#f0441c 62%,rgba(240,60,20,0) 74%);animation:nv-flick .42s ease-in-out infinite alternate;transform-origin:50% 100%}
+.nv-flame.f2{left:36%;width:36%;height:44%;animation-duration:.31s;animation-delay:-.2s;opacity:.9}
+@keyframes nv-flick{from{transform:scale(.82,.88) skewX(-5deg)}to{transform:scale(1.06,1.18) skewX(6deg)}}
+.nv-smoke{position:absolute;left:28%;top:-6%;width:44%;height:44%;border-radius:50%;background:rgba(70,70,70,.55);animation:nv-smoke 1.9s ease-out infinite}
+@keyframes nv-smoke{from{transform:translateY(0) scale(.45);opacity:.75}to{transform:translateY(-130%) scale(1.7);opacity:0}}
+.nv-burn.out .nv-flame{display:none}.nv-burn.out:before{background:radial-gradient(rgba(255,110,40,.35),rgba(30,20,20,0) 65%)}.nv-burn.out .nv-smoke{background:rgba(45,45,45,.7);animation-duration:2.4s}
+.nv-dot{position:absolute;inset:37%;border-radius:50%;background:#e8f4fc;box-shadow:0 0 0 2px rgba(255,255,255,.18)}
+.nv-ripple{position:absolute;inset:20%;border:2px solid rgba(220,240,255,.55);border-radius:50%;animation:nv-rip 2.8s ease-out infinite}
+@keyframes nv-rip{from{transform:scale(.45);opacity:.8}to{transform:scale(1.35);opacity:0}}
+.nv-missile{position:absolute;transform-origin:100% 50%;z-index:6;border-radius:0 70% 70% 0/0 50% 50% 0;background:linear-gradient(90deg,rgba(255,150,40,0) 0,rgba(255,200,80,.95) 34%,#fff2b8 37%,#c7ced4 39%,#e3e8ec 62%,#9aa4ad 84%,#c0392b 86%,#8e1e14 100%);box-shadow:0 0 10px rgba(255,170,60,.55)}
+.nv-boom{position:absolute;border-radius:50%;z-index:5;background:radial-gradient(circle,#fffbe0 0,#ffe066 18%,#ff9a1f 38%,#e8401c 56%,rgba(90,35,25,.55) 68%,rgba(0,0,0,0) 74%)}
+.nv-spark{position:absolute;width:5px;height:5px;border-radius:50%;background:#ffd36b;box-shadow:0 0 6px #ff9a2e;z-index:6}
+.nv-ring{position:absolute;border:3px solid rgba(225,242,255,.85);border-radius:50%;z-index:3}
+.nv-drop{position:absolute;width:5px;height:7px;border-radius:50%;background:#e6f5ff;z-index:6;box-shadow:0 0 3px rgba(255,255,255,.6)}
+.nv-bubble{position:absolute;width:6px;height:6px;border-radius:50%;border:1.5px solid rgba(220,240,255,.9);z-index:3}
+.nv-hull.svg{display:block;height:15px;flex:none}
+@media(prefers-reduced-motion:reduce){.nv-sprite,.nv-flame,.nv-smoke,.nv-ripple{animation:none}}

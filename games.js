@@ -76,7 +76,7 @@
       const theirs = (now.state.shots || {})[other()] || [], before = ((was.state && was.state.shots) || {})[other()] || [];
       if (theirs.length > before.length) {
         const last = theirs[theirs.length - 1];
-        ctx.toast(last.s ? `☠️ ${pl(other()).name} a coulé un de tes bateaux !` : last.h ? `💥 ${pl(other()).name} t’a touché en ${cellName(last.c)} !` : `🌊 ${pl(other()).name} a tiré dans l’eau (${cellName(last.c)}). À toi !`);
+        setTimeout(() => ctx.toast(last.s ? `☠️ ${pl(other()).name} a coulé un de tes bateaux !` : last.h ? `💥 ${pl(other()).name} t’a touché en ${cellName(last.c)} !` : `🌊 ${pl(other()).name} a tiré dans l’eau (${cellName(last.c)}). À toi !`), 1000);
       }
       if (now.state.phase === 'play' && was.state && was.state.phase === 'place') ctx.toast('🚢 Les deux flottes sont prêtes : la bataille commence !');
     }
@@ -344,8 +344,8 @@
       if (ok) return;
     }
   }
-  function grid(kind, cellsHTML) {
-    let h = `<div class="nv-grid ${kind}"><span class="nv-corner"></span>`;
+  function grid(kind, cellsHTML, attrs) {
+    let h = `<div class="nv-grid ${kind}" ${attrs || ''}><span class="nv-corner"></span>`;
     for (let c = 0; c < 10; c++) h += `<span class="nv-lab">${COLS[c]}</span>`;
     for (let r = 0; r < 10; r++) { h += `<span class="nv-lab">${r + 1}</span>`; for (let c = 0; c < 10; c++) h += cellsHTML(r * 10 + c); }
     return h + '</div>';
@@ -364,15 +364,16 @@
     else if (s.phase === 'place' && !placed.includes(me())) body = navalPlacement();
     else body = navalBattle(s);
     root.innerHTML = head() + `<div class="nv-wrap">${body}</div>` + actions();
+    navalFx();
   }
   function navalPlacement() {
     if (!navalDraft) navalDraft = SHIPS.map(() => null);
     const shipOf = new Map(); navalDraft.forEach((cells, i) => cells && cells.forEach(c => shipOf.set(c, i)));
-    const g = grid('mine place', c => { const i = shipOf.get(c); return `<button type="button" class="nv-cell${i !== undefined ? shipShape(navalDraft[i], c) : ''}" data-cell="${c}" aria-label="${cellName(c)}"></button>`; });
+    const g = grid('mine place', c => { const i = shipOf.get(c); return `<button type="button" class="nv-cell${i !== undefined ? shipShape(navalDraft[i], c) : ''}" data-cell="${c}" aria-label="${cellName(c)}"></button>`; }, 'data-g="draft"');
     const done = navalDraft.every(Boolean);
     return `<div class="nv-place"><div class="nv-board"><p class="nv-cap">⚓ Place tes 5 bateaux</p>${g}</div><div class="nv-panel">
       <p class="nv-help">Choisis un bateau, puis touche la case de départ. Touche un bateau posé pour le reprendre.</p>
-      <div class="nv-ships">${SHIPS.map((sh, i) => `<button type="button" class="nv-ship ${navalPick === i ? 'on' : ''} ${navalDraft[i] ? 'done' : ''}" data-ship="${i}"><span class="nv-hull">${'<i></i>'.repeat(sh.n)}</span><span>${sh.name} · ${sh.n}</span>${navalDraft[i] ? '<em>✓</em>' : ''}</button>`).join('')}</div>
+      <div class="nv-ships">${SHIPS.map((sh, i) => `<button type="button" class="nv-ship ${navalPick === i ? 'on' : ''} ${navalDraft[i] ? 'done' : ''}" data-ship="${i}"><span class="nv-hull svg" style="width:${sh.n * 15}px">${shipSVG(KIND_OF[i], sh.n)}</span><span>${sh.name} · ${sh.n}</span>${navalDraft[i] ? '<em>✓</em>' : ''}</button>`).join('')}</div>
       <div class="nv-tools"><button type="button" class="gb-btn ghost" data-act="rotate">↻ ${navalVertical ? 'Vertical' : 'Horizontal'}</button><button type="button" class="gb-btn ghost" data-act="random">🎲 Au hasard</button><button type="button" class="gb-btn ghost" data-act="clear">Effacer</button></div>
       <button type="button" class="gb-btn big" data-act="fleet" ${done && !pending ? '' : 'disabled'}>✅ Valider ma flotte</button></div></div>`;
   }
@@ -392,8 +393,8 @@
     const enemy = grid('enemy' + (canShoot ? ' armed' : ''), c => {
       const x = shotMap.get(c), sk = sunkOf.get(c), revealed = sk && cur.finished_at && !(x && x.h);
       return `<button type="button" class="nv-cell${sk ? shipShape(sk, c) + (revealed ? ' reveal' : ' sunk') : ''}${x ? (x.h ? ' hit' : ' miss') : ''}" data-shot="${c}" ${canShoot && !x ? '' : 'disabled'} aria-label="${cellName(c)}"></button>`;
-    });
-    const own = grid('mine', c => { const x = hitMe.get(c), sh = mineOf.get(c); return `<span class="nv-cell${sh ? shipShape(sh, c) : ''}${x ? (x.h ? ' hit' : ' miss') : ''}${sh && sh.every(q => hitMe.has(q) && hitMe.get(q).h) ? ' sunk' : ''}"></span>`; });
+    }, `data-g="enemy" data-shooter="${me()}"`);
+    const own = grid('mine', c => { const x = hitMe.get(c), sh = mineOf.get(c); return `<span class="nv-cell${sh ? shipShape(sh, c) : ''}${x ? (x.h ? ' hit' : ' miss') : ''}${sh && sh.every(q => hitMe.has(q) && hitMe.get(q).h) ? ' sunk' : ''}"></span>`; }, `data-g="mine" data-shooter="${other()}"`);
     const waitPlace = s.phase === 'place';
     return `<div class="nv-battle"><div class="nv-board"><p class="nv-cap">🎯 Flotte de ${esc(pl(other()).name)} <small>${cur.finished_at ? '' : `${sunk.length}/5 coulés`}</small></p>${waitPlace ? '<div class="nv-fog"><p>⏳ ' + esc(pl(other()).name) + ' place sa flotte…</p></div>' : enemy}</div>
       <div class="nv-board small"><p class="nv-cap">🛡️ Ta flotte <small>${mySunk}/5 coulés</small></p>${own}</div></div>
@@ -401,9 +402,161 @@
   }
   function navalSpectator(s) {
     const a = cur.challenger, b = cur.opponent;
-    const view = (shooter) => { const shots = new Map(((s.shots || {})[shooter] || []).map(x => [Number(x.c), x])); return grid('enemy', c => { const x = shots.get(c); return `<span class="nv-cell${x ? (x.h ? ' hit' : ' miss') : ''}"></span>`; }); };
+    const view = (shooter) => { const shots = new Map(((s.shots || {})[shooter] || []).map(x => [Number(x.c), x])); return grid('enemy', c => { const x = shots.get(c); return `<span class="nv-cell${x ? (x.h ? ' hit' : ' miss') : ''}"></span>`; }, `data-g="spec" data-shooter="${shooter}"`); };
     return `<div class="nv-battle"><div class="nv-board"><p class="nv-cap">Tirs de ${esc(pl(a).name)}</p>${view(a)}</div><div class="nv-board"><p class="nv-cap">Tirs de ${esc(pl(b).name)}</p>${view(b)}</div></div>`;
   }
+
+  // ---------- BATAILLE NAVALE : bateaux dessinés, missiles, explosions, naufrages ----------
+  const KIND_OF = ['carrier', 'battleship', 'cruiser', 'sub', 'destroyer'];
+  const reduceMotion = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let fxSeen = null, fxQueue = Promise.resolve(), fxGen = 0, audio = null;
+  function shipSVG(kind, n) {
+    const W = n * 100, s = 'stroke="#2c343c" stroke-width="3" stroke-linejoin="round"';
+    const hull = `<path d="M10 50 Q12 20 44 18 L${W - 80} 18 Q${W - 20} 24 ${W - 5} 50 Q${W - 20} 76 ${W - 80} 82 L44 82 Q12 80 10 50Z" fill="#7b8894" ${s}/><path d="M28 50 Q30 31 52 30 L${W - 86} 30 Q${W - 40} 34 ${W - 26} 50 Q${W - 40} 66 ${W - 86} 70 L52 70 Q30 69 28 50Z" fill="#96a3ae"/>`;
+    const turret = (x, dir) => `<g transform="translate(${x} 50)"><rect x="${dir > 0 ? 6 : -34}" y="-4" width="28" height="3.5" fill="#39434c"/><rect x="${dir > 0 ? 6 : -34}" y="1" width="28" height="3.5" fill="#39434c"/><circle r="15" fill="#5c6872" ${s}/><circle r="6" fill="#4a555e"/></g>`;
+    const bridge = (x, w) => `<rect x="${x}" y="34" width="${w}" height="32" rx="5" fill="#b9c3cb" ${s}/><rect x="${x + 6}" y="40" width="${w - 12}" height="7" rx="2" fill="#3b4a58"/><circle cx="${x + w / 2}" cy="57" r="4" fill="#2c343c"/>`;
+    let body = '';
+    if (kind === 'carrier') {
+      body = `<path d="M6 50 L28 12 L${W - 34} 12 Q${W - 4} 30 ${W - 4} 50 Q${W - 4} 70 ${W - 34} 88 L28 88 Z" fill="#6b7783" ${s}/>
+        <rect x="34" y="22" width="${W - 90}" height="56" rx="4" fill="#4e5862"/>
+        <line x1="44" y1="50" x2="${W - 60}" y2="50" stroke="#e9eef2" stroke-width="3" stroke-dasharray="20 14"/>
+        <line x1="60" y1="70" x2="${W - 140}" y2="30" stroke="#f2c94c" stroke-width="2.5" stroke-dasharray="10 8"/>
+        <rect x="${W - 190}" y="4" width="64" height="24" rx="4" fill="#a7b2bb" ${s}/><rect x="${W - 172}" y="-2" width="6" height="12" fill="#2c343c"/>
+        ${[90, 150, 210].map(x => `<path d="M${x} 50 l-18 -12 l4 12 l-4 12z M${x - 6} 50 l-10 -4 v8z" fill="#d6dde3" ${s.replace('3"', '1.5"')}/>`).join('')}`;
+    } else if (kind === 'sub') {
+      body = `<ellipse cx="${W / 2}" cy="50" rx="${W / 2 - 8}" ry="27" fill="#34414c" ${s}/><ellipse cx="${W / 2}" cy="44" rx="${W / 2 - 30}" ry="10" fill="#4b5966"/>
+        <rect x="${W / 2 - 34}" y="32" width="58" height="36" rx="12" fill="#2a343d" ${s}/><rect x="${W / 2 - 4}" y="22" width="5" height="20" fill="#1d252c"/>
+        <path d="M14 50 l-10 -16 v32z" fill="#2a343d"/>`;
+    } else {
+      body = hull;
+      if (kind === 'battleship') body += turret(W - 110, 1) + turret(W - 160, 1) + bridge(W / 2 - 50, 70) + `<rect x="${W / 2 - 92}" y="42" width="18" height="16" rx="3" fill="#39434c"/>` + turret(80, -1);
+      if (kind === 'cruiser') body += turret(W - 95, 1) + bridge(W / 2 - 40, 60) + turret(70, -1);
+      if (kind === 'destroyer') body += turret(W - 70, 1) + bridge(40, 56);
+    }
+    return `<svg viewBox="0 -6 ${W} 106" preserveAspectRatio="none" width="100%" height="100%" aria-hidden="true">${body}</svg>`;
+  }
+  function sizeKind(cells, used) { // flotte adverse coulée : on devine le type à la taille
+    const n = cells.length; if (n === 5) return 'carrier'; if (n === 4) return 'battleship'; if (n === 2) return 'destroyer';
+    const k = used.has('cruiser') ? 'sub' : 'cruiser'; used.add(k); return k;
+  }
+  const mk = (cls, parent) => { const d = document.createElement('div'); d.className = cls; if (parent) parent.appendChild(d); return d; };
+  function cellRect(cellsEl, c) { const e = cellsEl[c]; return {x: e.offsetLeft, y: e.offsetTop, w: e.offsetWidth, h: e.offsetHeight}; }
+  function putShip(fx, cellsEl, cells, kind, cls) {
+    cells = cells.map(Number).sort((a, b) => a - b);
+    const a = cellRect(cellsEl, cells[0]), b = cellRect(cellsEl, cells[cells.length - 1]), v = cells.length > 1 && cells[1] - cells[0] === 10;
+    const box = {x: a.x, y: a.y, w: b.x + b.w - a.x, h: b.y + b.h - a.y};
+    const d = mk('nv-sprite ' + (cls || ''), fx); Object.assign(d.style, {left: box.x + 'px', top: box.y + 'px', width: box.w + 'px', height: box.h + 'px'});
+    const inner = mk('nv-hullimg' + (v ? ' v' : ''), d); if (v) Object.assign(inner.style, {width: box.h + 'px', height: box.w + 'px'});
+    inner.innerHTML = shipSVG(kind, cells.length); d.dataset.cells = cells.join(',');
+    return d;
+  }
+  function putMark(fx, cellsEl, c, hit, cls) {
+    const r = cellRect(cellsEl, c), d = mk((hit ? 'nv-burn' : 'nv-peg') + ' ' + (cls || ''), fx); d.dataset.c = c;
+    Object.assign(d.style, {left: r.x + 'px', top: r.y + 'px', width: r.w + 'px', height: r.h + 'px'});
+    if (hit) { mk('nv-flame', d); mk('nv-flame f2', d); mk('nv-smoke', d); } else { mk('nv-dot', d); mk('nv-ripple', d); }
+    return d;
+  }
+  // Petits bruitages synthétisés (sifflement, explosion, plouf)
+  function sfx(kind) {
+    try {
+      audio = audio || new (window.AudioContext || window.webkitAudioContext)(); if (audio.state === 'suspended') audio.resume();
+      const t = audio.currentTime, len = kind === 'boom' ? 1.1 : kind === 'sink' ? 1.6 : kind === 'splash' ? 0.7 : 0.55;
+      const buf = audio.createBuffer(1, Math.floor(audio.sampleRate * len), audio.sampleRate), d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) { const p = i / d.length; d[i] = (Math.random() * 2 - 1) * (kind === 'whoosh' ? Math.sin(p * Math.PI) : Math.pow(1 - p, kind === 'boom' ? 2.2 : 3)); }
+      const src = audio.createBufferSource(), f = audio.createBiquadFilter(), g = audio.createGain(); src.buffer = buf;
+      if (kind === 'whoosh') { f.type = 'bandpass'; f.Q.value = 2; f.frequency.setValueAtTime(500, t); f.frequency.exponentialRampToValueAtTime(3000, t + len); g.gain.value = 0.18; }
+      else if (kind === 'boom') { f.type = 'lowpass'; f.frequency.setValueAtTime(1600, t); f.frequency.exponentialRampToValueAtTime(90, t + len); g.gain.value = 0.9; }
+      else if (kind === 'sink') { f.type = 'lowpass'; f.frequency.setValueAtTime(500, t); f.frequency.exponentialRampToValueAtTime(60, t + len); g.gain.value = 0.6; }
+      else { f.type = 'bandpass'; f.Q.value = 0.7; f.frequency.setValueAtTime(1800, t); f.frequency.exponentialRampToValueAtTime(500, t + len); g.gain.value = 0.45; }
+      src.connect(f).connect(g).connect(audio.destination); src.start(t);
+      if (kind === 'boom' || kind === 'sink') { const o = audio.createOscillator(), og = audio.createGain(); o.frequency.setValueAtTime(kind === 'boom' ? 110 : 70, t); o.frequency.exponentialRampToValueAtTime(30, t + 0.8); og.gain.setValueAtTime(0.5, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.9); o.connect(og).connect(audio.destination); o.start(t); o.stop(t + 0.9); }
+    } catch (_) {}
+  }
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  // Un tir : missile qui arrive, puis explosion (touché) ou gerbe d'eau (raté), puis naufrage si coulé.
+  async function animateShot(g, fx, cellsEl, shot, mark, sinking, gen) {
+    if (gen !== fxGen || !g.isConnected) { if (mark) mark.classList.remove('wait'); return; }
+    const r = cellRect(cellsEl, shot.c), cx = r.x + r.w / 2, cy = r.y + r.h / 2, size = 0.75 + Math.random() * 0.7;
+    const side = Math.random() < 0.5 ? -1 : 1, sx = cx + side * (g.offsetWidth * (0.3 + Math.random() * 0.35)), sy = -r.h * (2.5 + Math.random() * 2);
+    const ang = Math.atan2(cy - sy, cx - sx) * 180 / Math.PI;
+    const m = mk('nv-missile', fx); Object.assign(m.style, {left: cx + 'px', top: cy + 'px', width: r.w * 1.5 * size + 'px', height: r.h * 0.34 * size + 'px'});
+    sfx('whoosh');
+    await m.animate([{transform: `translate(${sx - cx}px,${sy - cy}px) translate(-100%,-50%) rotate(${ang}deg)`, offset: 0}, {transform: `translate(0,0) translate(-100%,-50%) rotate(${ang}deg)`}],
+      {duration: 620 + Math.random() * 200, easing: 'cubic-bezier(.5,0,.95,.55)'}).finished.catch(() => {});
+    m.remove(); if (!g.isConnected) return;
+    if (shot.h) {
+      sfx('boom');
+      const boom = mk('nv-boom', fx), bs = r.w * (2.2 + size); Object.assign(boom.style, {left: cx - bs / 2 + 'px', top: cy - bs / 2 + 'px', width: bs + 'px', height: bs + 'px'});
+      boom.animate([{transform: 'scale(.15)', opacity: 1}, {transform: 'scale(1)', opacity: .95, offset: .35}, {transform: 'scale(1.25)', opacity: 0}], {duration: 700, easing: 'ease-out'}).finished.then(() => boom.remove(), () => {});
+      for (let i = 0; i < 10; i++) {
+        const sp = mk('nv-spark', fx), a = Math.random() * Math.PI * 2, dist = r.w * (0.8 + Math.random() * 1.6);
+        Object.assign(sp.style, {left: cx + 'px', top: cy + 'px'});
+        sp.animate([{transform: 'translate(-50%,-50%) scale(1)', opacity: 1}, {transform: `translate(${Math.cos(a) * dist}px,${Math.sin(a) * dist + r.h * .6}px) scale(.3)`, opacity: 0}], {duration: 500 + Math.random() * 400, easing: 'cubic-bezier(.2,.7,.4,1)'}).finished.then(() => sp.remove(), () => {});
+      }
+      g.animate([{transform: 'translate(0,0)'}, {transform: 'translate(-4px,2px)'}, {transform: 'translate(4px,-2px)'}, {transform: 'translate(-3px,-1px)'}, {transform: 'translate(0,0)'}], {duration: 320});
+    } else {
+      sfx('splash');
+      for (let k = 0; k < 2; k++) { const ring = mk('nv-ring', fx), rs = r.w * 1.8; Object.assign(ring.style, {left: cx - rs / 2 + 'px', top: cy - rs / 2 + 'px', width: rs + 'px', height: rs + 'px'});
+        ring.animate([{transform: 'scale(.2)', opacity: .9}, {transform: 'scale(1.3)', opacity: 0}], {duration: 900, delay: k * 220, easing: 'ease-out'}).finished.then(() => ring.remove(), () => {}); }
+      for (let i = 0; i < 12; i++) {
+        const dr = mk('nv-drop', fx), dx = (Math.random() - 0.5) * r.w * 1.6, up = r.h * (1 + Math.random() * 1.8 * size);
+        Object.assign(dr.style, {left: cx + 'px', top: cy + 'px'});
+        dr.animate([{transform: 'translate(-50%,-50%)', opacity: 1}, {transform: `translate(${dx * .6}px,${-up}px)`, opacity: 1, offset: .45}, {transform: `translate(${dx}px,${r.h * .3}px)`, opacity: 0}], {duration: 750 + Math.random() * 300, easing: 'ease-out'}).finished.then(() => dr.remove(), () => {});
+      }
+    }
+    if (mark) mark.classList.remove('wait');
+    if (sinking) {
+      await wait(450); if (!sinking.isConnected) return;
+      sinking.classList.remove('wait'); sfx('sink');
+      const box = sinking.getBoundingClientRect();
+      sinking.animate([{transform: 'none', filter: 'brightness(1)', opacity: 1}, {transform: 'translateY(4%) rotate(3deg)', filter: 'brightness(.8)', opacity: 1, offset: .25}, {transform: 'translateY(22%) rotate(-8deg) scale(.95)', filter: 'brightness(.45) saturate(.4)', opacity: .7}], {duration: 2000, easing: 'ease-in'}).finished
+        .then(() => { sinking.classList.add('sunk'); sinking.classList.remove('afloat');
+          const cs = (sinking.dataset.cells || '').split(',').map(Number); fx.querySelectorAll('.nv-burn').forEach(b => { if (cs.includes(Number(b.dataset.c))) b.classList.add('out'); }); }, () => {});
+      const n = Math.max(6, Math.round(Math.max(box.width, box.height) / 12));
+      for (let i = 0; i < n; i++) {
+        const bb = mk('nv-bubble', fx), left = sinking.offsetLeft + Math.random() * sinking.offsetWidth, top = sinking.offsetTop + Math.random() * sinking.offsetHeight;
+        Object.assign(bb.style, {left: left + 'px', top: top + 'px'});
+        bb.animate([{transform: 'translateY(0) scale(.4)', opacity: 0}, {opacity: .9, offset: .2}, {transform: `translateY(${-20 - Math.random() * 30}px) scale(1)`, opacity: 0}], {duration: 900 + Math.random() * 900, delay: 300 + Math.random() * 1400}).finished.then(() => bb.remove(), () => {});
+      }
+    }
+  }
+  // Construit le décor de chaque grille et joue les tirs qui n'ont pas encore été montrés.
+  function navalFx() {
+    if (!cur || cur.game !== 'naval' || !root) return;
+    const s = cur.state || {}, gen = ++fxGen, still = reduceMotion();
+    if (!fxSeen || fxSeen.id !== cur.id) fxSeen = {id: cur.id, set: null};
+    const first = !fxSeen.set; if (first) fxSeen.set = new Set();
+    root.querySelectorAll('.nv-grid[data-g]').forEach(g => {
+      g.classList.add('fx'); g.querySelectorAll('.nv-fx').forEach(x => x.remove());
+      const fx = mk('nv-fx', g), cellsEl = g.querySelectorAll('.nv-cell'); if (cellsEl.length !== 100) return;
+      const kindG = g.dataset.g, shooter = Number(g.dataset.shooter) || 0;
+      if (kindG === 'draft') { (navalDraft || []).forEach((cells, i) => cells && putShip(fx, cellsEl, cells, KIND_OF[i], 'draft')); return; }
+      const shots = ((s.shots || {})[shooter] || []).map(x => ({c: Number(x.c), h: !!x.h, s: !!x.s}));
+      const hitSet = new Set(shots.filter(x => x.h).map(x => x.c));
+      const fresh = shots.filter(x => !fxSeen.set.has(kindG + shooter + ':' + x.c));
+      const freshSet = new Set(fresh.map(x => x.c));
+      // bateaux
+      const ships = [];
+      if (kindG === 'mine') (s.mine || []).forEach((cells, i) => ships.push({cells: cells.map(Number), kind: KIND_OF[i] || 'cruiser'}));
+      if (kindG === 'enemy') { const used = new Set(); (s.sunk || []).forEach(cells => ships.push({cells: cells.map(Number), kind: sizeKind(cells, used), enemy: true})); }
+      const sinkingOf = new Map();
+      ships.forEach(sh => {
+        const dead = sh.cells.every(c => hitSet.has(c)), dying = dead && sh.cells.some(c => freshSet.has(c)) && !first && !still;
+        const revealOnly = sh.enemy && !dead; // fin de partie : bateaux adverses non coulés
+        const el = putShip(fx, cellsEl, sh.cells, sh.kind, revealOnly ? 'reveal' : dead && !dying ? 'sunk' : dying ? 'afloat' + (sh.enemy ? ' wait' : '') : '');
+        if (dying) { const last = sh.cells.filter(c => freshSet.has(c)).pop(); sinkingOf.set(last, el); sh.dying = true; }
+      });
+      // marques (feu / plouf)
+      const deadCells = new Set(ships.filter(sh => !sh.dying && sh.cells.every(c => hitSet.has(c))).flatMap(sh => sh.cells));
+      const marks = new Map();
+      shots.forEach(x => marks.set(x.c, putMark(fx, cellsEl, x.c, x.h, (deadCells.has(x.c) ? 'out' : '') + (freshSet.has(x.c) && !first && !still ? ' wait' : ''))));
+      fresh.forEach(x => fxSeen.set.add(kindG + shooter + ':' + x.c));
+      if (first || still) return;
+      fresh.forEach(x => { fxQueue = fxQueue.then(() => animateShot(g, fx, cellsEl, x, marks.get(x.c), sinkingOf.get(x.c), gen)).then(() => wait(150)); });
+    });
+  }
+  let fxResize = 0;
+  window.addEventListener('resize', () => { clearTimeout(fxResize); fxResize = setTimeout(() => { if (cur && cur.game === 'naval' && !cur.loading) { fxGen++; root.querySelectorAll('.nv-grid[data-g]').forEach(() => {}); navalFx(); } }, 200); });
 
   // ---------- événements ----------
   function bind(el) {
@@ -446,7 +599,7 @@
         const c = Number(shot.dataset.shot); shot.classList.add('aim');
         root.querySelectorAll('[data-shot]').forEach(b => { b.disabled = true; });
         const r = await send({shot: c});
-        if (r) { ctx.toast(r.win ? '🏆 Toute la flotte est coulée, tu as gagné !' : r.sunk ? '☠️ Coulé ! Tu rejoues.' : r.hit ? `💥 Touché en ${cellName(c)} ! Tu rejoues.` : `🌊 Dans l’eau (${cellName(c)}).`); ctx.sound && ctx.sound(r.hit ? 'capture' : 'move'); }
+        if (r) { const msg = r.win ? '🏆 Toute la flotte est coulée, tu as gagné !' : r.sunk ? '☠️ Coulé ! Tu rejoues.' : r.hit ? `💥 Touché en ${cellName(c)} ! Tu rejoues.` : `🌊 Dans l’eau (${cellName(c)}).`; setTimeout(() => ctx.toast(msg), reduceMotion() ? 0 : 950); }
       }
     });
     el.addEventListener('pointerover', e => { if (e.pointerType !== 'mouse') return; const c = e.target.closest('[data-cell]'); if (c && navalDraft && cur && cur.game === 'naval') { hoverCell = Number(c.dataset.cell); paintPreview(); } });

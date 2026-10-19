@@ -246,8 +246,8 @@
   }
   const AVATARS=new Set(['alexandre','imany','loic','malak','mouna','nina','thibaud']);
   function avatar(p){
-    const slug=p.name.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
-    return AVATARS.has(slug)?`<img class="ranking-avatar" src="avatars/${slug}.jpg?v=1" alt="" style="--ring:${p.color}">`:`<span class="ranking-avatar ranking-avatar-empty" style="--ring:${p.color}">${escape(p.name.slice(0,1).toUpperCase())}</span>`;
+    const slug=p.name.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');const pic={imane:'imany'}[slug]||slug;
+    return AVATARS.has(pic)?`<img class="ranking-avatar" src="avatars/${pic}.jpg?v=1" alt="" style="--ring:${p.color}">`:`<span class="ranking-avatar ranking-avatar-empty" style="--ring:${p.color}">${escape(p.name.slice(0,1).toUpperCase())}</span>`;
   }
   function renderLeaderboard(scores) {
     const records=PLAYERS.map(p=>({...p,...stats(scores.filter(s=>s.player===p.id))})).sort((a,b)=>(b.best??-1)-(a.best??-1)||a.id-b.id);
