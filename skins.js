@@ -88,7 +88,7 @@
     {id:'snail',  kind:'curse', emoji:'🐌', fur:['#4a3a1a','#d9c48c'], name:'L’escargot', tag:'5 lancers de suite < 150 m', until:'Fais 150 m ou plus pour t’en débarrasser.', test:l => last(l, 5, v => v < 150)},
     {id:'fish',    kind:'curse', emoji:'🐟', name:'Le poisson mort', tag:'Dernier lancer sous 10 m', until:'Fais 10 m ou plus pour t’en débarrasser.', test:l => last(l, 1, v => v < 10)},
     {id:'frozen',  kind:'curse', emoji:'🥶', name:'Le congelé',      tag:'10 lancers de suite sans dépasser 250 m', until:'Dépasse 250 m pour te réchauffer.', test:l => last(l, 10, v => v <= 250)},
-    {id:'imany',  kind:'perso', owner:'imany', photo:'skins/imany.png', emoji:'👩', name:'Imany', tag:'Skin perso, réservé à Imany'},
+    {id:'imany',  kind:'perso', owner:'imane', photo:'skins/imany.png', emoji:'👩', name:'Imane', tag:'Skin perso, réservé à Imane'},
   ];
   // Couleur du pingouin selon le podium du club : [ombres, lumières].
   // Pingouin trophée : lingot poli, opaque, reflets marqués + contour. Purement visuel : aucune influence sur le jeu.

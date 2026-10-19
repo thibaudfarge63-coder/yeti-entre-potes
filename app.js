@@ -869,7 +869,7 @@
   }
   function plainBody(body){if(/^\[(g|gif):/.test(body||''))return 'a envoyé un GIF';const m=/^\[s:(.{1,12})\]$/u.exec(body||'');return m?m[1]:String(body||'');}
   const reEsc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-  // Nom affiché dans le chat (surnom, ex. Imany → Vladi) ; @surnom et @prénom taguent tous les deux.
+  // Nom affiché dans le chat : surnom optionnel (players.chat_name), sinon le prénom ; @surnom et @prénom taguent tous les deux.
   function cn(p){return p?(p.chat||p.name):'';}
   function lc(t){return String(t||'').toLocaleLowerCase('fr');}
   function byTag(t){return PLAYERS.find(q=>lc(q.name)===lc(t)||(q.chat&&lc(q.chat)===lc(t)));}
