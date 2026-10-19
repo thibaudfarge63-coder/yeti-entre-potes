@@ -776,19 +776,22 @@
       if(tag){showToast(`🔔 ${player(tag.player).name} t’a tagué : ${plainBody(tag.body).slice(0,80)}`);try{navigator.vibrate&&navigator.vibrate([80,60,80]);}catch(_){}}
       chatMsgs=chatMsgs.filter(m=>!m.temp||!list.some(x=>Number(x.player)===m.player&&x.body===m.body));
       chatMsgs.sort((a,b)=>(a.temp?1e15:a.id)-(b.temp?1e15:b.id));chatMsgs=chatMsgs.slice(-150);
-      chatLast=Math.max(chatLast,...chatMsgs.filter(m=>!m.temp).map(m=>m.id),0);renderChat();
+      chatLast=Math.max(chatLast,...chatMsgs.filter(m=>!m.temp).map(m=>m.id),0);renderChat(fresh.length>0);
     }catch(_){}finally{chatLoading=false;}
   }
   // Le chat est vidé toutes les 15 min (à :00, :15, :30, :45, côté serveur) : on retire aussi les vieux messages affichés.
+  function chatBottom(){const l=$('chat-list');if(l)l.scrollTop=l.scrollHeight;}
   const chatHour=()=>Math.floor(Date.now()/900000)*900000;
   let chatHourShown=chatHour();
-  function renderChat(){
+  function renderChat(toEnd){
     chatHourShown=chatHour();chatMsgs=chatMsgs.filter(m=>m.temp||!(Date.parse(m.at)<chatHourShown));
     const list=$('chat-list'),stick=list.scrollHeight-list.scrollTop-list.clientHeight<60,today=dayKey(new Date());
     list.innerHTML=chatMsgs.length?chatMsgs.map(m=>{const p=player(m.player),mine=m.player===selectedPlayer,d=new Date(m.at||Date.now());
       const media=mediaOf(m.body);
-      return `<div class="chat-msg ${mine?'mine':''} ${m.temp?'temp':''} ${media?'media':''} ${!mine&&mentionsMe(m)?'tagged':''}"><div class="chat-meta"><i class="player-dot" style="background:${p.color}"></i><b>${escape(p.name)}</b><time>${dayKey(d)===today?'':chatDay.format(d)+' '}${chatTime.format(d)}</time></div>${media||`<p>${richBody(m.body)}</p>`}</div>`;}).join(''):'<p class="chat-empty">Pas encore de message. Lance les hostilités.<br><small>Le chat se vide à chaque heure pile.</small></p>';
-    if(stick||chatOpen)list.scrollTop=list.scrollHeight;
+      return `<div class="chat-msg ${mine?'mine':''} ${m.temp?'temp':''} ${media?'media':''} ${!mine&&mentionsMe(m)?'tagged':''}"><div class="chat-meta"><i class="player-dot" style="background:${p.color}"></i><b>${escape(p.name)}</b><time>${dayKey(d)===today?'':chatDay.format(d)+' '}${chatTime.format(d)}</time></div>${media||`<p>${richBody(m.body)}</p>`}</div>`;}).join(''):'<p class="chat-empty">Pas encore de message. Lance les hostilités.<br><small>Le chat se vide toutes les 15 min.</small></p>';
+    if(stick||chatOpen||toEnd){chatBottom();
+      // les GIF se chargent après coup : on redescend quand chacun arrive
+      list.querySelectorAll('img').forEach(img=>{if(!img.complete)img.addEventListener('load',chatBottom,{once:true});});}
     if(chatOpen){chatRead=chatLast;try{localStorage.setItem('yeti-chat-read',String(chatRead));}catch(_){}}
     const unread=chatMsgs.filter(m=>!m.temp&&m.id>chatRead&&m.player!==selectedPlayer).length;
     $('chat-badge').hidden=!unread;$('chat-badge').textContent=unread>9?'9+':String(unread);
@@ -949,27 +952,51 @@
     inst.hidden=isStandalone()||!(installPrompt||isIOS||isAndroid);
     const logged=!!authed&&authed===selectedPlayer;
     if(!logged){nb.hidden=true;return;}
-    if(!pushOK()){nb.hidden=!(isIOS&&!isStandalone());nb.textContent='🔔 Notifs';nb.className='app-button';return;}
+    if(!pushOK()){nb.hidden=!((isIOS&&!isStandalone())||isAndroid);nb.textContent='🔔 Notifs';nb.className='app-button';return;}
     nb.hidden=false;
     const perm=Notification.permission;
     nb.textContent=perm==='denied'?'🔕 Notifs bloquées':pushOn?'🔔 Notifs activées':'🔔 Activer les notifs';
     nb.className='app-button'+(pushOn?' on':perm==='denied'?' off':'');
   }
   function b64u(s){const p='='.repeat((4-s.length%4)%4),b=atob((s+p).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from(b,c=>c.charCodeAt(0));}
+  function pushDiag(step,msg){try{const s=getSession();request('/api/push/diag',{player:authed||0,token:s&&s.token||'',step,msg:String(msg||'').slice(0,300),ua:navigator.userAgent.slice(0,300)}).catch(()=>{});}catch(_){}}
+  const sameKey=(a,b)=>{if(!a||!b||a.byteLength!==b.byteLength)return false;const x=new Uint8Array(a),y=new Uint8Array(b);for(let i=0;i<x.length;i++)if(x[i]!==y[i])return false;return true;};
   async function syncPush(ask){
+    let step='start';
     try{
-      if(!swReg||!pushOK()||!authed||authed!==selectedPlayer){renderAppButtons();return false;}
+      if(!authed||authed!==selectedPlayer){renderAppButtons();return false;}
+      if(!pushOK()){if(ask){pushDiag('unsupported','');showInstallHelp(true);}renderAppButtons();return false;}
+      step='sw';
+      if(!swReg){try{swReg=await navigator.serviceWorker.register('sw.js');}catch(e){throw new Error('Service worker impossible : '+(e.message||e));}}
       if(Notification.permission!=='granted'){
-        if(!ask||Notification.permission==='denied'){pushOn=false;renderAppButtons();return false;}
-        const p=await Notification.requestPermission();if(p!=='granted'){pushOn=false;renderAppButtons();return false;}
+        if(!ask||Notification.permission==='denied'){pushOn=false;renderAppButtons();if(ask)pushDiag('denied','');return false;}
+        step='permission';
+        const p=await Notification.requestPermission();
+        if(p!=='granted'){pushOn=false;renderAppButtons();pushDiag('permission',p);
+          showToast(p==='denied'?'Notifications refusées. Pour changer : réglages du téléphone → Applis → Chrome (ou Yeti rich club) → Notifications.'
+            :'Le navigateur n’a pas affiché la demande. Touche le cadenas 🔒 à gauche de l’adresse → Autorisations → Notifications → Autoriser, puis réessaie.');
+          return false;}
       }
-      let sub=await swReg.pushManager.getSubscription();
-      if(!sub)sub=await swReg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(window.YETI_CONFIG.vapidPublicKey)});
-      const s=getSession();if(!s||s.player!==authed){renderAppButtons();return false;}
+      step='ready';const reg=await navigator.serviceWorker.ready.catch(()=>swReg)||swReg;swReg=reg;
+      step='subscribe';
+      const appKey=b64u(window.YETI_CONFIG.vapidPublicKey);
+      let sub=await reg.pushManager.getSubscription();
+      if(sub&&sub.options&&sub.options.applicationServerKey&&!sameKey(sub.options.applicationServerKey,appKey.buffer)){try{await sub.unsubscribe();}catch(_){}sub=null;}
+      if(!sub){
+        try{sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:appKey});}
+        catch(e){const old=await reg.pushManager.getSubscription();if(old){try{await old.unsubscribe();}catch(_){}}
+          sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:appKey});}
+      }
+      step='session';const s=getSession();if(!s||s.player!==authed){renderAppButtons();return false;}
       const key=sub.endpoint+'|'+authed;
-      if(key!==pushKey){await request('/api/push',{player:authed,token:s.token,sub:sub.toJSON()});pushKey=key;}
+      step='save';
+      if(key!==pushKey||ask){await request('/api/push',{player:authed,token:s.token,sub:{...sub.toJSON(),ua:navigator.userAgent.slice(0,300)}});pushKey=key;}
+      if(ask)pushDiag('ok',sub.endpoint.slice(0,60));
       pushOn=true;renderAppButtons();return true;
-    }catch(error){if(ask)showToast(error.message||'Impossible d’activer les notifications.');pushOn=false;renderAppButtons();return false;}
+    }catch(error){
+      const m=(error&&(error.name?error.name+': ':'')+(error.message||error))||'?';pushDiag(step,m);
+      if(ask)showToast('Impossible d’activer les notifications ('+step+') : '+(error.message||error)+(isAndroid?' — essaie dans Chrome (pas Samsung Internet ni le navigateur d’Insta/Snap).':''));
+      pushOn=false;renderAppButtons();return false;}
   }
   function clubCode(){try{const u=new URL(window.YetiData.getInviteUrl());return new URLSearchParams(u.hash.slice(1)).get('club')||'';}catch(_){return '';}}
   function showInstallHelp(forNotifs){
@@ -987,8 +1014,11 @@
   $('notif-btn').addEventListener('click',async()=>{
     if(!pushOK()){showInstallHelp(true);return;}
     if(Notification.permission==='denied'){showToast('Notifications bloquées : autorise-les dans les réglages du téléphone / du navigateur pour ce site.');return;}
-    if(pushOn){showToast('🔔 Les notifs sont activées : tags dans le chat et entrées dans le top 5 du Hall of Fame.');return;}
-    if(await syncPush(true))showToast('🔔 Notifs activées ! Tu seras prévenu quand on te tague ou quand quelqu’un entre dans le top 5.');
+    if(pushOn||await syncPush(true)){
+      try{const s=getSession();const r=await request('/api/push/test',{player:authed,token:s&&s.token||''});
+        showToast(`🔔 Notifs activées ! Notif de test envoyée sur ${r&&r.devices||0} appareil(s) — elle doit arriver dans quelques secondes.`);}
+      catch(e){showToast('🔔 Notifs activées, mais le test a échoué : '+(e.message||e));}
+    }
   });
   renderAppButtons();
   // ---------- Mot de passe par joueur ----------
