@@ -507,7 +507,7 @@
       if(!knownDuels.has(d.id)){knownDuels.add(d.id);}
       if(d.status==='pending'&&d.opponent===selectedPlayer&&!inviteShown.has(d.id))queueInvite(d);
       if(!first&&prev==='pending'&&d.challenger===selectedPlayer){
-        if(d.status==='accepted'&&d.game!=='yeti'){showToast(`✅ ${player(d.opponent).name} a accepté ton défi ${GAME_INFO[d.game].label} !`);if(!activeRound&&!(window.YetiGames&&YetiGames.openId))openBoard(d.id);}
+        if(d.status==='accepted'&&d.game!=='yeti'){showToast(`✅ ${player(d.opponent).name} a accepté ton défi ${GAME_INFO[d.game].label} !`);const cur=window.YetiGames&&YetiGames.openId?duels.find(x=>x.id===YetiGames.openId):null;if(!activeRound&&(!cur||cur.finished_at||!boardTodo(cur,selectedPlayer)))openBoard(d.id);}
         else if(d.status==='accepted')showToast(`✅ ${player(d.opponent).name} a accepté ton duel ! Clique sur « Jouer » dans Duels 1v1.`);
         if(d.status==='refused')showToast(`❌ ${player(d.opponent).name} a refusé ton duel.`);
       }
@@ -634,7 +634,7 @@
     else if(open)status='<span class="duel-st live">En cours…</span>';
     else if(isMine)status=`<button type="button" class="br-btn small ${boardTodo(d,me)?'':'ghost'}" data-board="${d.id}">${boardTodo(d,me)?'▶ À toi de jouer':'Ouvrir la partie'}</button>`;
     else status=`<button type="button" class="br-btn small ghost" data-board="${d.id}">👁️ Regarder</button>`;
-    return `<div class="duel-row game-${d.game}">${side(A,st.winner===d.challenger)}<span class="duel-vs">VS</span>${side(B,st.winner===d.opponent)}${status}</div>`;
+    return `<div class="duel-row game-${d.game}">${side(A,st.winner===d.challenger)}<span class="duel-vs">VS${d.created_at?`<small>${dayKey(d.created_at)===dayKey(new Date())?hhmm(d.created_at):new Intl.DateTimeFormat('fr-FR',{timeZone:'Europe/Paris',day:'2-digit',month:'2-digit'}).format(new Date(d.created_at))+' '+hhmm(d.created_at)}</small>`:''}</span>${side(B,st.winner===d.opponent)}${status}</div>`;
   }
   // ---------- Échecs / bataille navale : la partie remplace la fenêtre du Yéti ----------
   let audioCtx=null;
@@ -648,6 +648,7 @@
         renderCompet();$('board-stage').scrollIntoView({behavior:'smooth',block:'start'});},
       onClose:()=>{$('game-stage').hidden=false;document.querySelector('.game-footer').hidden=false;try{if(playerApi){if(playerApi.resume)playerApi.resume();else if(playerApi.play)playerApi.play();}}catch(_){}renderCompet();},
       onFinished:()=>{refresh();},
+      otherTurns:cid=>duels.filter(d=>d.id!==cid&&d.game!=='yeti'&&boardTodo(d,selectedPlayer)).map(d=>({id:d.id,text:`${GAME_INFO[d.game].icon} À toi de jouer contre ${player(d.challenger===selectedPlayer?d.opponent:d.challenger).name}`})),
       rematch:(game,opp)=>{if(!opp)return;YetiGames.close();createGame(game,opp);}});
   }
   async function createGame(game,opp){

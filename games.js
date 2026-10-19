@@ -113,10 +113,21 @@
   function resultText() {
     const end = cur.state && cur.state.end, w = Number(cur.winner);
     const why = {time: 'au temps (pendule à 0)', checkmate: 'par échec et mat', resign: 'par abandon', timeout: 'par forfait (24 h sans jouer)', sunk: 'en coulant toute la flotte', stalemate: 'pat', draw: 'nulle', agreed: 'nulle d’un commun accord'}[end] || '';
+    if (end === 'aborted') return '🚫 Partie annulée avant le 2e coup';
     if (w === 0) return `🤝 Partie nulle${end === 'stalemate' ? ' (pat)' : end === 'agreed' ? ' d’un commun accord' : ''}`;
     if (isPlayer()) return w === me() ? `🏆 Tu as gagné ${why} !` : `😵 ${pl(w).name} a gagné ${why}.`;
     return `🏆 ${pl(w).name} a gagné ${why}.`;
   }
+  // « commencée à 9h22 » (ou « le 18/10 à 21h30 » si ce n'est pas aujourd'hui)
+  const fmtHM = new Intl.DateTimeFormat('fr-FR', {timeZone: 'Europe/Paris', hour: '2-digit', minute: '2-digit'});
+  const fmtDay = new Intl.DateTimeFormat('fr-FR', {timeZone: 'Europe/Paris', day: '2-digit', month: '2-digit'});
+  function whenText(iso) {
+    if (!iso) return '';
+    const d = new Date(iso); if (isNaN(d)) return '';
+    const hm = fmtHM.format(d).replace(':', 'h');
+    return fmtDay.format(d) === fmtDay.format(new Date()) ? `à ${hm}` : `le ${fmtDay.format(d)} à ${hm}`;
+  }
+  function startedText() { const t = whenText(cur.started_at || (cur.status === 'pending' ? cur.created_at : null)); return t ? (cur.status === 'pending' ? 'défi lancé ' : 'commencée ') + t : ''; }
   function head() {
     const g = GAMES[cur.game], A = pl(cur.challenger), B = pl(cur.opponent);
     let status;
@@ -126,7 +137,9 @@
     else if (!isPlayer()) status = '👁️ Tu regardes la partie';
     else if (myTurn()) status = cur.game === 'naval' && cur.state.phase === 'place' ? '⚓ Place ta flotte' : cur.game === 'naval' ? '🎯 À toi de tirer !' : '🟢 À toi de jouer !';
     else status = cur.game === 'naval' && cur.state.phase === 'place' ? `⏳ ${esc(pl(other()).name)} place sa flotte…` : `⏳ ${esc(pl(other()).name)} réfléchit…`;
-    return `<div class="gb-head"><button type="button" class="gb-back" data-act="exit">← Retour au Yéti</button><div class="gb-title"><b>${g.icon} ${g.name}</b><span>${esc(A.name)} vs ${esc(B.name)}</span></div><span class="gb-status ${myTurn() ? 'go' : ''} ${cur.finished_at ? 'end' : ''}" id="gb-status">${status}</span></div>`;
+    const others = ctx.otherTurns ? ctx.otherTurns(cur.id) : [];
+    const banner = others.length ? `<div class="gb-other">${others.map(o => `<button type="button" data-act="switch" data-id="${o.id}">${esc(o.text)} ▶</button>`).join('')}</div>` : '';
+    return banner + `<div class="gb-head"><button type="button" class="gb-back" data-act="exit">← Retour au Yéti</button><div class="gb-title"><b>${g.icon} ${g.name}</b><span>${esc(A.name)} vs ${esc(B.name)}${startedText() ? ' · ' + startedText() : ''}</span></div><span class="gb-status ${myTurn() ? 'go' : ''} ${cur.finished_at ? 'end' : ''}" id="gb-status">${status}</span></div>`;
   }
   function actions() {
     if (!isPlayer() || cur.status !== 'accepted') return '';
@@ -138,7 +151,8 @@
       else if (off === me()) h += '<span class="gb-offer">🤝 Nulle proposée…</span>';
       else h += '<button type="button" class="gb-btn ghost" data-act="draw-offer">🤝 Proposer la nulle</button>';
     }
-    h += `<button type="button" class="gb-btn danger" data-act="resign">${confirmResign > Date.now() ? 'Confirmer l’abandon ?' : '🏳️ Abandonner'}</button>`;
+    if (cur.game === 'chess' && cur.ply < 2) h += '<button type="button" class="gb-btn danger" data-act="abort">✖ Annuler la partie</button>';
+    else h += `<button type="button" class="gb-btn danger" data-act="resign">${confirmResign > Date.now() ? 'Confirmer l’abandon ?' : '🏳️ Abandonner'}</button>`;
     if (waitingOnOther()) h += idleHours() >= 24 ? '<button type="button" class="gb-btn" data-act="claim">⏰ Réclamer la victoire</button>' : `<span class="gb-idle" id="gb-idle">⏰ Victoire par forfait possible dans ${Math.ceil(24 - idleHours())} h</span>`;
     return `<div class="gb-actions">${h}</div>`;
   }
@@ -401,6 +415,8 @@
         if (act === 'rematch') { ctx.rematch && ctx.rematch(cur.game, other()); return; }
         if (act === 'resign') { if (confirmResign > Date.now()) { confirmResign = 0; await send({resign: true}); } else { confirmResign = Date.now() + 4000; render(); setTimeout(() => { if (confirmResign && confirmResign <= Date.now()) { confirmResign = 0; render(); } }, 4100); } return; }
         if (act === 'claim') { await send({claim: true}); return; }
+        if (act === 'abort') { await send({abort: true}); return; }
+        if (act === 'switch') { const id = Number(a.dataset.id); if (id) open(id, ctx); return; }
         if (act === 'draw-offer') { await send({draw: 'offer'}); ctx.toast('🤝 Nulle proposée.'); return; }
         if (act === 'draw-accept') { await send({draw: 'accept'}); return; }
         if (act === 'draw-decline') { await send({draw: 'decline'}); return; }
@@ -448,6 +464,7 @@
     document.addEventListener('keydown', e => { if (cur && cur.game === 'naval' && navalDraft && (e.key === 'r' || e.key === 'R') && !/input|textarea/i.test(e.target.tagName)) { navalVertical = !navalVertical; render(); } });
   }
 
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && cur && !cur.loading) { lastKey = ''; load(false); } });
   let bound = false;
   window.YetiGames = Object.freeze({
     GAMES,

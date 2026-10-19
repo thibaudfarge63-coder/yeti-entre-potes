@@ -628,3 +628,5 @@ body.chat-wide .chat-fab,body.chat-wide .chat-peek{display:none!important}
 .chess-moves b[data-ply]{cursor:pointer;border-radius:3px;padding:0 3px}.chess-moves b[data-ply]:hover{background:#3c3a37}
 .chess-tc{margin:0;font-size:11px;color:#a9a7a3}
 @media(max-width:760px){.clk{font-size:18px;min-width:72px;padding:7px 8px}}
+.gb-other{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}.gb-other button{flex:1;background:#e8b33c;color:#262421;border:0;border-radius:8px;padding:8px 10px;font:700 12px var(--font);animation:gb-pulse 1.6s ease-in-out infinite}
+.duel-vs small{display:block;font-size:9px;font-weight:600;color:var(--muted);text-align:center;white-space:nowrap}
