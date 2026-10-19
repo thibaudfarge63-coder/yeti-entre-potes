@@ -779,8 +779,8 @@
       chatLast=Math.max(chatLast,...chatMsgs.filter(m=>!m.temp).map(m=>m.id),0);renderChat();
     }catch(_){}finally{chatLoading=false;}
   }
-  // Le chat est vidé à chaque heure pile (côté serveur) : on retire aussi les vieux messages affichés.
-  const chatHour=()=>Math.floor(Date.now()/3600000)*3600000;
+  // Le chat est vidé toutes les 15 min (à :00, :15, :30, :45, côté serveur) : on retire aussi les vieux messages affichés.
+  const chatHour=()=>Math.floor(Date.now()/900000)*900000;
   let chatHourShown=chatHour();
   function renderChat(){
     chatHourShown=chatHour();chatMsgs=chatMsgs.filter(m=>m.temp||!(Date.parse(m.at)<chatHourShown));
@@ -867,31 +867,30 @@
   $('chat-mention').addEventListener('click',e=>{const b=e.target.closest('[data-mention]');if(b)pickMention(Number(b.dataset.mention));});
   $('chat-input').addEventListener('blur',()=>setTimeout(closeMention,150));
   // Sélecteur de GIF (GIPHY) : tendances à l'ouverture, recherche au fil de la frappe.
-  const giphyKey=()=>(window.YETI_CONFIG&&window.YETI_CONFIG.giphyKey)||'';
   let gifQ='',gifOffset=0,gifTimer=null,gifSeq=0;
-  // La clé gratuite GIPHY est limitée à 100 appels par heure : on garde les réponses en cache (30 min).
+  // Les GIF passent par notre serveur (fonction yeti-giphy) qui garde en cache, pour tout le club,
+  // les tendances et chaque recherche déjà faite : la limite GIPHY (100 appels/h) ne compte que les nouvelles recherches.
   const gifCache=new Map();
   async function giphyGet(url){
-    const k='yeti-giphy:'+url.replace(/api_key=[^&]+&?/,''),hit=gifCache.get(k);if(hit&&Date.now()-hit.t<18e5)return hit.j;
+    const k='yeti-giphy2:'+url.replace(/code=[^&]+&?/,''),hit=gifCache.get(k);if(hit&&Date.now()-hit.t<18e5)return hit.j;
     try{const c=JSON.parse(localStorage.getItem(k)||'null');if(c&&Date.now()-c.t<18e5){gifCache.set(k,c);return c.j;}}catch(_){}
-    const r=await fetch(url,{credentials:'omit',referrerPolicy:'no-referrer'});const j=await r.json();
-    if(!r.ok)throw new Error('giphy');const e={t:Date.now(),j};gifCache.set(k,e);
-    if(!url.includes('/search'))try{localStorage.setItem(k,JSON.stringify(e));}catch(_){}
+    const r=await fetch(url,{credentials:'omit',referrerPolicy:'no-referrer'});const j=await r.json().catch(()=>({}));
+    if(!r.ok){const e=new Error('giphy');e.status=r.status;throw e;}
+    const e={t:Date.now(),j};gifCache.set(k,e);try{localStorage.setItem(k,JSON.stringify(e));}catch(_){}
     return j;
   }
   async function loadGifs(more){
-    const grid=$('chat-picker-grid'),key=giphyKey();
-    if(!key){grid.innerHTML='<p class="gif-empty">Les GIF arrivent bientôt (clé GIPHY à configurer).</p>';$('gif-more').hidden=true;return;}
+    const grid=$('chat-picker-grid'),cfg=window.YETI_CONFIG||{},code=clubCode();
+    if(!code||!cfg.supabaseUrl){grid.innerHTML='<p class="gif-empty">Entre dans le club pour chercher des GIF.</p>';$('gif-more').hidden=true;return;}
     if(!more){gifOffset=0;grid.innerHTML='<p class="gif-empty">Chargement…</p>';}
     const seq=++gifSeq,q=gifQ.trim();
-    const url=q?`https://api.giphy.com/v1/gifs/search?api_key=${encodeURIComponent(key)}&q=${encodeURIComponent(q)}&limit=24&offset=${gifOffset}&rating=r&lang=fr`
-      :`https://api.giphy.com/v1/gifs/trending?api_key=${encodeURIComponent(key)}&limit=24&offset=${gifOffset}&rating=r`;
+    const url=`${cfg.supabaseUrl}/functions/v1/yeti-giphy?code=${encodeURIComponent(code)}&q=${encodeURIComponent(q)}&offset=${gifOffset}`;
     try{
       const j=await giphyGet(url);if(seq!==gifSeq)return;
-      const items=(j.data||[]).filter(g=>/^[A-Za-z0-9]{5,40}$/.test(g.id)).map(g=>{const im=g.images&&(g.images.fixed_width_small||g.images.fixed_width)||{};return `<button type="button" data-send="[gif:${g.id}]" title="${escape(g.title||'GIF')}"><img src="${escape(im.webp||im.url||'')}" alt="${escape(g.title||'GIF')}" loading="lazy"></button>`;}).join('');
+      const items=(j.data||[]).filter(g=>/^[A-Za-z0-9]{5,40}$/.test(g.id)).map(g=>`<button type="button" data-send="[gif:${g.id}]" title="${escape(g.title||'GIF')}"><img src="${escape(g.url||`https://media.giphy.com/media/${g.id}/100w.webp`)}" alt="${escape(g.title||'GIF')}" loading="lazy"></button>`).join('');
       if(!more)grid.innerHTML=items||'<p class="gif-empty">Aucun GIF trouvé.</p>';else grid.insertAdjacentHTML('beforeend',items);
-      gifOffset+=(j.data||[]).length;$('gif-more').hidden=!(j.pagination&&j.pagination.total_count>gifOffset);
-    }catch(_){if(seq===gifSeq&&!more)grid.innerHTML='<p class="gif-empty">GIPHY ne répond pas (limite de 100 recherches par heure atteinte ?). Réessaie un peu plus tard.</p>';}
+      gifOffset+=(j.data||[]).length;$('gif-more').hidden=!(j.total>gifOffset&&gifOffset<480);
+    }catch(e){if(seq===gifSeq&&!more)grid.innerHTML=e&&e.status===429?'<p class="gif-empty">Trop de nouvelles recherches cette heure-ci (limite GIPHY). Les recherches déjà faites marchent toujours, réessaie un peu plus tard pour les nouvelles.</p>':'<p class="gif-empty">GIPHY ne répond pas, réessaie.</p>';}
   }
   function closePicker(){$('chat-picker').hidden=true;$('chat-pick').setAttribute('aria-expanded','false');}
   $('chat-pick').addEventListener('click',()=>{const open=$('chat-picker').hidden;if(open){$('chat-picker').hidden=false;$('chat-pick').setAttribute('aria-expanded','true');loadGifs(false);setTimeout(()=>$('gif-q').focus(),50);}else closePicker();});
