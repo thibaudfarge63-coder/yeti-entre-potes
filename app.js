@@ -45,7 +45,7 @@
       if(Array.isArray(p.skins))savedSkins.set(id,p.skins.map(String));
       if(Number.isFinite(Number(p.total)))totals.set(id,Number(p.total));
       if(p.banned_until)bans[id]=p.banned_until;else if(p.banned_until===null)delete bans[id];
-      return {id,name:name.slice(0,24),color,locked:!!p.locked,admin:!!p.admin};
+      return {id,name:name.slice(0,24),color,locked:!!p.locked,admin:!!p.admin,chat:p.chat?String(p.chat).slice(0,24):''};
     }).filter(Boolean).sort((a,b)=>a.id-b.id);
     if(!parsed.length)return;
     PLAYERS=parsed;renderPlayerOptions();
@@ -758,7 +758,7 @@
   let chatReacts={},chatReactFor=0,chatReads={},chatSeenSent=0,chatMsgs=[],chatLast=0,chatOpen=false,chatLoading=false,chatRead=0,chatInit=false,peekTimer;
   function chatPeek(m){
     const p=player(m.player),el=$('chat-peek');
-    el.innerHTML=`<i class="player-dot" style="background:${p.color}"></i><b>${escape(p.name)}</b> : ${mentionsMe(m)?'🔔 ':''}${escape(plainBody(m.body))}`;el.hidden=false;
+    el.innerHTML=`<i class="player-dot" style="background:${p.color}"></i><b>${escape(cn(p))}</b> : ${mentionsMe(m)?'🔔 ':''}${escape(plainBody(m.body))}`;el.hidden=false;
     $('chat-fab').classList.remove('ping');void $('chat-fab').offsetWidth;$('chat-fab').classList.add('ping');
     clearTimeout(peekTimer);peekTimer=setTimeout(()=>el.hidden=true,4500);
   }
@@ -773,7 +773,7 @@
       const others=chatInit?fresh.filter(m=>m.player!==selectedPlayer):[];chatInit=true;
       if(others.length&&!chatOpen)chatPeek(others[others.length-1]);
       const tag=others.filter(mentionsMe).pop();
-      if(tag){showToast(`🔔 ${player(tag.player).name} t’a tagué : ${plainBody(tag.body).slice(0,80)}`);try{navigator.vibrate&&navigator.vibrate([80,60,80]);}catch(_){}}
+      if(tag){showToast(`🔔 ${cn(player(tag.player))} t’a tagué : ${plainBody(tag.body).slice(0,80)}`);try{navigator.vibrate&&navigator.vibrate([80,60,80]);}catch(_){}}
       chatMsgs=chatMsgs.filter(m=>!m.temp||!list.some(x=>Number(x.player)===m.player&&x.body===m.body));
       chatMsgs.sort((a,b)=>(a.temp?1e15:a.id)-(b.temp?1e15:b.id));chatMsgs=chatMsgs.slice(-150);
       chatLast=Math.max(chatLast,...chatMsgs.filter(m=>!m.temp).map(m=>m.id),0);renderChat(fresh.length>0);
@@ -820,16 +820,16 @@
     for(const [pid,last] of Object.entries(chatReads)){const id=Number(pid);if(!id||id===selectedPlayer)continue;
       let at=null;for(const m of real){if(m.id<=Number(last))at=m;else break;}
       if(at&&at.player!==id)(seenAt[at.id]=seenAt[at.id]||[]).push(id);}
-    const seenLine=m=>{const ids=seenAt[m.id];if(!ids||m.temp)return '';const names=ids.map(i=>escape(player(i).name));
+    const seenLine=m=>{const ids=seenAt[m.id];if(!ids||m.temp)return '';const names=ids.map(i=>escape(cn(player(i))));
       return `<div class="chat-seen ${m.player===selectedPlayer?'mine':''}">Vu par ${names.length>4?names.slice(0,4).join(', ')+' et '+(names.length-4)+' autre'+(names.length>5?'s':''):names.join(', ')}</div>`;};
     // Réactions emoji : pastilles sous la bulle + barre de choix sur le message touché
     const reactLine=m=>{if(m.temp)return '';const r=chatReacts[m.id]||{};const chips=REACTS.filter(e=>Array.isArray(r[e])&&r[e].length).map(e=>{const ids=r[e].map(Number);
-        return `<button type="button" class="react-chip ${ids.includes(selectedPlayer)?'me':''}" data-react="${e}" data-msg="${m.id}" title="${escape(ids.map(i=>player(i).name).join(', '))}">${e}${ids.length>1?`<small>${ids.length}</small>`:''}</button>`;}).join('');
+        return `<button type="button" class="react-chip ${ids.includes(selectedPlayer)?'me':''}" data-react="${e}" data-msg="${m.id}" title="${escape(ids.map(i=>cn(player(i))).join(', '))}">${e}${ids.length>1?`<small>${ids.length}</small>`:''}</button>`;}).join('');
       const bar=chatReactFor===m.id?`<div class="react-bar ${m.player===selectedPlayer?'mine':''}" role="group" aria-label="Réagir">${REACTS.map(e=>`<button type="button" data-react="${e}" data-msg="${m.id}" class="${(r[e]||[]).map(Number).includes(selectedPlayer)?'me':''}">${e}</button>`).join('')}</div>`:'';
       return chips||bar?`<div class="react-row ${m.player===selectedPlayer?'mine':''}">${chips}</div>${bar}`.replace('<div class="react-row '+(m.player===selectedPlayer?'mine':'')+'"></div>',''):'';};
     list.innerHTML=chatMsgs.length?chatMsgs.map(m=>{const p=player(m.player),mine=m.player===selectedPlayer,d=new Date(m.at||Date.now());
       const media=mediaOf(m.body);
-      return `<div data-mid="${m.temp?'':m.id}" class="chat-msg ${chatReactFor===m.id?'picked':''} ${mine?'mine':''} ${m.temp?'temp':''} ${media?'media':''} ${!mine&&mentionsMe(m)?'tagged':''}"><div class="chat-meta"><i class="player-dot" style="background:${p.color}"></i><b>${escape(p.name)}</b><time>${dayKey(d)===today?'':chatDay.format(d)+' '}${chatTime.format(d)}</time></div>${media||`<p>${richBody(m.body)}</p>`}</div>${reactLine(m)}${seenLine(m)}`;}).join(''):'<p class="chat-empty">Pas encore de message. Lance les hostilités.<br><small>Le chat se vide toutes les 15 min.</small></p>';
+      return `<div data-mid="${m.temp?'':m.id}" class="chat-msg ${chatReactFor===m.id?'picked':''} ${mine?'mine':''} ${m.temp?'temp':''} ${media?'media':''} ${!mine&&mentionsMe(m)?'tagged':''}"><div class="chat-meta"><i class="player-dot" style="background:${p.color}"></i><b>${escape(cn(p))}</b><time>${dayKey(d)===today?'':chatDay.format(d)+' '}${chatTime.format(d)}</time></div>${media||`<p>${richBody(m.body)}</p>`}</div>${reactLine(m)}${seenLine(m)}`;}).join(''):'<p class="chat-empty">Pas encore de message. Lance les hostilités.<br><small>Le chat se vide toutes les 15 min.</small></p>';
     if(stick||toEnd){chatBottom();
       // les GIF se chargent après coup : on redescend quand chacun arrive
       list.querySelectorAll('img').forEach(img=>{if(!img.complete)img.addEventListener('load',chatBottom,{once:true});});}
@@ -838,7 +838,7 @@
     $('chat-badge').hidden=!unread;$('chat-badge').textContent=unread>9?'9+':String(unread);
     const can=!!selectedPlayer&&!privateAccess;
     $('chat-input').disabled=!can;$('chat-send').disabled=!can;$('chat-pick').disabled=!can;if(!can)closePicker();
-    $('chat-input').placeholder=can?`Écris en tant que ${player(selectedPlayer).name}…`:'Choisis ton pseudo pour écrire';
+    $('chat-input').placeholder=can?`Écris en tant que ${cn(player(selectedPlayer))}…`:'Choisis ton pseudo pour écrire';
   }
   function toggleChat(open){
     chatOpen=open;$('chat-panel').hidden=!open;if(typeof applyWide==='function')applyWide();if(!open){closePicker();closeMention();}$('chat-fab').setAttribute('aria-expanded',String(open));$('chat-fab').classList.toggle('open',open);
@@ -869,15 +869,19 @@
   }
   function plainBody(body){if(/^\[(g|gif):/.test(body||''))return 'a envoyé un GIF';const m=/^\[s:(.{1,12})\]$/u.exec(body||'');return m?m[1]:String(body||'');}
   const reEsc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-  function mentionRe(){const names=PLAYERS.map(p=>p.name).sort((a,b)=>b.length-a.length).map(reEsc);return names.length?new RegExp('@('+names.join('|')+')(?![\\p{L}\\p{N}_])','giu'):null;}
+  // Nom affiché dans le chat (surnom, ex. Imany → Vladi) ; @surnom et @prénom taguent tous les deux.
+  function cn(p){return p?(p.chat||p.name):'';}
+  function lc(t){return String(t||'').toLocaleLowerCase('fr');}
+  function byTag(t){return PLAYERS.find(q=>lc(q.name)===lc(t)||(q.chat&&lc(q.chat)===lc(t)));}
+  function mentionRe(){const names=PLAYERS.flatMap(p=>p.chat?[p.name,p.chat]:[p.name]).sort((a,b)=>b.length-a.length).map(reEsc);return names.length?new RegExp('@('+names.join('|')+')(?![\\p{L}\\p{N}_])','giu'):null;}
   // Tags spéciaux : @tous, @here (les connectés) et les groupes (@lesarabes…).
   function specialRe(){const tags=['tous','all','everyone','here',...GROUPS.map(g=>g.tag)].sort((a,b)=>b.length-a.length).map(reEsc);return new RegExp('@('+tags.join('|')+')(?![\\p{L}\\p{N}_])','giu');}
   function specialHitsMe(tag){tag=tag.toLowerCase();if(['tous','all','everyone','here'].includes(tag))return true;const g=GROUPS.find(x=>x.tag.toLowerCase()===tag);return !!(g&&selectedPlayer&&g.members.includes(selectedPlayer));}
-  function mentionsMe(m){if(!selectedPlayer||m.player===selectedPlayer)return false;const me=player(selectedPlayer).name.toLocaleLowerCase('fr');const body=String(m.body||'');const re=mentionRe();if(re)for(const x of body.matchAll(re))if(x[1].toLocaleLowerCase('fr')===me)return true;for(const x of body.matchAll(specialRe()))if(specialHitsMe(x[1]))return true;return false;}
+  function mentionsMe(m){if(!selectedPlayer||m.player===selectedPlayer)return false;const body=String(m.body||'');const re=mentionRe();if(re)for(const x of body.matchAll(re)){const q=byTag(x[1]);if(q&&q.id===selectedPlayer)return true;}for(const x of body.matchAll(specialRe()))if(specialHitsMe(x[1]))return true;return false;}
   function richBody(body){
-    const re=mentionRe(),me=selectedPlayer?player(selectedPlayer).name.toLocaleLowerCase('fr'):'';let out='',last=0;const text=String(body||'');
+    const re=mentionRe();let out='',last=0;const text=String(body||'');
     const sre=specialRe();const esc=t=>{let o='',l=0;for(const x of t.matchAll(sre)){o+=escape(t.slice(l,x.index))+`<span class="mention group ${specialHitsMe(x[1])?'me':''}">@${escape(x[1])}</span>`;l=x.index+x[0].length;}return o+escape(t.slice(l));};
-    if(re)for(const x of text.matchAll(re)){out+=esc(text.slice(last,x.index));const isMe=x[1].toLocaleLowerCase('fr')===me;const p=PLAYERS.find(q=>q.name.toLocaleLowerCase('fr')===x[1].toLocaleLowerCase('fr'));out+=`<span class="mention ${isMe?'me':''}" style="--mc:${p?p.color:'#1b4e3b'}">@${escape(p?p.name:x[1])}</span>`;last=x.index+x[0].length;}
+    if(re)for(const x of text.matchAll(re)){out+=esc(text.slice(last,x.index));const p=byTag(x[1]);const isMe=!!(p&&p.id===selectedPlayer);out+=`<span class="mention ${isMe?'me':''}" style="--mc:${p?p.color:'#1b4e3b'}">@${escape(p?cn(p):x[1])}</span>`;last=x.index+x[0].length;}
     return out+esc(text.slice(last));
   }
   // Suggestions quand on tape @
@@ -887,16 +891,16 @@
   function renderMention(){
     const q=mentionQuery();if(!q){closeMention();return;}
     const n=q.q.toLocaleLowerCase('fr').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-    const groupItems=[...GROUPS.map(g=>({id:0,name:g.tag,ico:'👥',sub:g.members.map(id=>player(id)).filter(Boolean).map(p=>p.name).join(', ')})),{id:0,name:'here',ico:'🟢',sub:'les connectés'},{id:0,name:'tous',ico:'📣',sub:'tout le club'}].filter(g=>g.name.toLowerCase().startsWith(n));
-    mentionItems=[...PLAYERS.filter(p=>p.id!==selectedPlayer&&p.name.toLocaleLowerCase('fr').normalize('NFD').replace(/[\u0300-\u036f]/g,'').startsWith(n)),...groupItems].slice(0,10);
+    const groupItems=[...GROUPS.map(g=>({id:0,name:g.tag,ico:'👥',sub:g.members.map(id=>player(id)).filter(Boolean).map(cn).join(', ')})),{id:0,name:'here',ico:'🟢',sub:'les connectés'},{id:0,name:'tous',ico:'📣',sub:'tout le club'}].filter(g=>g.name.toLowerCase().startsWith(n));
+    mentionItems=[...PLAYERS.filter(p=>p.id!==selectedPlayer&&[p.name,p.chat].some(x=>x&&x.toLocaleLowerCase('fr').normalize('NFD').replace(/[\u0300-\u036f]/g,'').startsWith(n))),...groupItems].slice(0,10);
     if(!mentionItems.length){closeMention();return;}
     mentionSel=Math.min(mentionSel,mentionItems.length-1);
-    $('chat-mention').innerHTML=mentionItems.map((p,i)=>`<button type="button" role="option" aria-selected="${i===mentionSel}" class="${i===mentionSel?'on':''}" data-mention="${i}">${p.id?avatar(p):`<span class="ranking-avatar ranking-avatar-empty" style="--ring:#f08b50">${p.ico||'📣'}</span>`}<span>@${escape(p.name)}${p.sub?`<small class="mention-sub">${escape(p.sub)}</small>`:''}</span>${online.has(p.id)?'<i class="online-mini"></i>':''}</button>`).join('');
+    $('chat-mention').innerHTML=mentionItems.map((p,i)=>`<button type="button" role="option" aria-selected="${i===mentionSel}" class="${i===mentionSel?'on':''}" data-mention="${i}">${p.id?avatar(p):`<span class="ranking-avatar ranking-avatar-empty" style="--ring:#f08b50">${p.ico||'📣'}</span>`}<span>@${escape(p.id?cn(p):p.name)}${p.sub?`<small class="mention-sub">${escape(p.sub)}</small>`:''}</span>${online.has(p.id)?'<i class="online-mini"></i>':''}</button>`).join('');
     $('chat-mention').hidden=false;
   }
   function pickMention(i){
     const p=mentionItems[i],q=mentionQuery();if(!p||!q)return;const input=$('chat-input');
-    const ins='@'+p.name+' ';input.value=input.value.slice(0,q.start)+ins+input.value.slice(q.pos);
+    const ins='@'+(p.id?cn(p):p.name)+' ';input.value=input.value.slice(0,q.start)+ins+input.value.slice(q.pos);
     const c=q.start+ins.length;input.focus();input.setSelectionRange(c,c);closeMention();
   }
   $('chat-input').addEventListener('input',()=>{mentionSel=0;renderMention();});
