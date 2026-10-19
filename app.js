@@ -818,11 +818,12 @@
   const STICKERS=['🦭','🐧','❄️','🏔️','🥶','🏆','🥇','👑','🐐','🔥','💀','🤡','💩','😂','🤣','😭','😎','🤯','😤','🙄','🫡','👀','💪','🎯','🍺','🥳','🎉','❤️','👍','👎','🤌','🙏','😱','🤫','🫠','🧊','⛷️','💸','🚀','🧠'];
   const gifUrl=c=>`https://fonts.gstatic.com/s/e/notoemoji/latest/${c}/512.webp`;
   function mediaOf(body){
+    const gm=/^\[gif:([A-Za-z0-9]{5,40})\]$/.exec(body||'');if(gm)return `<img class="chat-gif giphy" src="https://media.giphy.com/media/${gm[1]}/200w.webp" alt="GIF" loading="lazy">`;
     let m=/^\[g:([0-9a-f_]{2,24})\]$/.exec(body||'');if(m&&GIFS.includes(m[1]))return `<img class="chat-gif" src="${gifUrl(m[1])}" alt="GIF" loading="lazy" width="120" height="120">`;
     m=/^\[s:(.{1,12})\]$/u.exec(body||'');if(m&&STICKERS.includes(m[1]))return `<span class="chat-sticker" role="img" aria-label="sticker">${m[1]}</span>`;
     return '';
   }
-  function plainBody(body){if(/^\[g:/.test(body||''))return 'a envoyé un GIF';const m=/^\[s:(.{1,12})\]$/u.exec(body||'');return m?m[1]:String(body||'');}
+  function plainBody(body){if(/^\[(g|gif):/.test(body||''))return 'a envoyé un GIF';const m=/^\[s:(.{1,12})\]$/u.exec(body||'');return m?m[1]:String(body||'');}
   const reEsc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
   function mentionRe(){const names=PLAYERS.map(p=>p.name).sort((a,b)=>b.length-a.length).map(reEsc);return names.length?new RegExp('@('+names.join('|')+')(?![\\p{L}\\p{N}_])','giu'):null;}
   // Tags spéciaux : @tous, @here (les connectés) et les groupes (@lesarabes…).
@@ -865,17 +866,39 @@
   $('chat-mention').addEventListener('mousedown',e=>e.preventDefault());
   $('chat-mention').addEventListener('click',e=>{const b=e.target.closest('[data-mention]');if(b)pickMention(Number(b.dataset.mention));});
   $('chat-input').addEventListener('blur',()=>setTimeout(closeMention,150));
-  // Sélecteur GIF / stickers
-  let pickTab='gif';
-  function renderPicker(){
-    document.querySelectorAll('[data-pick-tab]').forEach(b=>b.classList.toggle('active',b.dataset.pickTab===pickTab));
-    $('chat-picker-grid').className='chat-picker-grid '+pickTab;
-    $('chat-picker-grid').innerHTML=pickTab==='gif'?GIFS.map(c=>`<button type="button" data-send="[g:${c}]"><img src="${gifUrl(c)}" alt="" loading="lazy" width="56" height="56"></button>`).join(''):STICKERS.map(s=>`<button type="button" data-send="[s:${s}]">${s}</button>`).join('');
+  // Sélecteur de GIF (GIPHY) : tendances à l'ouverture, recherche au fil de la frappe.
+  const giphyKey=()=>(window.YETI_CONFIG&&window.YETI_CONFIG.giphyKey)||'';
+  let gifQ='',gifOffset=0,gifTimer=null,gifSeq=0;
+  // La clé gratuite GIPHY est limitée à 100 appels par heure : on garde les réponses en cache (30 min).
+  const gifCache=new Map();
+  async function giphyGet(url){
+    const k='yeti-giphy:'+url.replace(/api_key=[^&]+&?/,''),hit=gifCache.get(k);if(hit&&Date.now()-hit.t<18e5)return hit.j;
+    try{const c=JSON.parse(localStorage.getItem(k)||'null');if(c&&Date.now()-c.t<18e5){gifCache.set(k,c);return c.j;}}catch(_){}
+    const r=await fetch(url,{credentials:'omit',referrerPolicy:'no-referrer'});const j=await r.json();
+    if(!r.ok)throw new Error('giphy');const e={t:Date.now(),j};gifCache.set(k,e);
+    if(!url.includes('/search'))try{localStorage.setItem(k,JSON.stringify(e));}catch(_){}
+    return j;
+  }
+  async function loadGifs(more){
+    const grid=$('chat-picker-grid'),key=giphyKey();
+    if(!key){grid.innerHTML='<p class="gif-empty">Les GIF arrivent bientôt (clé GIPHY à configurer).</p>';$('gif-more').hidden=true;return;}
+    if(!more){gifOffset=0;grid.innerHTML='<p class="gif-empty">Chargement…</p>';}
+    const seq=++gifSeq,q=gifQ.trim();
+    const url=q?`https://api.giphy.com/v1/gifs/search?api_key=${encodeURIComponent(key)}&q=${encodeURIComponent(q)}&limit=24&offset=${gifOffset}&rating=r&lang=fr`
+      :`https://api.giphy.com/v1/gifs/trending?api_key=${encodeURIComponent(key)}&limit=24&offset=${gifOffset}&rating=r`;
+    try{
+      const j=await giphyGet(url);if(seq!==gifSeq)return;
+      const items=(j.data||[]).filter(g=>/^[A-Za-z0-9]{5,40}$/.test(g.id)).map(g=>{const im=g.images&&(g.images.fixed_width_small||g.images.fixed_width)||{};return `<button type="button" data-send="[gif:${g.id}]" title="${escape(g.title||'GIF')}"><img src="${escape(im.webp||im.url||'')}" alt="${escape(g.title||'GIF')}" loading="lazy"></button>`;}).join('');
+      if(!more)grid.innerHTML=items||'<p class="gif-empty">Aucun GIF trouvé.</p>';else grid.insertAdjacentHTML('beforeend',items);
+      gifOffset+=(j.data||[]).length;$('gif-more').hidden=!(j.pagination&&j.pagination.total_count>gifOffset);
+    }catch(_){if(seq===gifSeq&&!more)grid.innerHTML='<p class="gif-empty">GIPHY ne répond pas (limite de 100 recherches par heure atteinte ?). Réessaie un peu plus tard.</p>';}
   }
   function closePicker(){$('chat-picker').hidden=true;$('chat-pick').setAttribute('aria-expanded','false');}
-  $('chat-pick').addEventListener('click',()=>{const open=$('chat-picker').hidden;if(open){renderPicker();$('chat-picker').hidden=false;$('chat-pick').setAttribute('aria-expanded','true');}else closePicker();});
-  document.querySelectorAll('[data-pick-tab]').forEach(b=>b.addEventListener('click',()=>{pickTab=b.dataset.pickTab;renderPicker();}));
-  $('chat-picker-grid').addEventListener('click',e=>{const b=e.target.closest('[data-send]');if(!b)return;closePicker();sendChat(b.dataset.send);});
+  $('chat-pick').addEventListener('click',()=>{const open=$('chat-picker').hidden;if(open){$('chat-picker').hidden=false;$('chat-pick').setAttribute('aria-expanded','true');loadGifs(false);setTimeout(()=>$('gif-q').focus(),50);}else closePicker();});
+  $('gif-q').addEventListener('input',()=>{gifQ=$('gif-q').value;clearTimeout(gifTimer);gifTimer=setTimeout(()=>{if(gifQ.trim().length!==1)loadGifs(false);},500);});
+  $('gif-q').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();clearTimeout(gifTimer);gifQ=$('gif-q').value;loadGifs(false);}if(e.key==='Escape')closePicker();});
+  $('gif-more').addEventListener('click',()=>loadGifs(true));
+  $('chat-picker-grid').addEventListener('click',e=>{const b=e.target.closest('[data-send]');if(!b)return;closePicker();$('gif-q').value='';gifQ='';sendChat(b.dataset.send);});
   // Chat agrandi : moitié de l'écran (à droite sur ordi, en bas sur téléphone), le jeu reste visible.
   let chatWide=false;try{chatWide=localStorage.getItem('yeti-chat-wide')==='1';}catch(_){}
   function applyWide(){

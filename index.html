@@ -12,17 +12,17 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Yeti rich club">
-  <link rel="stylesheet" href="styles.css?v=20261019-49">
+  <link rel="stylesheet" href="styles.css?v=20261019-50">
   <link rel="stylesheet" href="chess-pieces.css?v=1">
   <script>window.RufflePlayer = window.RufflePlayer || {}; window.RufflePlayer.config = {autoplay:"on",unmuteOverlay:"visible",backgroundColor:"#c9e8f7",contextMenu:"off",warnOnUnsupportedContent:false};</script>
   <script src="ruffle/ruffle.js" defer></script>
-  <script src="config.js?v=20261019-49" defer></script>
-  <script src="data-client.js?v=20261019-49" defer></script>
-  <script src="costumes.js?v=20261019-49" defer></script>
-  <script src="skins.js?v=20261019-49" defer></script>
+  <script src="config.js?v=20261019-50" defer></script>
+  <script src="data-client.js?v=20261019-50" defer></script>
+  <script src="costumes.js?v=20261019-50" defer></script>
+  <script src="skins.js?v=20261019-50" defer></script>
   <script src="chess-engine.js?v=1" defer></script>
-  <script src="games.js?v=20261019-49" defer></script>
-  <script src="app.js?v=20261019-49" defer></script>
+  <script src="games.js?v=20261019-50" defer></script>
+  <script src="app.js?v=20261019-50" defer></script>
 </head>
 <body>
   <div class="page-shell">
@@ -87,7 +87,7 @@
   <div class="access-overlay" id="add-player-overlay" hidden><form id="add-player-form" class="access-card" role="dialog" aria-modal="true" aria-labelledby="add-player-title"><span class="brand-mark" aria-hidden="true">+</span><p class="eyebrow">NOUVEAU JOUEUR</p><h2 id="add-player-title">Un pote de plus.</h2><p>Son prénom apparaîtra à côté des autres, avec son propre classement et son historique.</p><label for="new-player-name">Prénom</label><input id="new-player-name" type="text" maxlength="24" autocomplete="off" required><button class="primary-button" id="add-player-submit" type="submit">Ajouter au club →</button><button class="text-button add-player-cancel" id="add-player-cancel" type="button">Annuler</button><p id="add-player-error" role="alert"></p></form></div>
   <div class="chat-peek" id="chat-peek" hidden role="status"></div>
   <button type="button" class="chat-fab" id="chat-fab" aria-controls="chat-panel" aria-expanded="false" aria-label="Ouvrir le chat">💬<span class="chat-badge" id="chat-badge" hidden>0</span></button>
-  <section class="chat-panel" id="chat-panel" hidden aria-label="Chat du club"><header class="chat-head"><div><strong>Le chat du club</strong><span id="chat-sub">Tout le club voit tes messages</span></div><div class="chat-head-actions"><button type="button" class="chat-close chat-wide-btn" id="chat-wide" aria-label="Agrandir le chat" title="Agrandir le chat (moitié d’écran)">⤢</button><button type="button" class="chat-close" id="chat-close" aria-label="Fermer le chat">✕</button></div></header><div class="chat-list" id="chat-list" aria-live="polite"><p class="chat-empty">Pas encore de message. Lance les hostilités.</p></div><div class="chat-mention" id="chat-mention" hidden role="listbox" aria-label="Taguer un joueur"></div><div class="chat-picker" id="chat-picker" hidden><div class="chat-picker-tabs"><button type="button" class="active" data-pick-tab="gif">GIF</button><button type="button" data-pick-tab="sticker">Stickers</button></div><div class="chat-picker-grid" id="chat-picker-grid"></div></div><form class="chat-form" id="chat-form"><button type="button" class="chat-pick-btn" id="chat-pick" aria-label="GIF et stickers" aria-expanded="false" disabled>😊</button><input id="chat-input" type="text" maxlength="280" autocomplete="off" placeholder="Choisis ton pseudo pour écrire" disabled><button type="submit" id="chat-send" disabled aria-label="Envoyer">➤</button></form></section>
+  <section class="chat-panel" id="chat-panel" hidden aria-label="Chat du club"><header class="chat-head"><div><strong>Le chat du club</strong><span id="chat-sub">Tout le club voit tes messages</span></div><div class="chat-head-actions"><button type="button" class="chat-close chat-wide-btn" id="chat-wide" aria-label="Agrandir le chat" title="Agrandir le chat (moitié d’écran)">⤢</button><button type="button" class="chat-close" id="chat-close" aria-label="Fermer le chat">✕</button></div></header><div class="chat-list" id="chat-list" aria-live="polite"><p class="chat-empty">Pas encore de message. Lance les hostilités.</p></div><div class="chat-mention" id="chat-mention" hidden role="listbox" aria-label="Taguer un joueur"></div><div class="chat-picker" id="chat-picker" hidden><div class="gif-search"><input id="gif-q" type="search" placeholder="Chercher un GIF…" autocomplete="off" enterkeyhint="search" aria-label="Chercher un GIF"></div><div class="chat-picker-grid gifs" id="chat-picker-grid"></div><div class="gif-foot"><button type="button" id="gif-more" hidden>Plus de GIFs</button><span class="giphy-by">Powered by <b>GIPHY</b></span></div></div><form class="chat-form" id="chat-form"><button type="button" class="chat-pick-btn" id="chat-pick" aria-label="Envoyer un GIF" aria-expanded="false" disabled>GIF</button><input id="chat-input" type="text" maxlength="280" autocomplete="off" placeholder="Choisis ton pseudo pour écrire" disabled><button type="submit" id="chat-send" disabled aria-label="Envoyer">➤</button></form></section>
   <canvas class="confetti" id="confetti" hidden aria-hidden="true"></canvas>
   <div class="party" id="party" hidden role="alert"><div class="party-card"><span class="party-eyebrow">🎉 NOUVEAU RECORD ABSOLU 🎉</span><strong id="party-name"></strong><span class="party-score" id="party-score"></span><span class="party-prev" id="party-prev"></span></div></div>
   <div class="duel-invite" id="duel-invite" hidden role="dialog" aria-modal="true" aria-labelledby="di-title"><div class="di-card"><div class="di-vs" id="di-vs"></div><p class="di-eyebrow">⚔️ DÉFI EN DUEL</p><h2 id="di-title"></h2><p class="di-text" id="di-text">5 lancers chacun, la meilleure moyenne gagne.</p><div class="di-actions"><button type="button" class="di-no" id="di-no">Refuser</button><button type="button" class="di-yes" id="di-yes">Accepter</button></div></div></div>
