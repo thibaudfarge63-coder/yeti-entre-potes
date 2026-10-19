@@ -554,8 +554,7 @@ body.chat-wide .chat-fab,body.chat-wide .chat-peek{display:none!important}
 .gb-strip.turn .ranking-avatar{box-shadow:0 0 0 3px #81b64c}
 .gb-name{display:flex;flex-direction:column;line-height:1.15}.gb-name b{font-size:13px}.gb-name small{font-size:10px;color:#a9a7a3}
 .gb-taken{display:flex;align-items:center;flex-wrap:wrap;margin-left:auto;font-size:15px;line-height:1;opacity:.9}
-.gb-taken i{font-style:normal;margin-left:-3px}.gb-taken em{font-style:normal;font-size:11px;color:#a9a7a3;margin-left:4px}
-.gb-taken.from-b i{color:#1d1d1d;text-shadow:0 0 1px #fff,0 0 1px #fff}.gb-taken.from-w i{color:#fff;text-shadow:0 0 1px #000,0 0 1px #000}
+.gb-taken .pc.mini{display:inline-block;width:17px;height:17px;margin-left:-5px;cursor:default}.gb-taken em{font-style:normal;font-size:11px;color:#a9a7a3;margin-left:4px}
 .chess-board{display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr);aspect-ratio:1;width:100%;border-radius:4px;overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:none;box-shadow:0 6px 18px #0006}
 .sq{position:relative;display:flex;align-items:center;justify-content:center;container-type:size}
 .sq.l{background:#ebecd0}.sq.d{background:#739552}
@@ -566,9 +565,7 @@ body.chat-wide .chat-fab,body.chat-wide .chat-peek{display:none!important}
 .sq .cr,.sq .cf{position:absolute;font:700 10px var(--font);pointer-events:none}
 .sq .cr{top:2px;left:3px}.sq .cf{bottom:1px;right:3px}
 .sq.l .cr,.sq.l .cf{color:#739552}.sq.d .cr,.sq.d .cf{color:#ebecd0}
-.pc{font-family:'Segoe UI Symbol','Apple Symbols','Noto Sans Symbols 2','DejaVu Sans',serif;font-size:min(9.5vw,52px);font-size:82cqh;line-height:1;cursor:grab;position:relative;z-index:1}
-.pc.w{color:#fff;text-shadow:0 0 1px #000,0 0 1px #000,0 1px 1px #000,0 2px 3px #0005}
-.pc.b{color:#1d1d1d;text-shadow:0 0 1px #000,0 2px 3px #0004}
+.pc{display:block;width:100%;height:100%;background-size:contain;background-repeat:no-repeat;background-position:center;cursor:grab;position:relative;z-index:1}
 .drag-ghost{position:fixed;z-index:200;pointer-events:none;transform:translate(-50%,-55%) scale(1.15);cursor:grabbing}
 .chess-side{display:flex;flex-direction:column;gap:6px;min-width:0}
 .chess-moves{background:#21201d;border-radius:8px;max-height:360px;min-height:120px;overflow:auto;padding:6px 8px;font-size:12px}
@@ -580,8 +577,8 @@ body.chat-wide .chat-fab,body.chat-wide .chat-peek{display:none!important}
 .chess-promo[hidden]{display:none}
 .promo-card{background:#fff;border-radius:12px;padding:12px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:center}
 .promo-card p{width:100%;margin:0 0 4px;text-align:center;color:#262421;font-weight:700}
-.promo-card button.pc{font-size:44px;width:62px;height:62px;border:0;border-radius:8px;background:#ebecd0;cursor:pointer}
-.promo-card button.pc:hover{background:#f5f682}.promo-x{border:0;background:none;font-size:18px;color:#666;padding:6px}
+.promo-card button.promo-pc{width:62px;height:62px;padding:4px;border:0;border-radius:8px;background:#ebecd0;cursor:pointer}
+.promo-card button.promo-pc:hover{background:#f5f682}.promo-x{border:0;background:none;font-size:18px;color:#666;padding:6px}
 @media(max-width:760px){.chess-wrap{grid-template-columns:1fr}.chess-moves{max-height:120px;min-height:0}}
 /* bataille navale */
 .nv-wrap{min-width:0}
@@ -614,3 +611,20 @@ body.chat-wide .chat-fab,body.chat-wide .chat-peek{display:none!important}
 .nv-board.small .nv-grid{max-width:100%}
 @media(max-width:760px){.nv-place,.nv-battle{grid-template-columns:1fr}.nv-board.small{max-width:300px;margin:0 auto;width:100%}.board-stage{padding:10px;border-radius:12px}.gb-status{margin-left:0;width:100%;text-align:center}}
 .nv-grid .nv-cell:disabled{opacity:1;cursor:default}
+/* échecs : pendule, tour de jeu, revoir les coups */
+.gb-strip .gb-name{min-width:0}
+.gb-turn{display:inline-block;margin-top:2px;font-style:normal;font-size:11px;font-weight:700;background:#3c3a37;color:#e6e4e1;border-radius:5px;padding:1px 7px;white-space:nowrap}
+.gb-strip.turn .gb-turn{background:#81b64c;color:#fff}
+.clk{margin-left:8px;min-width:86px;text-align:right;font:700 22px/1 var(--display);font-variant-numeric:tabular-nums;background:#2b2a27;color:#8b8987;border-radius:6px;padding:8px 10px}
+.clk.run{background:#fff;color:#262421;box-shadow:0 0 0 2px #81b64c}
+.clk.low{background:#e02828;color:#fff;box-shadow:none}
+.chess-board.myturn{box-shadow:0 0 0 3px #81b64c,0 6px 18px #0006}
+.chess-board.review{box-shadow:0 0 0 3px #e8b33c,0 6px 18px #0006}
+.chess-nav{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.chess-nav button{flex:1;min-width:44px;background:#3c3a37;color:#fff;border:0;border-radius:6px;padding:9px 0;font-size:15px;box-shadow:0 3px 0 #2a2826}
+.chess-nav button:hover:not(:disabled){background:#4b4946}.chess-nav button:disabled{opacity:.35}
+.chess-nav button.live{background:#81b64c;box-shadow:0 3px 0 #5d8a35}
+.chess-review{width:100%;text-align:center;font-size:11px;color:#e8b33c;font-weight:700}
+.chess-moves b[data-ply]{cursor:pointer;border-radius:3px;padding:0 3px}.chess-moves b[data-ply]:hover{background:#3c3a37}
+.chess-tc{margin:0;font-size:11px;color:#a9a7a3}
+@media(max-width:760px){.clk{font-size:18px;min-width:72px;padding:7px 8px}}

@@ -14,7 +14,7 @@
   const START = {p: 8, n: 2, b: 2, r: 2, q: 1};
 
   let ctx = null, root = null, cur = null, timer = null, busy = false, pending = false, sel = null, drag = null, confirmResign = 0;
-  let chess = null, lastKey = '', navalDraft = null, navalPick = 0, navalVertical = false, hoverCell = -1;
+  let chess = null, view = null, clockTimer = null, skew = 0, flagAt = 0, lastKey = '', navalDraft = null, navalPick = 0, navalVertical = false, hoverCell = -1;
 
   const $ = s => root.querySelector(s);
   const esc = t => ctx.escape(String(t));
@@ -24,20 +24,22 @@
   const other = () => (cur ? (me() === cur.challenger ? cur.opponent : cur.challenger) : 0);
 
   function glyph(t) { return GLYPH[t] + '︎'; }
+  const pieceEl = (c, t, extra) => `<span class="pc c${c} t${t}${extra ? ' ' + extra : ''}"></span>`;
 
   // ---------- ouverture / fermeture ----------
   async function open(duelId, options) {
     ctx = options; root = ctx.root;
     if (cur && cur.id !== duelId) close(true);
-    cur = {id: duelId, loading: true}; lastKey = ''; sel = null; navalDraft = null; navalPick = 0; chess = null;
+    cur = {id: duelId, loading: true}; lastKey = ''; sel = null; view = null; navalDraft = null; navalPick = 0; chess = null;
     root.hidden = false; root.className = 'board-stage';
     root.innerHTML = '<div class="gb-loading"><span class="spinner"></span><p>Chargement de la partie…</p></div>';
     ctx.onOpen && ctx.onOpen();
     await load(true);
     clearInterval(timer); timer = setInterval(() => { if (!document.hidden) load(false); }, 2000);
+    clearInterval(clockTimer); clockTimer = setInterval(tickClocks, 200);
   }
   function close(silent) {
-    clearInterval(timer); timer = null; cur = null; chess = null; drag = null;
+    clearInterval(timer); timer = null; clearInterval(clockTimer); clockTimer = null; cur = null; chess = null; drag = null; view = null;
     if (root) { root.hidden = true; root.innerHTML = ''; }
     if (!silent && ctx && ctx.onClose) ctx.onClose();
   }
@@ -50,6 +52,7 @@
       if (!cur || d.id !== cur.id) return;
       const key = JSON.stringify([d.ply, d.status, d.winner, d.finished_at, d.state && d.state.draw_offer, d.viewer]);
       const was = cur;
+      if (d.server_ms) skew = Number(d.server_ms) - Date.now();
       cur = {...d, id: Number(d.id), challenger: Number(d.challenger), opponent: Number(d.opponent), viewer: Number(d.viewer) || 0, ply: Number(d.ply) || 0};
       if (key !== lastKey || first) {
         const firstRender = !lastKey; lastKey = key;
@@ -109,7 +112,7 @@
   function idleHours() { return cur && cur.moved_at ? (Date.parse(cur.server_time || new Date()) - Date.parse(cur.moved_at)) / 36e5 : 0; }
   function resultText() {
     const end = cur.state && cur.state.end, w = Number(cur.winner);
-    const why = {checkmate: 'par échec et mat', resign: 'par abandon', timeout: 'par forfait (24 h sans jouer)', sunk: 'en coulant toute la flotte', stalemate: 'pat', draw: 'nulle', agreed: 'nulle d’un commun accord'}[end] || '';
+    const why = {time: 'au temps (pendule à 0)', checkmate: 'par échec et mat', resign: 'par abandon', timeout: 'par forfait (24 h sans jouer)', sunk: 'en coulant toute la flotte', stalemate: 'pat', draw: 'nulle', agreed: 'nulle d’un commun accord'}[end] || '';
     if (w === 0) return `🤝 Partie nulle${end === 'stalemate' ? ' (pat)' : end === 'agreed' ? ' d’un commun accord' : ''}`;
     if (isPlayer()) return w === me() ? `🏆 Tu as gagné ${why} !` : `😵 ${pl(w).name} a gagné ${why}.`;
     return `🏆 ${pl(w).name} a gagné ${why}.`;
@@ -167,24 +170,61 @@
   function strip(pid, color, m, top) {
     const p = pl(pid), taken = m.takenBy[color].sort((a, b) => VALUE[b] - VALUE[a]), adv = color === 'w' ? m.diff : -m.diff;
     const turn = !cur.finished_at && cur.status === 'accepted' && turnColor() === color;
-    return `<div class="gb-strip ${top ? 'top' : ''} ${turn ? 'turn' : ''}">${ctx.avatar(p)}<span class="gb-name"><b>${esc(p.name)}</b><small>${color === 'w' ? 'Blancs' : 'Noirs'}${turn ? ' · au trait' : ''}</small></span><span class="gb-taken ${color === 'w' ? 'from-b' : 'from-w'}">${taken.map(t => `<i>${glyph(t)}</i>`).join('')}${adv > 0 ? `<em>+${adv}</em>` : ''}</span></div>`;
+    const mine = isPlayer() && pid === me();
+    const tag = turn ? `<em class="gb-turn">${mine ? '▶ À toi de jouer' : `⏳ Au tour de ${esc(p.name)}`}</em>` : '';
+    const clk = cur.state.clock ? `<span class="clk ${color} ${turn ? 'run' : ''}" data-clk="${color}">${fmtClock(clockLeft(color))}</span>` : '';
+    return `<div class="gb-strip ${top ? 'top' : ''} ${turn ? 'turn' : ''}">${ctx.avatar(p)}<span class="gb-name"><b>${esc(p.name)}</b><small>${color === 'w' ? 'Blancs' : 'Noirs'}</small>${tag}</span><span class="gb-taken ${color === 'w' ? 'from-b' : 'from-w'}">${taken.map(t => pieceEl(color === 'w' ? 'b' : 'w', t, 'mini')).join('')}${adv > 0 ? `<em>+${adv}</em>` : ''}</span>${clk}</div>`;
+  }
+  // ---------- Pendule 10 min ----------
+  function clockLeft(color) {
+    const c = cur && cur.state && cur.state.clock; if (!c) return null;
+    let left = Number(c[color]);
+    if (!cur.finished_at && cur.status === 'accepted' && cur.ply >= 1 && turnColor() === color && cur.state.ts) left -= (Date.now() + skew) - Number(cur.state.ts);
+    return Math.max(0, left);
+  }
+  function fmtClock(ms) {
+    if (ms === null) return '';
+    if (ms < 20000) return `0:${String(Math.floor(ms / 1000)).padStart(2, '0')}.${Math.floor(ms % 1000 / 100)}`;
+    const t = Math.ceil(ms / 1000); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+  }
+  function tickClocks() {
+    if (!cur || cur.game !== 'chess' || !cur.state || !cur.state.clock || !root) return;
+    root.querySelectorAll('[data-clk]').forEach(el => { const ms = clockLeft(el.dataset.clk); el.textContent = fmtClock(ms); el.classList.toggle('low', ms !== null && ms < 30000 && !cur.finished_at); });
+    // une pendule à 0 : on le signale au serveur, qui termine la partie
+    const t = turnColor(), ms = clockLeft(t);
+    if (isPlayer() && !cur.finished_at && cur.ply >= 1 && ms === 0 && Date.now() - flagAt > 3000 && !pending) { flagAt = Date.now(); send({flag: true}); }
   }
   function renderChess() {
     syncChess();
     const col = myColor(), m = material(), oppId = isPlayer() ? other() : (Number(cur.state.white) === cur.challenger ? cur.opponent : cur.challenger);
     const meId = isPlayer() ? me() : Number(cur.state.white);
-    root.innerHTML = head() + `<div class="chess-wrap"><div class="chess-main">${strip(oppId, col === 'w' ? 'b' : 'w', m, true)}<div class="chess-board ${col === 'b' ? 'flip' : ''}" id="chess-board"></div>${strip(meId, col, m, false)}</div>
-      <aside class="chess-side"><div class="chess-moves" id="chess-moves"></div>${actions()}</aside></div><div class="chess-promo" id="chess-promo" hidden></div>`;
-    drawBoard(); drawMoves();
+    root.innerHTML = head() + `<div class="chess-wrap"><div class="chess-main">${strip(oppId, col === 'w' ? 'b' : 'w', m, true)}<div class="chess-board ${myTurn() ? 'myturn' : ''}" id="chess-board"></div>${strip(meId, col, m, false)}</div>
+      <aside class="chess-side"><div class="chess-nav" id="chess-nav"></div><div class="chess-moves" id="chess-moves"></div>${cur.state.clock ? '<p class="chess-tc">⏱️ 10 min par joueur · la pendule démarre au 1er coup des blancs</p>' : ''}${actions()}</aside></div><div class="chess-promo" id="chess-promo" hidden></div>`;
+    drawBoard(); drawMoves(); drawNav();
   }
   function lastMove() { const mv = chess._moves || []; return mv.length ? mv[mv.length - 1] : null; }
+  // Revoir les coups : view = nombre de coups affichés (null = position actuelle)
+  function posAt(n) { const c = new window.Chess(); for (const m of (chess._moves || []).slice(0, n)) c.move(m.san, {sloppy: true}); return c; }
+  function setView(v) {
+    const n = (chess && chess._moves || []).length;
+    view = v === null || v >= n ? null : Math.max(0, v); sel = null;
+    drawBoard(); drawMoves(); drawNav();
+  }
+  function drawNav() {
+    const el = $('#chess-nav'); if (!el) return;
+    const n = (chess._moves || []).length, at = view === null ? n : view;
+    el.innerHTML = `<button type="button" data-nav="first" ${at ? '' : 'disabled'} aria-label="Début de la partie">⏮</button><button type="button" data-nav="prev" ${at ? '' : 'disabled'} aria-label="Coup précédent">◀</button><button type="button" data-nav="next" ${view === null ? 'disabled' : ''} aria-label="Coup suivant">▶</button><button type="button" data-nav="last" class="${view === null ? '' : 'live'}" ${view === null ? 'disabled' : ''} aria-label="Position actuelle">⏭</button>`
+      + (view !== null ? `<span class="chess-review">Coup ${at}/${n}</span>` : '');
+  }
   function drawBoard() {
     const el = $('#chess-board'); if (!el) return;
-    const col = myColor(), lm = lastMove(), board = chess.board();
-    const targets = sel ? chess.moves({square: sel, verbose: true}) : [];
+    const live = view === null, pos = live ? chess : posAt(view);
+    const col = myColor(), lm = live ? lastMove() : (view ? chess._moves[view - 1] : null), board = pos.board();
+    el.classList.toggle('review', !live);
+    const targets = sel && live ? chess.moves({square: sel, verbose: true}) : [];
     const tset = new Map(targets.map(t => [t.to, t]));
     let checkSq = '';
-    if (chess.in_check()) { const t = chess.turn(); for (let r = 0; r < 8; r++) for (let f = 0; f < 8; f++) { const q = board[r][f]; if (q && q.type === 'k' && q.color === t) checkSq = FILES[f] + (8 - r); } }
+    if (pos.in_check()) { const t = pos.turn(); for (let r = 0; r < 8; r++) for (let f = 0; f < 8; f++) { const q = board[r][f]; if (q && q.type === 'k' && q.color === t) checkSq = FILES[f] + (8 - r); } }
     let h = '';
     for (let i = 0; i < 64; i++) {
       const r = col === 'w' ? Math.floor(i / 8) : 7 - Math.floor(i / 8), f = col === 'w' ? i % 8 : 7 - (i % 8);
@@ -196,7 +236,7 @@
       const t = tset.get(sq);
       if (t) cls.push(piece || t.flags.includes('e') ? 'cap' : 'dot');
       const rowEdge = col === 'w' ? f === 0 : f === 7, colEdge = col === 'w' ? r === 7 : r === 0;
-      h += `<div class="${cls.join(' ')}" data-sq="${sq}">${rowEdge ? `<span class="cr">${8 - r}</span>` : ''}${colEdge ? `<span class="cf">${FILES[f]}</span>` : ''}${piece ? `<span class="pc ${piece.color}" data-pc="${piece.color}">${glyph(piece.type)}</span>` : ''}</div>`;
+      h += `<div class="${cls.join(' ')}" data-sq="${sq}">${rowEdge ? `<span class="cr">${8 - r}</span>` : ''}${colEdge ? `<span class="cf">${FILES[f]}</span>` : ''}${piece ? pieceEl(piece.color, piece.type) : ''}</div>`;
     }
     el.innerHTML = h;
   }
@@ -205,10 +245,12 @@
     const mv = chess._moves || [];
     if (!mv.length) { el.innerHTML = `<p class="chess-empty">${cur.status === 'accepted' ? (isPlayer() ? (myTurn() ? 'Tu as les blancs : à toi d’ouvrir la partie !' : `${esc(pl(Number(cur.state.white)).name)} a les blancs et commence.`) : 'La partie n’a pas commencé.') : 'La partie commencera quand le défi sera accepté.'}</p>`; return; }
     let h = '<ol>';
-    for (let i = 0; i < mv.length; i += 2) h += `<li><span>${i / 2 + 1}.</span><b class="${i === mv.length - 1 ? 'last' : ''}">${esc(mv[i].san)}</b><b class="${i + 1 === mv.length - 1 ? 'last' : ''}">${mv[i + 1] ? esc(mv[i + 1].san) : ''}</b></li>`;
-    el.innerHTML = h + '</ol>'; el.scrollTop = el.scrollHeight;
+    const at = (view === null ? mv.length : view) - 1;
+    for (let i = 0; i < mv.length; i += 2) h += `<li><span>${i / 2 + 1}.</span><b data-ply="${i + 1}" class="${i === at ? 'last' : ''}">${esc(mv[i].san)}</b><b ${mv[i + 1] ? `data-ply="${i + 2}"` : ''} class="${i + 1 === at ? 'last' : ''}">${mv[i + 1] ? esc(mv[i + 1].san) : ''}</b></li>`;
+    el.innerHTML = h + '</ol>';
+    const curEl = el.querySelector('b.last'); if (view === null) el.scrollTop = el.scrollHeight; else if (curEl) el.scrollTop = curEl.offsetTop - el.clientHeight / 2;
   }
-  function canMove() { return myTurn() && !pending && chess && chess.turn() === myColor(); }
+  function canMove() { return view === null && myTurn() && !pending && chess && chess.turn() === myColor(); }
   function sqAt(x, y) { const n = document.elementFromPoint(x, y); const s = n && n.closest && n.closest('.sq'); return s && root.contains(s) ? s.dataset.sq : null; }
   function tryMove(from, to) {
     const legal = chess.moves({square: from, verbose: true}).filter(m => m.to === to);
@@ -219,7 +261,7 @@
   }
   function askPromo(from, to) {
     const p = $('#chess-promo'), c = myColor();
-    p.innerHTML = `<div class="promo-card"><p>Promotion</p>${['q', 'r', 'b', 'n'].map(t => `<button type="button" data-promo="${t}" class="pc ${c}">${glyph(t)}</button>`).join('')}<button type="button" class="promo-x" data-promo="">✕</button></div>`;
+    p.innerHTML = `<div class="promo-card"><p>Promotion</p>${['q', 'r', 'b', 'n'].map(t => `<button type="button" data-promo="${t}" class="promo-pc">${pieceEl(c, t)}</button>`).join('')}<button type="button" class="promo-x" data-promo="">✕</button></div>`;
     p.hidden = false;
     p.onclick = e => { const b = e.target.closest('[data-promo]'); if (!b) return; p.hidden = true; if (b.dataset.promo) commit(from, to, b.dataset.promo); else { sel = null; drawBoard(); } };
   }
@@ -235,6 +277,7 @@
   }
   function onChessDown(e) {
     const s = e.target.closest('.sq'); if (!s || !chess) return;
+    if (view !== null) { setView(null); return; }
     const sq = s.dataset.sq, piece = chess.get(sq);
     if (sel && sel !== sq && canMove() && tryMove(sel, sq)) { e.preventDefault(); return; }
     if (piece && canMove() && piece.color === myColor()) {
@@ -250,8 +293,8 @@
     if (!drag.moved && Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < 6) return;
     if (!drag.moved) {
       drag.moved = true;
-      const g = document.createElement('span'); g.className = 'pc drag-ghost ' + myColor(); g.textContent = drag.pc.textContent;
-      g.style.fontSize = getComputedStyle(drag.pc).fontSize; document.body.appendChild(g); drag.ghost = g; drag.pc.style.opacity = '.25';
+      const g = document.createElement('span'); g.className = drag.pc.className + ' drag-ghost';
+      g.style.width = g.style.height = drag.size + 'px'; document.body.appendChild(g); drag.ghost = g; drag.pc.style.opacity = '.25';
     }
     drag.ghost.style.left = e.clientX + 'px'; drag.ghost.style.top = e.clientY + 'px';
     e.preventDefault();
@@ -366,6 +409,10 @@
         if (act === 'clear') { navalDraft = SHIPS.map(() => null); navalPick = 0; render(); return; }
         if (act === 'fleet') { if (!navalDraft || !navalDraft.every(Boolean)) return; a.disabled = true; const r = await send({fleet: navalDraft}); if (r) ctx.toast('⚓ Flotte placée !'); return; }
       }
+      const nb = e.target.closest('[data-nav]');
+      if (nb && !nb.disabled && chess) { const n = (chess._moves || []).length, at = view === null ? n : view; const k = nb.dataset.nav; setView(k === 'first' ? 0 : k === 'prev' ? at - 1 : k === 'next' ? at + 1 : null); return; }
+      const mp = e.target.closest('[data-ply]');
+      if (mp && chess) { setView(Number(mp.dataset.ply)); return; }
       const sh = e.target.closest('[data-ship]');
       if (sh) { const i = Number(sh.dataset.ship); if (navalDraft && navalDraft[i]) navalDraft[i] = null; navalPick = i; render(); return; }
       const cell = e.target.closest('[data-cell]');
@@ -392,6 +439,12 @@
     window.addEventListener('pointermove', onChessMove, {passive: false});
     window.addEventListener('pointerup', onChessUp);
     window.addEventListener('pointercancel', () => { if (drag) { if (drag.ghost) drag.ghost.remove(); drag.pc.style.opacity = ''; drag = null; } });
+    document.addEventListener('keydown', e => {
+      if (!cur || cur.game !== 'chess' || !chess || /input|textarea/i.test(e.target.tagName) || root.hidden) return;
+      const n = (chess._moves || []).length, at = view === null ? n : view;
+      if (e.key === 'ArrowLeft') { e.preventDefault(); setView(at - 1); } else if (e.key === 'ArrowRight') { e.preventDefault(); setView(at + 1); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); setView(0); } else if (e.key === 'ArrowDown') { e.preventDefault(); setView(null); }
+    });
     document.addEventListener('keydown', e => { if (cur && cur.game === 'naval' && navalDraft && (e.key === 'r' || e.key === 'R') && !/input|textarea/i.test(e.target.tagName)) { navalVertical = !navalVertical; render(); } });
   }
 
