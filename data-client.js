@@ -95,7 +95,7 @@
           throw failure('L’ajout de joueurs n’est pas encore activé sur le serveur du club.', 501, 'not_supported');
         }
         if (data && data.code === '23505') throw failure('Ce joueur existe déjà.', 409, 'duplicate_player');
-        if (data && data.code === '22023' && (name === 'yeti_send_message' || name === 'yeti_create_duel' || name === 'yeti_answer_duel' || name === 'yeti_set_password' || name === 'yeti_login' || name === 'yeti_ban' || name === 'yeti_push_subscribe' || name === 'yeti_push_test' || name === 'yeti_push_diag' || name === 'yeti_create_game' || name === 'yeti_game_state' || name === 'yeti_game_move')) throw failure(data.message || 'Message refusé.', 400, 'invalid_message');
+        if (data && data.code === '22023' && (name === 'yeti_send_message' || name === 'yeti_create_duel' || name === 'yeti_answer_duel' || name === 'yeti_set_password' || name === 'yeti_login' || name === 'yeti_ban' || name === 'yeti_push_subscribe' || name === 'yeti_push_test' || name === 'yeti_chat_react' || name === 'yeti_push_diag' || name === 'yeti_create_game' || name === 'yeti_game_state' || name === 'yeti_game_move')) throw failure(data.message || 'Message refusé.', 400, 'invalid_message');
         if (data && data.code === '22023') {
           throw failure('Ces scores ne peuvent pas être enregistrés. Ils restent en attente.', 400, 'invalid_scores');
         }
@@ -150,7 +150,7 @@
       forgetCode(config);
       return {ok: true};
     }
-    if (path !== '/api/state' && path !== '/api/scores' && path !== '/api/players' && path !== '/api/version' && path !== '/api/chat' && path !== '/api/chat/send' && path !== '/api/chat/seen' && path !== '/api/duel' && path !== '/api/duel/answer' && path !== '/api/skins' && path !== '/api/presence' && path !== '/api/password' && path !== '/api/login' && path !== '/api/session' && path !== '/api/ban' && path !== '/api/push' && path !== '/api/push/test' && path !== '/api/push/diag' && path !== '/api/game/create' && path !== '/api/game/state' && path !== '/api/game/move') {
+    if (path !== '/api/state' && path !== '/api/scores' && path !== '/api/players' && path !== '/api/version' && path !== '/api/chat' && path !== '/api/chat/send' && path !== '/api/chat/seen' && path !== '/api/chat/react' && path !== '/api/duel' && path !== '/api/duel/answer' && path !== '/api/skins' && path !== '/api/presence' && path !== '/api/password' && path !== '/api/login' && path !== '/api/session' && path !== '/api/ban' && path !== '/api/push' && path !== '/api/push/test' && path !== '/api/push/diag' && path !== '/api/game/create' && path !== '/api/game/state' && path !== '/api/game/move') {
       throw failure('Cette action est introuvable.', 404, 'not_found');
     }
     const invitedState = await validateInvite(config);
@@ -165,6 +165,7 @@
       if (path === '/api/password') return await rpc(config, 'yeti_set_password', {p_room_code: code, p_player: Number(body.player), p_password: String(body.password || '')});
       if (path === '/api/login') return await rpc(config, 'yeti_login', {p_room_code: code, p_player: Number(body.player), p_password: String(body.password || '')});
       if (path === '/api/session') return await rpc(config, 'yeti_check_session', {p_room_code: code, p_player: Number(body.player), p_token: String(body.token || '')});
+      if (path === '/api/chat/react') return await rpc(config, 'yeti_chat_react', {p_room_code: code, p_player: Number(body.player), p_token: String(body.token || ''), p_msg: Number(body.msg) || 0, p_emoji: String(body.emoji || '')});
       if (path === '/api/chat/seen') return await rpc(config, 'yeti_chat_seen', {p_room_code: code, p_player: Number(body.player), p_token: String(body.token || ''), p_msg: Number(body.msg) || 0});
       if (path === '/api/push/test') return await rpc(config, 'yeti_push_test', {p_room_code: code, p_player: Number(body.player), p_token: String(body.token || '')});
       if (path === '/api/push/diag') return await rpc(config, 'yeti_push_diag', {p_room_code: code, p_player: Number(body.player) || 0, p_step: String(body.step || ''), p_msg: String(body.msg || ''), p_ua: String(body.ua || '')});

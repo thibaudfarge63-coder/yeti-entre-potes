@@ -755,7 +755,7 @@
     }finally{polling=false;}
   }
   // ---------- Chat ----------
-  let chatReads={},chatSeenSent=0,chatMsgs=[],chatLast=0,chatOpen=false,chatLoading=false,chatRead=0,chatInit=false,peekTimer;
+  let chatReacts={},chatReactFor=0,chatReads={},chatSeenSent=0,chatMsgs=[],chatLast=0,chatOpen=false,chatLoading=false,chatRead=0,chatInit=false,peekTimer;
   function chatPeek(m){
     const p=player(m.player),el=$('chat-peek');
     el.innerHTML=`<i class="player-dot" style="background:${p.color}"></i><b>${escape(p.name)}</b> : ${mentionsMe(m)?'🔔 ':''}${escape(plainBody(m.body))}`;el.hidden=false;
@@ -785,6 +785,30 @@
     chatSeenSent=chatLast;chatReads[authed]=chatLast;request('/api/chat/seen',{player:authed,token:s.token,msg:chatLast}).catch(()=>{chatSeenSent=0;});
   }
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)sendSeen();});
+  const REACTS=['❤️','😂','😮','😢','😡','👍','🔥','💀'];
+  async function sendReact(msg,emoji){
+    const s=getSession();if(!authed||authed!==selectedPlayer||!s||s.player!==authed){showToast('Connecte-toi pour réagir.');return;}
+    // affichage immédiat, puis la réponse du serveur fait foi
+    const r=chatReacts[msg]=chatReacts[msg]||{},ids=(r[emoji]||[]).map(Number);
+    r[emoji]=ids.includes(authed)?ids.filter(i=>i!==authed):[...ids,authed];chatReactFor=0;renderChat();
+    try{const res=await request('/api/chat/react',{player:authed,token:s.token,msg,emoji});if(res&&res.reactions)chatReacts=res.reactions;}
+    catch(e){showToast(e.message||'Réaction impossible.');}
+    renderChat();
+  }
+  let lastTap={id:0,t:0};
+  $('chat-list').addEventListener('click',e=>{
+    const b=e.target.closest('[data-react]');
+    if(b){e.stopPropagation();sendReact(Number(b.dataset.msg),b.dataset.react);return;}
+    if(e.target.closest('a,button'))return;
+    const m=e.target.closest('.chat-msg[data-mid]');const id=m&&Number(m.dataset.mid);
+    if(!id){if(chatReactFor){chatReactFor=0;renderChat();}return;}
+    // double-tap = ❤️ (comme sur Insta)
+    const now=Date.now();if(lastTap.id===id&&now-lastTap.t<350){lastTap={id:0,t:0};chatReactFor=0;
+      const mine=((chatReacts[id]||{})['❤️']||[]).map(Number).includes(selectedPlayer);if(!mine)sendReact(id,'❤️');else renderChat();return;}
+    lastTap={id,t:now};
+    const keep=$('chat-list').scrollTop;chatReactFor=chatReactFor===id?0:id;renderChat();$('chat-list').scrollTop=keep;
+    const bar=$('chat-list').querySelector('.react-bar');if(bar)bar.scrollIntoView({block:'nearest'});
+  });
   function chatBottom(){const l=$('chat-list');if(l)l.scrollTop=l.scrollHeight;}
   const chatHour=()=>Math.floor(Date.now()/900000)*900000;
   let chatHourShown=chatHour();
@@ -798,10 +822,15 @@
       if(at&&at.player!==id)(seenAt[at.id]=seenAt[at.id]||[]).push(id);}
     const seenLine=m=>{const ids=seenAt[m.id];if(!ids||m.temp)return '';const names=ids.map(i=>escape(player(i).name));
       return `<div class="chat-seen ${m.player===selectedPlayer?'mine':''}">Vu par ${names.length>4?names.slice(0,4).join(', ')+' et '+(names.length-4)+' autre'+(names.length>5?'s':''):names.join(', ')}</div>`;};
+    // Réactions emoji : pastilles sous la bulle + barre de choix sur le message touché
+    const reactLine=m=>{if(m.temp)return '';const r=chatReacts[m.id]||{};const chips=REACTS.filter(e=>Array.isArray(r[e])&&r[e].length).map(e=>{const ids=r[e].map(Number);
+        return `<button type="button" class="react-chip ${ids.includes(selectedPlayer)?'me':''}" data-react="${e}" data-msg="${m.id}" title="${escape(ids.map(i=>player(i).name).join(', '))}">${e}${ids.length>1?`<small>${ids.length}</small>`:''}</button>`;}).join('');
+      const bar=chatReactFor===m.id?`<div class="react-bar ${m.player===selectedPlayer?'mine':''}" role="group" aria-label="Réagir">${REACTS.map(e=>`<button type="button" data-react="${e}" data-msg="${m.id}" class="${(r[e]||[]).map(Number).includes(selectedPlayer)?'me':''}">${e}</button>`).join('')}</div>`:'';
+      return chips||bar?`<div class="react-row ${m.player===selectedPlayer?'mine':''}">${chips}</div>${bar}`.replace('<div class="react-row '+(m.player===selectedPlayer?'mine':'')+'"></div>',''):'';};
     list.innerHTML=chatMsgs.length?chatMsgs.map(m=>{const p=player(m.player),mine=m.player===selectedPlayer,d=new Date(m.at||Date.now());
       const media=mediaOf(m.body);
-      return `<div class="chat-msg ${mine?'mine':''} ${m.temp?'temp':''} ${media?'media':''} ${!mine&&mentionsMe(m)?'tagged':''}"><div class="chat-meta"><i class="player-dot" style="background:${p.color}"></i><b>${escape(p.name)}</b><time>${dayKey(d)===today?'':chatDay.format(d)+' '}${chatTime.format(d)}</time></div>${media||`<p>${richBody(m.body)}</p>`}</div>${seenLine(m)}`;}).join(''):'<p class="chat-empty">Pas encore de message. Lance les hostilités.<br><small>Le chat se vide toutes les 15 min.</small></p>';
-    if(stick||chatOpen||toEnd){chatBottom();
+      return `<div data-mid="${m.temp?'':m.id}" class="chat-msg ${chatReactFor===m.id?'picked':''} ${mine?'mine':''} ${m.temp?'temp':''} ${media?'media':''} ${!mine&&mentionsMe(m)?'tagged':''}"><div class="chat-meta"><i class="player-dot" style="background:${p.color}"></i><b>${escape(p.name)}</b><time>${dayKey(d)===today?'':chatDay.format(d)+' '}${chatTime.format(d)}</time></div>${media||`<p>${richBody(m.body)}</p>`}</div>${reactLine(m)}${seenLine(m)}`;}).join(''):'<p class="chat-empty">Pas encore de message. Lance les hostilités.<br><small>Le chat se vide toutes les 15 min.</small></p>';
+    if(stick||toEnd){chatBottom();
       // les GIF se chargent après coup : on redescend quand chacun arrive
       list.querySelectorAll('img').forEach(img=>{if(!img.complete)img.addEventListener('load',chatBottom,{once:true});});}
     if(chatOpen){chatRead=chatLast;try{localStorage.setItem('yeti-chat-read',String(chatRead));}catch(_){}sendSeen();}
@@ -813,7 +842,7 @@
   }
   function toggleChat(open){
     chatOpen=open;$('chat-panel').hidden=!open;if(typeof applyWide==='function')applyWide();if(!open){closePicker();closeMention();}$('chat-fab').setAttribute('aria-expanded',String(open));$('chat-fab').classList.toggle('open',open);
-    if(open){$('chat-peek').hidden=true;renderChat();loadChat();if(!$('chat-input').disabled&&matchMedia('(pointer:fine)').matches)$('chat-input').focus();}
+    if(open){$('chat-peek').hidden=true;chatReactFor=0;renderChat(true);loadChat();if(!$('chat-input').disabled&&matchMedia('(pointer:fine)').matches)$('chat-input').focus();}
   }
   $('chat-fab').addEventListener('click',()=>toggleChat(!chatOpen));
   $('chat-peek').addEventListener('click',()=>{$('chat-peek').hidden=true;toggleChat(true);});
@@ -934,6 +963,7 @@
     try{const r=await request('/api/presence',{player:selectedPlayer||0});
       if(r&&r.bans&&typeof r.bans==='object'){const key=JSON.stringify(r.bans);if(key!==JSON.stringify(bans)){bans=r.bans;renderProfiles();if(!$('admin-overlay').hidden)renderAdmin();}}
       if(selectedPlayer&&banLeft(selectedPlayer))kick(selectedPlayer);
+      if(r&&r.reactions&&typeof r.reactions==='object'){const key=JSON.stringify(r.reactions);if(key!==JSON.stringify(chatReacts)){chatReacts=r.reactions;if(chatOpen)renderChat();}}
       if(r&&r.reads&&typeof r.reads==='object'){const key=JSON.stringify(r.reads);if(key!==JSON.stringify(chatReads)){chatReads=r.reads;if(chatOpen)renderChat();}}
       if(r&&Array.isArray(r.online)){const next=new Set(r.online.map(Number));if([...next].join()!==[...online].join()){online=next;renderProfiles();}}}
     catch(_){}finally{presenceBusy=false;}

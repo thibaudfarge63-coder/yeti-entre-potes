@@ -644,3 +644,15 @@ body.chat-wide .chat-fab,body.chat-wide .chat-peek{display:none!important}
 body.chat-wide .chat-gif.giphy{max-width:260px;max-height:260px;width:auto;height:auto}
 .chat-seen{font-size:10px;color:var(--muted);margin:-3px 6px 2px;align-self:flex-start;max-width:82%}
 .chat-seen.mine{align-self:flex-end;text-align:right}
+.chat-msg[data-mid]:not([data-mid=""]){cursor:pointer;-webkit-user-select:none;user-select:none}
+.chat-msg.picked{box-shadow:0 0 0 2px #c9d9ad}
+.react-row{display:flex;flex-wrap:wrap;gap:4px;margin:-6px 8px 0;align-self:flex-start;max-width:82%;position:relative;z-index:1}
+.react-row.mine{align-self:flex-end;justify-content:flex-end}
+.react-chip{display:inline-flex;align-items:center;gap:3px;border:1px solid var(--line);background:#fff;border-radius:999px;padding:1px 7px;font-size:13px;line-height:20px;cursor:pointer;font-family:inherit;color:var(--ink)}
+.react-chip small{font-size:11px;color:var(--muted);font-weight:600}
+.react-chip.me{background:#e4ecd5;border-color:#a9c27f}
+.react-bar{display:flex;gap:2px;align-self:flex-start;background:#fff;border:1px solid var(--line);border-radius:999px;padding:3px 6px;box-shadow:0 6px 18px rgba(0,0,0,.12);margin-top:-2px;max-width:100%;flex-wrap:wrap;justify-content:center}
+.react-bar.mine{align-self:flex-end}
+.react-bar button{border:0;background:transparent;font-size:22px;line-height:1.15;padding:4px;border-radius:50%;cursor:pointer;transition:transform .12s}
+.react-bar button:hover,.react-bar button:focus-visible{transform:scale(1.25)}
+.react-bar button.me{background:#e4ecd5}
