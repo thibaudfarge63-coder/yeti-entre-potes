@@ -1084,21 +1084,40 @@
     setTimeout(()=>$('pin-input').focus(),50);
     return new Promise(r=>pinResolve=r);
   }
+  // L'admin a demandé de changer le mot de passe : on enchaîne directement sur le nouveau.
+  function askNewPassword(id,token){
+    const p=player(id),o=$('pin-overlay');
+    $('pin-eyebrow').textContent='NOUVEAU MOT DE PASSE';
+    $('pin-title').textContent=`${p.name}, change ton mot de passe`;
+    $('pin-text').textContent='L’admin te demande de choisir un nouveau mot de passe (4 caractères minimum, différent de l’ancien) avant de continuer.';
+    $('pin-confirm-wrap').hidden=false;$('pin-confirm').required=true;$('pin-input').setAttribute('autocomplete','new-password');
+    $('pin-input').value='';$('pin-confirm').value='';$('pin-error').textContent='';
+    $('pin-submit').textContent='Changer mon mot de passe →';
+    o.dataset.player=id;o.dataset.mode='change';o.dataset.token=token;o.hidden=false;
+    setTimeout(()=>$('pin-input').focus(),50);
+  }
   function closePin(ok){$('pin-overlay').hidden=true;const r=pinResolve;pinResolve=null;if(r)r(ok);}
-  $('pin-cancel').addEventListener('click',()=>closePin(false));
+  $('pin-cancel').addEventListener('click',()=>{$('pin-overlay').dataset.token='';closePin(false);});
   $('pin-form').addEventListener('submit',async e=>{
-    e.preventDefault();const o=$('pin-overlay'),id=Number(o.dataset.player),create=o.dataset.mode==='create',pw=$('pin-input').value;
+    e.preventDefault();const o=$('pin-overlay'),id=Number(o.dataset.player),mode=o.dataset.mode,create=mode==='create'||mode==='change',pw=$('pin-input').value;
     if(pw.length<4){$('pin-error').textContent='4 caractères minimum.';return;}
     if(create&&pw!==$('pin-confirm').value){$('pin-error').textContent='Les deux mots de passe ne sont pas identiques.';return;}
     $('pin-submit').disabled=true;$('pin-error').textContent='';
     try{
-      const r=await request(create?'/api/password':'/api/login',{player:id,password:pw});
+      if(mode==='change'){
+        const r=await request('/api/password/change',{player:id,token:o.dataset.token||'',password:pw});
+        if(!r||!r.ok||!r.token){$('pin-error').textContent='Changement impossible, réessaie.';return;}
+        setSession({player:id,token:r.token});o.dataset.token='';closePin(true);showToast('🔒 Nouveau mot de passe enregistré. Garde-le bien !');return;
+      }
+      const r=await request(mode==='create'?'/api/password':'/api/login',{player:id,password:pw});
       if(!r||!r.ok||!r.token){$('pin-error').textContent='Mauvais mot de passe.';$('pin-input').select();return;}
-      setSession({player:id,token:r.token});const p=PLAYERS.find(x=>x.id===id);if(p)p.locked=true;
-      closePin(true);if(create)showToast('🔒 Mot de passe créé. Garde-le bien !');
+      const p=PLAYERS.find(x=>x.id===id);if(p)p.locked=true;
+      if(r.must_change){askNewPassword(id,r.token);return;}
+      setSession({player:id,token:r.token});
+      closePin(true);if(mode==='create')showToast('🔒 Mot de passe créé. Garde-le bien !');
     }catch(error){
       const msg=error.message||'Connexion impossible pour le moment.';
-      if(create&&/déjà un mot de passe/.test(msg)){const p=PLAYERS.find(x=>x.id===id);if(p)p.locked=true;const r=pinResolve;pinResolve=null;askPassword(id).then(r);$('pin-error').textContent='Ce prénom a déjà un mot de passe.';return;}
+      if(mode==='create'&&/déjà un mot de passe/.test(msg)){const p=PLAYERS.find(x=>x.id===id);if(p)p.locked=true;const r=pinResolve;pinResolve=null;askPassword(id).then(r);$('pin-error').textContent='Ce prénom a déjà un mot de passe.';return;}
       $('pin-error').textContent=msg;
     }finally{$('pin-submit').disabled=false;}
   });
