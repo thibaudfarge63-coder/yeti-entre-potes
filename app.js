@@ -883,6 +883,7 @@
       const bar=chatReactFor===m.id?`<div class="react-bar ${m.player===selectedPlayer?'mine':''}" role="group" aria-label="Réagir">${REACTS.map(e=>`<button type="button" data-react="${e}" data-msg="${m.id}" class="${(r[e]||[]).map(Number).includes(selectedPlayer)?'me':''}">${e}</button>`).join('')}</div>`:'';
       return chips||bar?`<div class="react-row ${m.player===selectedPlayer?'mine':''}">${chips}</div>${bar}`.replace('<div class="react-row '+(m.player===selectedPlayer?'mine':'')+'"></div>',''):'';};
     list.innerHTML=chatMsgs.length?chatMsgs.map(m=>{const p=player(m.player),mine=m.player===selectedPlayer,d=new Date(m.at||Date.now());
+      const mod=modMsg(m);if(mod)return `<div class="chat-mod ${mod.me?'me':''}" data-mid="${m.id}"><span class="chat-mod-tag">🚨 MODO · ${escape(cn(p))}</span><p><b>${escape(cn(mod.target))}</b>, ${escape(cn(p))} te dit de <b>fermer ta sale gueule</b>.</p><time>${chatTime.format(d)}</time></div>`;
       const media=mediaOf(m.body);
       const trBox=!media&&!m.temp&&!mine?translateBlock(m):'';
       return `<div data-mid="${m.temp?'':m.id}" class="chat-msg ${chatReactFor===m.id?'picked':''} ${mine?'mine':''} ${m.temp?'temp':''} ${media?'media':''} ${!mine&&mentionsMe(m)?'tagged':''}"><div class="chat-meta"><i class="player-dot" style="background:${p.color}"></i><b data-who="${m.player}">${escape(cn(p))}</b><time>${dayKey(d)===today?'':chatDay.format(d)+' '}${chatTime.format(d)}</time></div>${media||`<p>${richBody(m.body)}</p>`}${trBox}</div>${reactLine(m)}${seenLine(m)}`;}).join(''):'<p class="chat-empty">Pas encore de message. Lance les hostilités.<br><small>Le chat se vide toutes les 15 min.</small></p>';
@@ -917,13 +918,15 @@
   const GIFS=['1f602','1f923','1f62d','1f525','1f480','1f921','1f973','1f60e','1f92f','1f631','1f97a','1f644','1f62c','1f914','1f44f','1f4af','1f389','1f4a9','1f976','1f975','1f92a','1f634','1f621','1f618','1f60d','1f440','1f44b','1f64f','1f4aa','1f92e','1f47b','1f680','1f3c6','1f427','1f9ad','2744_fe0f','1f37b','1f60f','1f971','1f910','1f92b','1f608','1f4a5','1f198','1f947','1f622','1f633','1f929'];
   const STICKERS=['🦭','🐧','❄️','🏔️','🥶','🏆','🥇','👑','🐐','🔥','💀','🤡','💩','😂','🤣','😭','😎','🤯','😤','🙄','🫡','👀','💪','🎯','🍺','🥳','🎉','❤️','👍','👎','🤌','🙏','😱','🤫','🫠','🧊','⛷️','💸','🚀','🧠'];
   const gifUrl=c=>`https://fonts.gstatic.com/s/e/notoemoji/latest/${c}/512.webp`;
+  // Message spécial posté par un modo (« ferme ta… »)
+  function modMsg(m){const x=/^\[mod:shut:(\d+)\]$/.exec(String(m.body||''));if(!x||!player(m.player).mod)return null;const t=Number(x[1]);return {target:player(t),me:t===selectedPlayer};}
   function mediaOf(body){
     const gm=/^\[gif:([A-Za-z0-9]{5,40})\]$/.exec(body||'');if(gm)return `<img class="chat-gif giphy" src="https://media.giphy.com/media/${gm[1]}/200w.webp" alt="GIF" loading="lazy">`;
     let m=/^\[g:([0-9a-f_]{2,24})\]$/.exec(body||'');if(m&&GIFS.includes(m[1]))return `<img class="chat-gif" src="${gifUrl(m[1])}" alt="GIF" loading="lazy" width="120" height="120">`;
     m=/^\[s:(.{1,12})\]$/u.exec(body||'');if(m&&STICKERS.includes(m[1]))return `<span class="chat-sticker" role="img" aria-label="sticker">${m[1]}</span>`;
     return '';
   }
-  function plainBody(body){if(/^\[(g|gif):/.test(body||''))return 'a envoyé un GIF';const m=/^\[s:(.{1,12})\]$/u.exec(body||'');return m?m[1]:String(body||'');}
+  function plainBody(body){if(/^\[(g|gif):/.test(body||''))return 'a envoyé un GIF';const mm=/^\[mod:shut:(\d+)\]$/.exec(body||'');if(mm)return `🚨 ${cn(player(Number(mm[1])))}, ferme ta sale gueule.`;const m=/^\[s:(.{1,12})\]$/u.exec(body||'');return m?m[1]:String(body||'');}
   const reEsc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
   // Nom affiché dans le chat : surnom optionnel (players.chat_name), sinon le prénom ; @surnom et @prénom taguent tous les deux.
   function cn(p){return p?(p.chat||p.name):'';}
@@ -1052,7 +1055,7 @@
   }
   function renderMod(){
     const list=PLAYERS.filter(p=>p.id!==authed&&(!modFocus||p.id===modFocus));
-    $('mod-list').innerHTML=list.map(p=>{const b=banLeft(p.id);return `<div class="admin-row ${b?'banned':''}"><div class="admin-who">${avatar(p)}<span><b>${escape(p.name)}</b><small>${b?`⛔ ${banText(p.id)}`:online.has(p.id)?'🟢 en ligne':'hors ligne'}${p.mod?' · 🚨 modo':''}</small></span></div><div class="admin-actions"><button type="button" class="shut" data-mod="warn" data-target="${p.id}">🤐 Ferme ta gueule</button>${p.mod?'':`<button type="button" data-mod="ban30" data-target="${p.id}">⛔ 30 s</button><button type="button" data-mod="ban60" data-target="${p.id}">⛔ 1 min</button>`}</div></div>`;}).join('')+(modFocus?'<button type="button" class="text-button" id="mod-all" style="margin-top:6px">Voir tout le monde</button>':'');
+    $('mod-list').innerHTML=list.map(p=>{const b=banLeft(p.id);return `<div class="admin-row ${b?'banned':''}"><div class="admin-who">${avatar(p)}<span><b>${escape(p.name)}</b><small>${b?`⛔ ${banText(p.id)}`:online.has(p.id)?'🟢 en ligne':'hors ligne'}${p.mod?' · 🚨 modo':''}</small></span></div><div class="admin-actions"><button type="button" class="shut" data-mod="warn" data-target="${p.id}">🤐 Ferme ta gueule</button>${p.mod?'':`<button type="button" data-mod="ban30" data-target="${p.id}">⛔ 30 s</button><button type="button" data-mod="ban60" data-target="${p.id}">⛔ 1 min</button>`}${b&&!banPerm(p.id)?`<button type="button" class="unban" data-mod="unban" data-target="${p.id}">✅ Débannir</button>`:''}</div></div>`;}).join('')+(modFocus?'<button type="button" class="text-button" id="mod-all" style="margin-top:6px">Voir tout le monde</button>':'');
     const all=$('mod-all');if(all)all.onclick=()=>{modFocus=0;renderMod();};
   }
   function openMod(id){modEl();modFocus=id||0;$('mod-error').textContent='';renderMod();$('mod-overlay').hidden=false;}
@@ -1062,8 +1065,9 @@
     if(btn)btn.disabled=true;
     try{const r=await request('/api/mod',{mod:authed,token:s.token,target,action,body});const name=player(target).name;
       if(r.banned_until){bans[target]=r.banned_until;online.delete(target);renderProfiles();}
+      if(action==='unban'){delete bans[target];renderProfiles();}
       if(action==='purge'){chatMsgs=chatMsgs.filter(m=>m.temp||!(m.player===target&&String(m.body).trim().toLowerCase()===String(body).trim().toLowerCase()));renderChat();}
-      showToast(action==='warn'?`🤐 ${name} a reçu ton message.`:action==='purge'?`🗑️ ${r.hidden||0} message${r.hidden>1?'s':''} de ${name} supprimé${r.hidden>1?'s':''}.`:`⛔ ${name} est banni ${action==='ban30'?'30 s':'1 min'}.`);
+      showToast(action==='warn'?`🤐 ${name} a reçu ton message.`:action==='purge'?`🗑️ ${r.hidden||0} message${r.hidden>1?'s':''} de ${name} supprimé${r.hidden>1?'s':''}.`:action==='unban'?`✅ ${name} est débanni.`:`⛔ ${name} est banni ${action==='ban30'?'30 s':'1 min'}.`);
       return true;
     }catch(e){showToast(e.message||'Action impossible.');if(btn)btn.disabled=false;return false;}
   }

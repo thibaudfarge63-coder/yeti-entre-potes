@@ -722,3 +722,7 @@ body.chat-wide .chat-gif.giphy{max-width:260px;max-height:260px;width:auto;heigh
 @keyframes typing-bounce{0%,60%,100%{transform:translateY(0);opacity:.5}30%{transform:translateY(-4px);opacity:1}}
 @media(prefers-reduced-motion:reduce){.typing-dots i,.warn-sign,.warn-card{animation:none}}
 #mod-overlay{z-index:280}
+.chat-mod{align-self:stretch;background:linear-gradient(135deg,#ffd60a,#ffb703);border:3px solid #1d1d1b;border-radius:14px;padding:10px 14px;box-shadow:0 4px 0 #1d1d1b;text-align:center;color:#1d1d1b}
+.chat-mod p{margin:4px 0 2px;font:800 17px/1.3 var(--display)}.chat-mod.me{animation:warn-shake .5s ease-in-out 2}
+.chat-mod-tag{display:inline-block;background:#1d1d1b;color:#ffd60a;border-radius:6px;padding:2px 8px;font:800 10px var(--font);letter-spacing:.08em}
+.chat-mod time{font-size:10px;opacity:.7}
