@@ -722,10 +722,23 @@ body.chat-wide .chat-gif.giphy{max-width:260px;max-height:260px;width:auto;heigh
 @keyframes typing-bounce{0%,60%,100%{transform:translateY(0);opacity:.5}30%{transform:translateY(-4px);opacity:1}}
 @media(prefers-reduced-motion:reduce){.typing-dots i,.warn-sign,.warn-card{animation:none}}
 #mod-overlay{z-index:280}
-.chat-mod{align-self:stretch;background:linear-gradient(135deg,#ffd60a,#ffb703);border:3px solid #1d1d1b;border-radius:14px;padding:10px 14px;box-shadow:0 4px 0 #1d1d1b;text-align:center;color:#1d1d1b}
-.chat-mod p{margin:4px 0 2px;font:800 17px/1.3 var(--display)}.chat-mod.me{animation:warn-shake .5s ease-in-out 2}
-.chat-mod-tag{display:inline-block;background:#1d1d1b;color:#ffd60a;border-radius:6px;padding:2px 8px;font:800 10px var(--font);letter-spacing:.08em}
+.chat-mod{position:relative;align-self:stretch;margin:6px 0;border-radius:16px;padding:16px 14px 12px;text-align:center;color:#1d1d1b;overflow:hidden;border:4px solid transparent;
+  background:linear-gradient(135deg,#ffe14d,#ffb703) padding-box,repeating-linear-gradient(45deg,#1d1d1b 0 12px,#ffd60a 12px 24px) border-box;box-shadow:0 6px 0 #1d1d1b,0 10px 26px rgba(0,0,0,.25)}
+.chat-mod.ban{color:#fff;background:linear-gradient(135deg,#e63946,#9d0208) padding-box,repeating-linear-gradient(45deg,#1d1d1b 0 12px,#ff4d4d 12px 24px) border-box}
+.chat-mod-siren{font-size:34px;line-height:1;animation:siren-spin 1.2s linear infinite;display:inline-block;filter:drop-shadow(0 0 8px rgba(255,40,40,.9))}
+.chat-mod-tag{display:table;margin:4px auto 0;background:#1d1d1b;color:#ffd60a;border-radius:6px;padding:3px 9px;font:900 11px var(--font);letter-spacing:.12em}
+.chat-mod.ban .chat-mod-tag{color:#ff6b6b}
+.chat-mod-big{margin:8px 0 4px!important;font:900 clamp(18px,5.4vw,26px)/1.12 var(--display)!important;letter-spacing:.01em;text-transform:uppercase;text-shadow:2px 2px 0 rgba(255,255,255,.55)}
+.chat-mod.ban .chat-mod-big{text-shadow:2px 2px 0 rgba(0,0,0,.45)}
+.chat-mod-sub{margin:0 0 4px!important;font:700 12px var(--font)!important;opacity:.85}
 .chat-mod time{font-size:10px;opacity:.7}
+.chat-mod.fresh{animation:mod-pop .5s cubic-bezier(.2,1.6,.4,1),mod-flash .45s steps(2) .5s 8,warn-shake .5s ease-in-out .5s 2}
+.chat-mod.fresh:before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 0,rgba(255,255,255,.8),transparent 60%);animation:mod-glow 1s ease-in-out 4;pointer-events:none}
+@keyframes siren-spin{0%{transform:rotate(-18deg) scale(1)}25%{transform:rotate(18deg) scale(1.15)}50%{transform:rotate(-18deg) scale(1)}75%{transform:rotate(18deg) scale(1.15)}100%{transform:rotate(-18deg) scale(1)}}
+@keyframes mod-pop{from{transform:scale(.3) rotate(-6deg);opacity:0}to{transform:none;opacity:1}}
+@keyframes mod-flash{50%{filter:brightness(1.35) saturate(1.4)}}
+@keyframes mod-glow{0%,100%{opacity:0}50%{opacity:1}}
+@media(prefers-reduced-motion:reduce){.chat-mod,.chat-mod-siren,.chat-mod:before{animation:none!important}}
 .chat-dev{align-self:stretch;background:linear-gradient(135deg,#1b4e3b,#2c6e55);color:#fff;border-radius:14px;padding:10px 14px;text-align:center;box-shadow:0 4px 14px #163c3233}
 .chat-dev p{margin:6px 0 4px;font:700 14px/1.35 var(--display)}
 .chat-dev-tag{display:inline-block;background:var(--lime);color:var(--green);border-radius:6px;padding:2px 8px;font:800 10px var(--font);letter-spacing:.08em}

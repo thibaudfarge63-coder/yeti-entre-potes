@@ -884,7 +884,9 @@
       return chips||bar?`<div class="react-row ${m.player===selectedPlayer?'mine':''}">${chips}</div>${bar}`.replace('<div class="react-row '+(m.player===selectedPlayer?'mine':'')+'"></div>',''):'';};
     list.innerHTML=chatMsgs.length?chatMsgs.map(m=>{const p=player(m.player),mine=m.player===selectedPlayer,d=new Date(m.at||Date.now());
       const dev=devMsg(m);if(dev)return `<div class="chat-dev" data-mid="${m.id}"><span class="chat-dev-tag">🛠️ LES DÉVELOPPEURS DU SITE</span><p>${escape(dev)}</p><small>🔄 Rafraîchis la page pour voir la nouveauté · ${chatTime.format(d)}</small></div>`;
-      const mod=modMsg(m);if(mod)return `<div class="chat-mod ${mod.me?'me':''}" data-mid="${m.id}"><span class="chat-mod-tag">🚨 MODO · ${escape(cn(p))}</span><p><b>${escape(cn(mod.target))}</b>, ${escape(cn(p))} te dit de <b>fermer ta sale gueule</b>.</p><time>${chatTime.format(d)}</time></div>`;
+      const mod=modMsg(m);if(mod){const t=escape(cn(mod.target)).toUpperCase(),by=escape(cn(p)),fresh=!modShown.has(m.id)&&Date.now()-Date.parse(m.at||0)<30000;modShown.add(m.id);
+        const big=mod.kind==='shut'?`🤐 FERME TA SALE GUEULE, ${t}&nbsp;!`:mod.secs<0?`🚫 ${t} EST EXCLU DÉFINITIVEMENT`:`⛔ ${t} EST BANNI ${mod.secs<60?mod.secs+' SECONDES':mod.secs<3600?(mod.secs/60)+' MIN':(mod.secs/3600)+' H'}`;
+        return `<div class="chat-mod ${mod.kind} ${mod.me?'me':''} ${fresh?'fresh':''}" data-mid="${m.id}"><div class="chat-mod-siren" aria-hidden="true">🚨</div><span class="chat-mod-tag">${p.admin?'ADMIN':'MODO'} · ${by}</span><p class="chat-mod-big">${big}</p><p class="chat-mod-sub">${mod.kind==='shut'?`Message de ${by}. On se calme.`:`Décision de ${by}. Ça t’apprendra.`}</p><time>${chatTime.format(d)}</time></div>`;}
       const media=mediaOf(m.body);
       const trBox=!media&&!m.temp&&!mine?translateBlock(m):'';
       return `<div data-mid="${m.temp?'':m.id}" class="chat-msg ${chatReactFor===m.id?'picked':''} ${mine?'mine':''} ${m.temp?'temp':''} ${media?'media':''} ${!mine&&mentionsMe(m)?'tagged':''}"><div class="chat-meta"><i class="player-dot" style="background:${p.color}"></i><b data-who="${m.player}">${escape(cn(p))}</b><time>${dayKey(d)===today?'':chatDay.format(d)+' '}${chatTime.format(d)}</time></div>${media||`<p>${richBody(m.body)}</p>`}${trBox}</div>${reactLine(m)}${seenLine(m)}`;}).join(''):'<p class="chat-empty">Pas encore de message. Lance les hostilités.<br><small>Le chat se vide toutes les 15 min.</small></p>';
@@ -922,14 +924,15 @@
   // Message spécial posté par un modo (« ferme ta… »)
   // Annonce des développeurs (« [dev:texte] », postée par l'admin)
   function devMsg(m){const x=/^\[dev:([\s\S]{1,270})\]$/.exec(String(m.body||''));return x&&player(m.player).admin?x[1]:null;}
-  function modMsg(m){const x=/^\[mod:shut:(\d+)\]$/.exec(String(m.body||''));if(!x||!player(m.player).mod)return null;const t=Number(x[1]);return {target:player(t),me:t===selectedPlayer};}
+  const modShown=new Set();
+  function modMsg(m){const b=String(m.body||''),x=/^\[mod:shut:(\d+)\]$/.exec(b),y=/^\[mod:ban:(\d+):(-?\d+)\]$/.exec(b);if((!x&&!y)||!player(m.player).mod)return null;const t=Number((x||y)[1]);return {kind:x?'shut':'ban',secs:y?Number(y[2]):0,target:player(t),me:t===selectedPlayer};}
   function mediaOf(body){
     const gm=/^\[gif:([A-Za-z0-9]{5,40})\]$/.exec(body||'');if(gm)return `<img class="chat-gif giphy" src="https://media.giphy.com/media/${gm[1]}/200w.webp" alt="GIF" loading="lazy">`;
     let m=/^\[g:([0-9a-f_]{2,24})\]$/.exec(body||'');if(m&&GIFS.includes(m[1]))return `<img class="chat-gif" src="${gifUrl(m[1])}" alt="GIF" loading="lazy" width="120" height="120">`;
     m=/^\[s:(.{1,12})\]$/u.exec(body||'');if(m&&STICKERS.includes(m[1]))return `<span class="chat-sticker" role="img" aria-label="sticker">${m[1]}</span>`;
     return '';
   }
-  function plainBody(body){if(/^\[(g|gif):/.test(body||''))return 'a envoyé un GIF';const dv=/^\[dev:([\s\S]+)\]$/.exec(body||'');if(dv)return '🛠️ '+dv[1];const mm=/^\[mod:shut:(\d+)\]$/.exec(body||'');if(mm)return `🚨 ${cn(player(Number(mm[1])))}, ferme ta sale gueule.`;const m=/^\[s:(.{1,12})\]$/u.exec(body||'');return m?m[1]:String(body||'');}
+  function plainBody(body){if(/^\[(g|gif):/.test(body||''))return 'a envoyé un GIF';const dv=/^\[dev:([\s\S]+)\]$/.exec(body||'');if(dv)return '🛠️ '+dv[1];const mm=/^\[mod:shut:(\d+)\]$/.exec(body||'');if(mm)return `🚨 ${cn(player(Number(mm[1])))}, ferme ta sale gueule.`;const mb=/^\[mod:ban:(\d+):(-?\d+)\]$/.exec(body||'');if(mb)return `⛔ ${cn(player(Number(mb[1])))} a été banni.`;const m=/^\[s:(.{1,12})\]$/u.exec(body||'');return m?m[1]:String(body||'');}
   const reEsc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
   // Nom affiché dans le chat : surnom optionnel (players.chat_name), sinon le prénom ; @surnom et @prénom taguent tous les deux.
   function cn(p){return p?(p.chat||p.name):'';}
