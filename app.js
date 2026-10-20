@@ -885,7 +885,7 @@
     list.innerHTML=chatMsgs.length?chatMsgs.map(m=>{const p=player(m.player),mine=m.player===selectedPlayer,d=new Date(m.at||Date.now());
       const dev=devMsg(m);if(dev)return `<div class="chat-dev" data-mid="${m.id}"><span class="chat-dev-tag">🛠️ LES DÉVELOPPEURS DU SITE</span><p>${escape(dev)}</p><small>🔄 Rafraîchis la page pour voir la nouveauté · ${chatTime.format(d)}</small></div>`;
       const mod=modMsg(m);if(mod){const t=escape(cn(mod.target)).toUpperCase(),by=escape(cn(p)),fresh=!modShown.has(m.id)&&Date.now()-Date.parse(m.at||0)<30000;modShown.add(m.id);
-        const big=mod.kind==='shut'?`🤐 FERME TA SALE GUEULE, ${t}&nbsp;!`:mod.secs<0?`🚫 ${t} EST EXCLU DÉFINITIVEMENT`:`⛔ ${t} EST BANNI ${mod.secs<60?mod.secs+' SECONDES':mod.secs<3600?(mod.secs/60)+' MIN':(mod.secs/3600)+' H'}`;
+        const big=mod.kind==='shut'?`🤐 ${t} FERME TA SALE GUEULE`:mod.secs<0?`🚫 ${t} EST EXCLU DÉFINITIVEMENT`:`⛔ ${t} EST BANNI ${mod.secs<60?mod.secs+' SECONDES':mod.secs<3600?(mod.secs/60)+' MIN':(mod.secs/3600)+' H'}`;
         return `<div class="chat-mod ${mod.kind} ${mod.me?'me':''} ${fresh?'fresh':''}" data-mid="${m.id}"><div class="chat-mod-siren" aria-hidden="true">🚨</div><span class="chat-mod-tag">${p.admin?'ADMIN':'MODO'} · ${by}</span><p class="chat-mod-big">${big}</p><p class="chat-mod-sub">${mod.kind==='shut'?`Message de ${by}. On se calme.`:`Décision de ${by}. Ça t’apprendra.`}</p><time>${chatTime.format(d)}</time></div>`;}
       const media=mediaOf(m.body);
       const trBox=!media&&!m.temp&&!mine?translateBlock(m):'';
