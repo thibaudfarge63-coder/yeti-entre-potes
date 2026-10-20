@@ -883,6 +883,7 @@
       const bar=chatReactFor===m.id?`<div class="react-bar ${m.player===selectedPlayer?'mine':''}" role="group" aria-label="Réagir">${REACTS.map(e=>`<button type="button" data-react="${e}" data-msg="${m.id}" class="${(r[e]||[]).map(Number).includes(selectedPlayer)?'me':''}">${e}</button>`).join('')}</div>`:'';
       return chips||bar?`<div class="react-row ${m.player===selectedPlayer?'mine':''}">${chips}</div>${bar}`.replace('<div class="react-row '+(m.player===selectedPlayer?'mine':'')+'"></div>',''):'';};
     list.innerHTML=chatMsgs.length?chatMsgs.map(m=>{const p=player(m.player),mine=m.player===selectedPlayer,d=new Date(m.at||Date.now());
+      const dev=devMsg(m);if(dev)return `<div class="chat-dev" data-mid="${m.id}"><span class="chat-dev-tag">🛠️ LES DÉVELOPPEURS DU SITE</span><p>${escape(dev)}</p><small>🔄 Rafraîchis la page pour voir la nouveauté · ${chatTime.format(d)}</small></div>`;
       const mod=modMsg(m);if(mod)return `<div class="chat-mod ${mod.me?'me':''}" data-mid="${m.id}"><span class="chat-mod-tag">🚨 MODO · ${escape(cn(p))}</span><p><b>${escape(cn(mod.target))}</b>, ${escape(cn(p))} te dit de <b>fermer ta sale gueule</b>.</p><time>${chatTime.format(d)}</time></div>`;
       const media=mediaOf(m.body);
       const trBox=!media&&!m.temp&&!mine?translateBlock(m):'';
@@ -919,6 +920,8 @@
   const STICKERS=['🦭','🐧','❄️','🏔️','🥶','🏆','🥇','👑','🐐','🔥','💀','🤡','💩','😂','🤣','😭','😎','🤯','😤','🙄','🫡','👀','💪','🎯','🍺','🥳','🎉','❤️','👍','👎','🤌','🙏','😱','🤫','🫠','🧊','⛷️','💸','🚀','🧠'];
   const gifUrl=c=>`https://fonts.gstatic.com/s/e/notoemoji/latest/${c}/512.webp`;
   // Message spécial posté par un modo (« ferme ta… »)
+  // Annonce des développeurs (« [dev:texte] », postée par l'admin)
+  function devMsg(m){const x=/^\[dev:([\s\S]{1,270})\]$/.exec(String(m.body||''));return x&&player(m.player).admin?x[1]:null;}
   function modMsg(m){const x=/^\[mod:shut:(\d+)\]$/.exec(String(m.body||''));if(!x||!player(m.player).mod)return null;const t=Number(x[1]);return {target:player(t),me:t===selectedPlayer};}
   function mediaOf(body){
     const gm=/^\[gif:([A-Za-z0-9]{5,40})\]$/.exec(body||'');if(gm)return `<img class="chat-gif giphy" src="https://media.giphy.com/media/${gm[1]}/200w.webp" alt="GIF" loading="lazy">`;
@@ -926,7 +929,7 @@
     m=/^\[s:(.{1,12})\]$/u.exec(body||'');if(m&&STICKERS.includes(m[1]))return `<span class="chat-sticker" role="img" aria-label="sticker">${m[1]}</span>`;
     return '';
   }
-  function plainBody(body){if(/^\[(g|gif):/.test(body||''))return 'a envoyé un GIF';const mm=/^\[mod:shut:(\d+)\]$/.exec(body||'');if(mm)return `🚨 ${cn(player(Number(mm[1])))}, ferme ta sale gueule.`;const m=/^\[s:(.{1,12})\]$/u.exec(body||'');return m?m[1]:String(body||'');}
+  function plainBody(body){if(/^\[(g|gif):/.test(body||''))return 'a envoyé un GIF';const dv=/^\[dev:([\s\S]+)\]$/.exec(body||'');if(dv)return '🛠️ '+dv[1];const mm=/^\[mod:shut:(\d+)\]$/.exec(body||'');if(mm)return `🚨 ${cn(player(Number(mm[1])))}, ferme ta sale gueule.`;const m=/^\[s:(.{1,12})\]$/u.exec(body||'');return m?m[1]:String(body||'');}
   const reEsc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
   // Nom affiché dans le chat : surnom optionnel (players.chat_name), sinon le prénom ; @surnom et @prénom taguent tous les deux.
   function cn(p){return p?(p.chat||p.name):'';}
