@@ -698,3 +698,27 @@ body.chat-wide .chat-gif.giphy{max-width:260px;max-height:260px;width:auto;heigh
 .tr-btn{display:inline-block;margin-top:3px;border:0;background:none;padding:0;font:600 10px var(--font);color:#4f7a2f;cursor:pointer}
 .tr-btn:hover{text-decoration:underline}.tr-btn.wait{color:var(--muted);cursor:default}
 .tr-out{margin:4px 0 0!important;padding:5px 8px;border-left:3px solid #a9c27f;background:#f3f7ea;border-radius:6px;font-style:italic}
+/* Modos */
+.mod-open{border-color:#f0b3a3;background:#fff0ec;color:#b03a1f}.mod-open:hover{background:#ffe1d8}
+.admin-actions button.shut{border-color:#e8b33c;color:#8a5a00;background:#fff8e3}.admin-actions button.shut:hover{background:#ffefc2}
+.chat-meta b[data-who]{cursor:default}
+.warn-overlay{position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;padding:16px;background:repeating-linear-gradient(45deg,rgba(255,196,0,.92) 0 28px,rgba(20,20,20,.92) 28px 56px);animation:warn-in .25s ease-out}
+.warn-overlay[hidden]{display:none}
+.warn-card{background:#fff;border:6px solid #d62d20;border-radius:22px;max-width:520px;width:100%;padding:26px 22px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5);animation:warn-shake .5s ease-in-out 2}
+.warn-sign{font-size:76px;line-height:1;animation:warn-pulse .8s ease-in-out infinite}
+.warn-top{margin:6px 0 4px;font:900 30px var(--display);letter-spacing:.12em;color:#d62d20}
+.warn-card h2{margin:4px 0 18px;font:700 24px/1.25 var(--display);color:#1d1d1b}.warn-card h2 b{color:#d62d20}
+.warn-card button{border:0;border-radius:12px;background:#d62d20;color:#fff;font:800 16px var(--font);padding:12px 22px}.warn-card button:disabled{opacity:.45}
+@keyframes warn-in{from{opacity:0}to{opacity:1}}@keyframes warn-pulse{50%{transform:scale(1.15)}}
+@keyframes warn-shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-10px) rotate(-1deg)}40%{transform:translateX(10px) rotate(1deg)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}
+.spam-alert{position:fixed;left:16px;right:16px;bottom:96px;z-index:250;max-width:460px;margin:0 auto;background:#2a1714;color:#fff;border:2px solid #e74c3c;border-radius:14px;padding:12px 14px;box-shadow:0 12px 30px rgba(0,0,0,.35)}
+.spam-alert[hidden]{display:none}.spam-alert p{margin:0 0 8px;font-size:13px;line-height:1.35}
+.spam-actions{display:flex;flex-wrap:wrap;gap:6px}.spam-actions button{border:0;border-radius:8px;background:#e74c3c;color:#fff;font:700 12px var(--font);padding:7px 10px}.spam-actions button.ghost{background:#4a3a37}
+.chat-typing{display:flex;align-items:center;gap:7px;padding:4px 14px 6px;font-size:11px;color:var(--muted);background:var(--paper)}
+.chat-typing[hidden]{display:none}
+.typing-dots{display:inline-flex;gap:3px;background:#e6e9e0;border-radius:10px;padding:5px 7px}
+.typing-dots i{width:5px;height:5px;border-radius:50%;background:#7d8574;animation:typing-bounce 1.2s ease-in-out infinite}
+.typing-dots i:nth-child(2){animation-delay:.15s}.typing-dots i:nth-child(3){animation-delay:.3s}
+@keyframes typing-bounce{0%,60%,100%{transform:translateY(0);opacity:.5}30%{transform:translateY(-4px);opacity:1}}
+@media(prefers-reduced-motion:reduce){.typing-dots i,.warn-sign,.warn-card{animation:none}}
+#mod-overlay{z-index:280}

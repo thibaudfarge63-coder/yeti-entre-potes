@@ -45,7 +45,7 @@
       if(Array.isArray(p.skins))savedSkins.set(id,p.skins.map(String));
       if(Number.isFinite(Number(p.total)))totals.set(id,Number(p.total));
       if(p.banned_until)bans[id]=p.banned_until;else if(p.banned_until===null)delete bans[id];
-      return {id,name:name.slice(0,24),color,locked:!!p.locked,admin:!!p.admin,muted:!!p.muted,chat:p.chat?String(p.chat).slice(0,24):''};
+      return {id,name:name.slice(0,24),color,locked:!!p.locked,admin:!!p.admin,mod:!!(p.mod||p.admin),muted:!!p.muted,chat:p.chat?String(p.chat).slice(0,24):''};
     }).filter(Boolean).sort((a,b)=>a.id-b.id);
     if(!parsed.length)return;
     PLAYERS=parsed;renderPlayerOptions();
@@ -135,7 +135,7 @@
     const on=p=>banLeft(p.id)?'<span class="ban-mark" aria-hidden="true">⛔</span>':online.has(p.id)?'<span class="online-dot" aria-hidden="true"></span>':'',onTitle=p=>banLeft(p.id)?` title="${escape(p.name)} est ${banText(p.id)}"`:online.has(p.id)?` title="${escape(p.name)} est en ligne"`:'';
     $('profiles').innerHTML=PLAYERS.map(p=>`<button class="profile-button ${online.has(p.id)?'is-online':''} ${banLeft(p.id)?'is-banned':''} ${selectedPlayer===p.id?'active':''}" data-player="${p.id}" type="button" aria-pressed="${selectedPlayer===p.id}"${onTitle(p)} ${busy}><span class="player-dot" style="background:${p.color}"></span>${escape(p.name)}${on(p)}</button>`).join('')+add;
     $('cover-profiles').innerHTML=PLAYERS.map(p=>`<button class="profile-button ${online.has(p.id)?'is-online':''} ${banLeft(p.id)?'is-banned':''}" data-player="${p.id}" type="button"${onTitle(p)}><span class="player-dot" style="background:${p.color}"></span>${escape(p.name)}${on(p)}</button>`).join('')+add;
-    const me=authed&&selectedPlayer===authed?player(authed):null;$('admin-open').hidden=!(me&&me.admin);$('chat-clear').hidden=!(me&&me.admin);
+    const me=authed&&selectedPlayer===authed?player(authed):null;$('admin-open').hidden=!(me&&me.admin);$('mod-open').hidden=!(me&&me.mod);$('chat-clear').hidden=!(me&&me.admin);
     const label=document.querySelector('.player-label');if(label)label.innerHTML='Je joue avec'+(online.size?` <span class="online-count" title="${escape(PLAYERS.filter(p=>online.has(p.id)).map(p=>p.name).join(', '))}"><i></i>${online.size} en ligne</span>`:'');
     $('round-tag').textContent=activeRound?'Lancer en cours…':modeLabel();
     $('round-tag').classList.toggle('mode-on',playMode.kind!=='free');
@@ -799,6 +799,7 @@
   }
   let lastTap={id:0,t:0};
   $('chat-list').addEventListener('click',e=>{
+    const who=e.target.closest('[data-who]');if(who&&isMod()&&Number(who.dataset.who)!==authed){e.stopPropagation();openMod(Number(who.dataset.who));return;}
     const tb=e.target.closest('[data-tr]');if(tb){e.stopPropagation();translateMsg(Number(tb.dataset.tr));return;}
     const b=e.target.closest('[data-react]');
     if(b){e.stopPropagation();sendReact(Number(b.dataset.msg),b.dataset.react);return;}
@@ -884,7 +885,7 @@
     list.innerHTML=chatMsgs.length?chatMsgs.map(m=>{const p=player(m.player),mine=m.player===selectedPlayer,d=new Date(m.at||Date.now());
       const media=mediaOf(m.body);
       const trBox=!media&&!m.temp&&!mine?translateBlock(m):'';
-      return `<div data-mid="${m.temp?'':m.id}" class="chat-msg ${chatReactFor===m.id?'picked':''} ${mine?'mine':''} ${m.temp?'temp':''} ${media?'media':''} ${!mine&&mentionsMe(m)?'tagged':''}"><div class="chat-meta"><i class="player-dot" style="background:${p.color}"></i><b>${escape(cn(p))}</b><time>${dayKey(d)===today?'':chatDay.format(d)+' '}${chatTime.format(d)}</time></div>${media||`<p>${richBody(m.body)}</p>`}${trBox}</div>${reactLine(m)}${seenLine(m)}`;}).join(''):'<p class="chat-empty">Pas encore de message. Lance les hostilités.<br><small>Le chat se vide toutes les 15 min.</small></p>';
+      return `<div data-mid="${m.temp?'':m.id}" class="chat-msg ${chatReactFor===m.id?'picked':''} ${mine?'mine':''} ${m.temp?'temp':''} ${media?'media':''} ${!mine&&mentionsMe(m)?'tagged':''}"><div class="chat-meta"><i class="player-dot" style="background:${p.color}"></i><b data-who="${m.player}">${escape(cn(p))}</b><time>${dayKey(d)===today?'':chatDay.format(d)+' '}${chatTime.format(d)}</time></div>${media||`<p>${richBody(m.body)}</p>`}${trBox}</div>${reactLine(m)}${seenLine(m)}`;}).join(''):'<p class="chat-empty">Pas encore de message. Lance les hostilités.<br><small>Le chat se vide toutes les 15 min.</small></p>';
     if(stick||toEnd){chatBottom();
       // les GIF se chargent après coup : on redescend quand chacun arrive
       list.querySelectorAll('img').forEach(img=>{if(!img.complete)img.addEventListener('load',chatBottom,{once:true});});}
@@ -904,7 +905,7 @@
   $('chat-close').addEventListener('click',()=>toggleChat(false));
   $('chat-form').addEventListener('submit',async e=>{
     e.preventDefault();const input=$('chat-input'),body=input.value.trim();if(!body||!selectedPlayer)return;
-    input.value='';closeMention();sendChat(body);
+    input.value='';closeMention();if(typingOn)typingOn=false;sendChat(body);
   });
   async function sendChat(body){
     const input=$('chat-input');if(!selectedPlayer)return;
@@ -1026,10 +1027,91 @@
       if(r&&'chat_cleared' in r){const c=Date.parse(r.chat_cleared||'')||0;if(chatClearedSeen===null)chatClearedSeen=c;else if(c>chatClearedSeen){chatClearedSeen=c;reloadAfterClear();}}
       if(r&&r.reactions&&typeof r.reactions==='object'){const key=JSON.stringify(r.reactions);if(key!==JSON.stringify(chatReacts)){chatReacts=r.reactions;if(chatOpen)renderChat();}}
       if(r&&r.reads&&typeof r.reads==='object'){const key=JSON.stringify(r.reads);if(key!==JSON.stringify(chatReads)){chatReads=r.reads;if(chatOpen)renderChat();}}
+      if(r&&Array.isArray(r.hidden)&&r.hidden.length){const hid=new Set(r.hidden.map(Number)),n=chatMsgs.length;chatMsgs=chatMsgs.filter(m=>m.temp||!hid.has(m.id));if(chatMsgs.length!==n)renderChat();}
+      if(r)modPresence(r);
+      if(r&&Array.isArray(r.typing)){const t=r.typing.map(Number);if(t.join()!==chatTyping.join()){chatTyping=t;renderTyping();}}
       if(r&&Array.isArray(r.online)){const next=new Set(r.online.map(Number));if([...next].join()!==[...online].join()){online=next;renderProfiles();}}}
     catch(_){}finally{presenceBusy=false;}
   }
-  setInterval(pingPresence,5000);
+  // Toutes les 2,5 s quand le chat est ouvert (pour « … est en train d'écrire »), sinon toutes les 5 s.
+  let presenceTick=0;setInterval(()=>{presenceTick++;if(chatOpen||presenceTick%2===0)pingPresence();},2500);
+  // ---------- Modos : « ferme ta… », bans express, alerte spam ----------
+  function isMod(){return !!(authed&&authed===selectedPlayer&&player(authed).mod);}
+  let modFocus=0,spamDismissed=new Set(),warnSeen=0;try{warnSeen=Number(localStorage.getItem('yeti-warn-seen'))||0;}catch(_){}
+  function modEl(){
+    let o=$('mod-overlay');if(o)return o;
+    o=document.createElement('div');o.className='access-overlay';o.id='mod-overlay';o.hidden=true;
+    o.innerHTML='<div class="access-card admin-card" role="dialog" aria-modal="true" aria-labelledby="mod-title"><span class="brand-mark" aria-hidden="true">🚨</span><p class="eyebrow">MODO</p><h2 id="mod-title">Calmer quelqu’un.</h2><p>« Ferme ta gueule » affiche un gros panneau sur son écran. Le ban express le déconnecte 30 s ou 1 min.</p><div class="admin-list" id="mod-list"></div><p id="mod-error" role="alert"></p><button class="text-button add-player-cancel" id="mod-close" type="button">Fermer</button></div>';
+    document.body.appendChild(o);
+    o.addEventListener('click',async e=>{
+      if(e.target===o||e.target.id==='mod-close'){o.hidden=true;return;}
+      const b=e.target.closest('[data-mod]');if(!b)return;
+      const ok=await modAction(Number(b.dataset.target),b.dataset.mod,null,b);if(ok)renderMod();
+    });
+    return o;
+  }
+  function renderMod(){
+    const list=PLAYERS.filter(p=>p.id!==authed&&(!modFocus||p.id===modFocus));
+    $('mod-list').innerHTML=list.map(p=>{const b=banLeft(p.id);return `<div class="admin-row ${b?'banned':''}"><div class="admin-who">${avatar(p)}<span><b>${escape(p.name)}</b><small>${b?`⛔ ${banText(p.id)}`:online.has(p.id)?'🟢 en ligne':'hors ligne'}${p.mod?' · 🚨 modo':''}</small></span></div><div class="admin-actions"><button type="button" class="shut" data-mod="warn" data-target="${p.id}">🤐 Ferme ta gueule</button>${p.mod?'':`<button type="button" data-mod="ban30" data-target="${p.id}">⛔ 30 s</button><button type="button" data-mod="ban60" data-target="${p.id}">⛔ 1 min</button>`}</div></div>`;}).join('')+(modFocus?'<button type="button" class="text-button" id="mod-all" style="margin-top:6px">Voir tout le monde</button>':'');
+    const all=$('mod-all');if(all)all.onclick=()=>{modFocus=0;renderMod();};
+  }
+  function openMod(id){modEl();modFocus=id||0;$('mod-error').textContent='';renderMod();$('mod-overlay').hidden=false;}
+  $('mod-open').addEventListener('click',()=>openMod(0));
+  async function modAction(target,action,body,btn){
+    const s=getSession();if(!s||s.player!==authed){showToast('Reconnecte-toi.');return false;}
+    if(btn)btn.disabled=true;
+    try{const r=await request('/api/mod',{mod:authed,token:s.token,target,action,body});const name=player(target).name;
+      if(r.banned_until){bans[target]=r.banned_until;online.delete(target);renderProfiles();}
+      if(action==='purge'){chatMsgs=chatMsgs.filter(m=>m.temp||!(m.player===target&&String(m.body).trim().toLowerCase()===String(body).trim().toLowerCase()));renderChat();}
+      showToast(action==='warn'?`🤐 ${name} a reçu ton message.`:action==='purge'?`🗑️ ${r.hidden||0} message${r.hidden>1?'s':''} de ${name} supprimé${r.hidden>1?'s':''}.`:`⛔ ${name} est banni ${action==='ban30'?'30 s':'1 min'}.`);
+      return true;
+    }catch(e){showToast(e.message||'Action impossible.');if(btn)btn.disabled=false;return false;}
+  }
+  function warnEl(){
+    let o=$('warn-overlay');if(o)return o;
+    o=document.createElement('div');o.id='warn-overlay';o.className='warn-overlay';o.hidden=true;
+    o.innerHTML='<div class="warn-card" role="alertdialog" aria-modal="true" aria-labelledby="warn-title"><div class="warn-sign" aria-hidden="true">⚠️</div><p class="warn-top">ATTENTION</p><h2 id="warn-title"></h2><button type="button" id="warn-ok" disabled>OK… 🤐</button></div>';
+    document.body.appendChild(o);o.querySelector('#warn-ok').addEventListener('click',()=>{o.hidden=true;});return o;
+  }
+  function spamEl(){
+    let o=$('spam-alert');if(o)return o;
+    o=document.createElement('div');o.id='spam-alert';o.className='spam-alert';o.hidden=true;document.body.appendChild(o);
+    o.addEventListener('click',async e=>{const b=e.target.closest('[data-spam]');if(!b)return;const key=o.dataset.key,target=Number(o.dataset.player),body=o.dataset.body;
+      if(b.dataset.spam==='ignore'){spamDismissed.add(key);o.hidden=true;return;}
+      if(await modAction(target,b.dataset.spam,body,b)){spamDismissed.add(key);o.hidden=true;}});
+    return o;
+  }
+  function modPresence(r){
+    // le panneau « ferme ta… » pour le joueur visé
+    if(r.warn&&r.warn.id&&selectedPlayer&&Number(r.warn.id)>warnSeen){
+      warnSeen=Number(r.warn.id);try{localStorage.setItem('yeti-warn-seen',String(warnSeen));}catch(_){}
+      const o=warnEl();o.querySelector('#warn-title').innerHTML=`<b>${escape(r.warn.from||'Un modo')}</b> te dit de fermer ta sale gueule.`;
+      const ok=o.querySelector('#warn-ok');ok.disabled=true;setTimeout(()=>{ok.disabled=false;},2500);o.hidden=false;
+      try{navigator.vibrate&&navigator.vibrate([200,100,200,100,400]);}catch(_){}
+    }
+    // alerte spam pour les modos
+    if(!isMod()){const o=$('spam-alert');if(o)o.hidden=true;return;}
+    const items=(Array.isArray(r.spam)?r.spam:[]).filter(x=>Number(x.player)!==authed);
+    const it=items.find(x=>!spamDismissed.has(`${x.player}|${String(x.body).trim().toLowerCase()}|${x.n}`));
+    const o=spamEl();
+    if(!it){o.hidden=true;return;}
+    const key=`${it.player}|${String(it.body).trim().toLowerCase()}|${it.n}`;if(!o.hidden&&o.dataset.key===key)return;
+    const p=player(Number(it.player));o.dataset.key=key;o.dataset.player=it.player;o.dataset.body=it.body;
+    o.innerHTML=`<p><b>🚨 ${escape(cn(p))}</b> a envoyé <b>${it.n} fois</b> le même message : « ${escape(plainBody(it.body).slice(0,80))} »</p><div class="spam-actions"><button type="button" data-spam="purge">🗑️ Supprimer ces messages</button>${p.mod?'':'<button type="button" data-spam="ban30">⛔ Ban 30 s</button><button type="button" data-spam="ban60">⛔ Ban 1 min</button>'}<button type="button" class="ghost" data-spam="ignore">Ignorer</button></div>`;
+    o.hidden=false;
+  }
+  // ---------- « … est en train d'écrire » ----------
+  let typingSent=0,typingOn=false,chatTyping=[];
+  function sendTyping(on){const s=getSession();if(!s||!authed||s.player!==authed)return;typingOn=on;typingSent=on?Date.now():0;request('/api/typing',{player:authed,token:s.token,on}).catch(()=>{});}
+  $('chat-input').addEventListener('input',()=>{const v=$('chat-input').value.trim();if(v&&(!typingOn||Date.now()-typingSent>2500))sendTyping(true);else if(!v&&typingOn)sendTyping(false);});
+  $('chat-input').addEventListener('blur',()=>{if(typingOn)sendTyping(false);});
+  function renderTyping(){
+    let el=$('chat-typing');if(!el){el=document.createElement('div');el.id='chat-typing';el.className='chat-typing';el.setAttribute('aria-live','polite');$('chat-list').insertAdjacentElement('afterend',el);}
+    const names=chatTyping.filter(id=>id!==selectedPlayer).map(id=>escape(cn(player(id))));
+    if(!names.length){el.hidden=true;el.innerHTML='';return;}
+    const who=names.length===1?`${names[0]} est en train d’écrire`:names.length===2?`${names[0]} et ${names[1]} écrivent`:`${names.length} personnes écrivent`;
+    el.innerHTML=`<span class="typing-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>${who}</span>`;el.hidden=false;
+  }
   // ---------- Appli installable + notifications push ----------
   const isStandalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
   const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
