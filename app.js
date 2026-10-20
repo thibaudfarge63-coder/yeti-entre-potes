@@ -135,7 +135,7 @@
     const on=p=>banLeft(p.id)?'<span class="ban-mark" aria-hidden="true">⛔</span>':online.has(p.id)?'<span class="online-dot" aria-hidden="true"></span>':'',onTitle=p=>banLeft(p.id)?` title="${escape(p.name)} est ${banText(p.id)}"`:online.has(p.id)?` title="${escape(p.name)} est en ligne"`:'';
     $('profiles').innerHTML=PLAYERS.map(p=>`<button class="profile-button ${online.has(p.id)?'is-online':''} ${banLeft(p.id)?'is-banned':''} ${selectedPlayer===p.id?'active':''}" data-player="${p.id}" type="button" aria-pressed="${selectedPlayer===p.id}"${onTitle(p)} ${busy}><span class="player-dot" style="background:${p.color}"></span>${escape(p.name)}${on(p)}</button>`).join('')+add;
     $('cover-profiles').innerHTML=PLAYERS.map(p=>`<button class="profile-button ${online.has(p.id)?'is-online':''} ${banLeft(p.id)?'is-banned':''}" data-player="${p.id}" type="button"${onTitle(p)}><span class="player-dot" style="background:${p.color}"></span>${escape(p.name)}${on(p)}</button>`).join('')+add;
-    const me=authed&&selectedPlayer===authed?player(authed):null;$('admin-open').hidden=!(me&&me.admin);
+    const me=authed&&selectedPlayer===authed?player(authed):null;$('admin-open').hidden=!(me&&me.admin);$('chat-clear').hidden=!(me&&me.admin);
     const label=document.querySelector('.player-label');if(label)label.innerHTML='Je joue avec'+(online.size?` <span class="online-count" title="${escape(PLAYERS.filter(p=>online.has(p.id)).map(p=>p.name).join(', '))}"><i></i>${online.size} en ligne</span>`:'');
     $('round-tag').textContent=activeRound?'Lancer en cours…':modeLabel();
     $('round-tag').classList.toggle('mode-on',playMode.kind!=='free');
@@ -755,7 +755,7 @@
     }finally{polling=false;}
   }
   // ---------- Chat ----------
-  let chatReacts={},chatReactFor=0,chatReads={},chatSeenSent=0,chatMsgs=[],chatLast=0,chatOpen=false,chatLoading=false,chatRead=0,chatInit=false,peekTimer;
+  let chatServerSince=0,chatClearArm=0,chatReacts={},chatReactFor=0,chatReads={},chatSeenSent=0,chatMsgs=[],chatLast=0,chatOpen=false,chatLoading=false,chatRead=0,chatInit=false,peekTimer;
   function chatPeek(m){
     const p=player(m.player),el=$('chat-peek');
     el.innerHTML=`<i class="player-dot" style="background:${p.color}"></i><b>${escape(cn(p))}</b> : ${mentionsMe(m)?'🔔 ':''}${escape(plainBody(m.body))}`;el.hidden=false;
@@ -767,7 +767,7 @@
   const chatDay=new Intl.DateTimeFormat('fr-FR',{timeZone:'Europe/Paris',day:'2-digit',month:'2-digit'});
   async function loadChat(){
     if(chatLoading)return;chatLoading=true;
-    try{const r=await request('/api/chat',{after:chatLast});const list=Array.isArray(r.messages)?r.messages:[];
+    try{const r=await request('/api/chat',{after:chatLast});noteChatSince(r&&r.since);const list=Array.isArray(r.messages)?r.messages:[];
       const known=new Set(chatMsgs.map(m=>m.id));
       const fresh=[];for(const m of list){if(!known.has(Number(m.id))){const n={...m,id:Number(m.id),player:Number(m.player)};chatMsgs.push(n);fresh.push(n);}}
       const others=chatInit?fresh.filter(m=>m.player!==selectedPlayer):[];chatInit=true;
@@ -809,11 +809,21 @@
     const keep=$('chat-list').scrollTop;chatReactFor=chatReactFor===id?0:id;renderChat();$('chat-list').scrollTop=keep;
     const bar=$('chat-list').querySelector('.react-bar');if(bar)bar.scrollIntoView({block:'nearest'});
   });
+  // Le chat peut aussi être vidé par l'admin : le serveur donne l'heure à partir de laquelle on garde les messages.
+  function noteChatSince(v){const t=Date.parse(v||'');if(t&&t>chatServerSince){chatServerSince=t;return true;}return false;}
+  $('chat-clear').addEventListener('click',async()=>{
+    const b=$('chat-clear');
+    if(chatClearArm<Date.now()){chatClearArm=Date.now()+4000;b.textContent='Vider ?';b.classList.add('arm');setTimeout(()=>{if(chatClearArm<=Date.now()){b.textContent='🧹';b.classList.remove('arm');}},4100);return;}
+    chatClearArm=0;b.textContent='🧹';b.classList.remove('arm');
+    const s=getSession();if(!s||s.player!==authed){showToast('Reconnecte-toi.');return;}
+    try{const r=await request('/api/chat/clear',{admin:authed,token:s.token});noteChatSince(r&&r.since);chatReacts={};chatReads={};renderChat();showToast(`🧹 Chat vidé pour tout le monde (${r&&r.deleted||0} message${(r&&r.deleted)>1?'s':''}).`);}
+    catch(e){showToast(e.message||'Impossible de vider le chat.');}
+  });
   function chatBottom(){const l=$('chat-list');if(l)l.scrollTop=l.scrollHeight;}
   const chatHour=()=>Math.floor(Date.now()/900000)*900000;
   let chatHourShown=chatHour();
   function renderChat(toEnd){
-    chatHourShown=chatHour();chatMsgs=chatMsgs.filter(m=>m.temp||!(Date.parse(m.at)<chatHourShown));
+    chatHourShown=Math.max(chatHour(),chatServerSince);chatMsgs=chatMsgs.filter(m=>m.temp||!(Date.parse(m.at)<chatHourShown));
     const list=$('chat-list'),stick=list.scrollHeight-list.scrollTop-list.clientHeight<60,today=dayKey(new Date());
     // « Vu par » : chaque lecteur est placé sous le dernier message qu'il a lu (comme sur Insta / WhatsApp)
     const real=chatMsgs.filter(m=>!m.temp),seenAt={};
@@ -967,6 +977,7 @@
     try{const r=await request('/api/presence',{player:selectedPlayer||0});
       if(r&&r.bans&&typeof r.bans==='object'){const key=JSON.stringify(r.bans);if(key!==JSON.stringify(bans)){bans=r.bans;renderProfiles();if(!$('admin-overlay').hidden)renderAdmin();}}
       if(selectedPlayer&&banLeft(selectedPlayer))kick(selectedPlayer);
+      if(r&&noteChatSince(r.chat_since))renderChat();
       if(r&&r.reactions&&typeof r.reactions==='object'){const key=JSON.stringify(r.reactions);if(key!==JSON.stringify(chatReacts)){chatReacts=r.reactions;if(chatOpen)renderChat();}}
       if(r&&r.reads&&typeof r.reads==='object'){const key=JSON.stringify(r.reads);if(key!==JSON.stringify(chatReads)){chatReads=r.reads;if(chatOpen)renderChat();}}
       if(r&&Array.isArray(r.online)){const next=new Set(r.online.map(Number));if([...next].join()!==[...online].join()){online=next;renderProfiles();}}}

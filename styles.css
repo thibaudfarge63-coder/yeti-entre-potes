@@ -693,3 +693,4 @@ body.chat-wide .chat-gif.giphy{max-width:260px;max-height:260px;width:auto;heigh
 .nv-bubble{position:absolute;width:6px;height:6px;border-radius:50%;border:1.5px solid rgba(220,240,255,.9);z-index:3}
 .nv-hull.svg{display:block;height:15px;flex:none}
 @media(prefers-reduced-motion:reduce){.nv-sprite,.nv-flame,.nv-smoke,.nv-ripple{animation:none}}
+.chat-clear-btn{font-size:15px;width:auto;min-width:32px;padding:0 6px;border-radius:16px}.chat-clear-btn.arm{background:#c0392b;font:700 12px var(--font);padding:0 10px}
