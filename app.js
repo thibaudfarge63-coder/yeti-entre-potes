@@ -755,7 +755,7 @@
     }finally{polling=false;}
   }
   // ---------- Chat ----------
-  let chatServerSince=0,chatClearArm=0,chatReacts={},chatReactFor=0,chatReads={},chatSeenSent=0,chatMsgs=[],chatLast=0,chatOpen=false,chatLoading=false,chatRead=0,chatInit=false,peekTimer;
+  let chatClearedSeen=null,chatTr={},chatServerSince=0,chatClearArm=0,chatReacts={},chatReactFor=0,chatReads={},chatSeenSent=0,chatMsgs=[],chatLast=0,chatOpen=false,chatLoading=false,chatRead=0,chatInit=false,peekTimer;
   // Notifs du chat coupées par l'admin pour ce joueur : pas de bulle, pas de compteur, pas d'alerte de tag.
   function chatMuted(){return !!(selectedPlayer&&player(selectedPlayer).muted);}
   function chatPeek(m){
@@ -799,6 +799,7 @@
   }
   let lastTap={id:0,t:0};
   $('chat-list').addEventListener('click',e=>{
+    const tb=e.target.closest('[data-tr]');if(tb){e.stopPropagation();translateMsg(Number(tb.dataset.tr));return;}
     const b=e.target.closest('[data-react]');
     if(b){e.stopPropagation();sendReact(Number(b.dataset.msg),b.dataset.react);return;}
     if(e.target.closest('a,button'))return;
@@ -812,15 +813,56 @@
     const bar=$('chat-list').querySelector('.react-bar');if(bar)bar.scrollIntoView({block:'nearest'});
   });
   // Le chat peut aussi être vidé par l'admin : le serveur donne l'heure à partir de laquelle on garde les messages.
+  // L'admin a vidé le chat : on recharge la page chez tout le monde (sauf pendant un lancer ou une partie en cours, on attend la fin).
+  function reloadAfterClear(){chatMsgs=chatMsgs.filter(m=>m.temp);renderChat();const go=()=>{if(activeRound||(window.YetiGames&&YetiGames.openId)){setTimeout(go,2000);return;}location.reload();};setTimeout(go,300);}
   function noteChatSince(v){const t=Date.parse(v||'');if(t&&t>chatServerSince){chatServerSince=t;return true;}return false;}
   $('chat-clear').addEventListener('click',async()=>{
     const b=$('chat-clear');
     if(chatClearArm<Date.now()){chatClearArm=Date.now()+4000;b.textContent='Vider ?';b.classList.add('arm');setTimeout(()=>{if(chatClearArm<=Date.now()){b.textContent='🧹';b.classList.remove('arm');}},4100);return;}
     chatClearArm=0;b.textContent='🧹';b.classList.remove('arm');
     const s=getSession();if(!s||s.player!==authed){showToast('Reconnecte-toi.');return;}
-    try{const r=await request('/api/chat/clear',{admin:authed,token:s.token});noteChatSince(r&&r.since);chatReacts={};chatReads={};renderChat();showToast(`🧹 Chat vidé pour tout le monde (${r&&r.deleted||0} message${(r&&r.deleted)>1?'s':''}).`);}
+    try{const r=await request('/api/chat/clear',{admin:authed,token:s.token});noteChatSince(r&&r.since);chatClearedSeen=Math.max(chatClearedSeen||0,Date.parse(r&&r.since||'')||0);chatReacts={};chatReads={};renderChat();showToast(`🧹 Chat vidé pour tout le monde (${r&&r.deleted||0} message${(r&&r.deleted)>1?'s':''}).`);}
     catch(e){showToast(e.message||'Impossible de vider le chat.');}
   });
+  // ---------- Traduction des messages écrits dans une autre langue ----------
+  const FR_W=new Set('le la les un une des de du et est pas je tu il elle on nous vous ils elles que qui quoi mais ou donc car ce cette ces mon ma mes ton ta tes son sa ses en au aux avec pour sur dans par plus tres très bien oui non cest c’est suis es sommes êtes sont ai as avons avez ont fait faire vas va allez aller moi toi lui leur ça ca ici là quand comme aussi encore jamais rien tout tous toute trop vraiment mdr ptdr wsh frero frère grave genre ouais nan bah bon ben alors'.split(' '));
+  const XX_W=new Set('the and is are you i it to of in that this what with for not have be was were my your me he she they we do does did can will just like so but how why when where there here hello hi thanks please yes no el los las una por para que con como pero muy está estoy gracias hola der die das und ist nicht ich du sie wir ein eine mit für auf ja nein danke il lo gli che non sono sei è ciao grazie molto perché anche come sta você não sim obrigado muito tudo bem eu ele ela'.split(' '));
+  function looksForeign(text){
+    const t=String(text||'').replace(/@[\p{L}\p{N}_-]+/gu,' ').replace(/https?:\/\/\S+/g,' ');
+    const letters=t.match(/\p{L}/gu)||[];if(letters.length<4)return false;
+    const latin=letters.filter(c=>/\p{Script=Latin}/u.test(c)).length;if(latin/letters.length<0.6)return true; // arabe, cyrillique, asiatique…
+    const words=(t.toLowerCase().match(/[\p{L}’']+/gu)||[]).filter(w=>w.length>1);if(words.length<2)return false;
+    let fr=0,xx=0;for(const w of words){if(FR_W.has(w))fr++;else if(XX_W.has(w))xx++;}
+    if(/[èêàùçœ]/i.test(t))fr+=1;if(/[¿¡ñßäöüãõ]/i.test(t))xx+=2;
+    return xx>=1&&xx>fr;
+  }
+  const LANG_FR=(()=>{try{return new Intl.DisplayNames(['fr'],{type:'language'});}catch(_){return null;}})();
+  function translateBlock(m){
+    const tr=chatTr[m.id];
+    if(!tr&&!looksForeign(m.body))return '';
+    if(!tr)return `<button type="button" class="tr-btn" data-tr="${m.id}">🌐 Traduire</button>`;
+    if(tr.state==='loading')return '<span class="tr-btn wait">🌐 Traduction…</span>';
+    if(tr.state==='err')return `<button type="button" class="tr-btn" data-tr="${m.id}">🌐 Réessayer la traduction</button>`;
+    if(tr.hidden)return `<button type="button" class="tr-btn" data-tr="${m.id}">🌐 Voir la traduction</button>`;
+    const from=tr.lang&&LANG_FR?(()=>{try{return LANG_FR.of(tr.lang);}catch(_){return tr.lang;}})():'';
+    return `<p class="tr-out">${tr.same?'Déjà en français 🙂':escape(tr.text)}</p><button type="button" class="tr-btn" data-tr="${m.id}">${from&&!tr.same?`Traduit de l’${escape(from)} · `:''}masquer</button>`;
+  }
+  async function translateMsg(id){
+    const m=chatMsgs.find(x=>x.id===id);if(!m)return;const tr=chatTr[id];
+    if(tr&&tr.state==='done'){tr.hidden=!tr.hidden;renderChat();return;}
+    if(tr&&tr.state==='loading')return;
+    chatTr[id]={state:'loading'};renderChat();
+    try{
+      const q=String(m.body).replace(/@([\p{L}\p{N}_-]+)/gu,'$1').slice(0,480);
+      const res=await fetch('https://api.mymemory.translated.net/get?q='+encodeURIComponent(q)+'&langpair=autodetect|fr');
+      const d=await res.json();const out=d&&d.responseData&&d.responseData.translatedText;
+      if(!res.ok||!out||d.quotaFinished)throw new Error('trad');
+      const lang=String(d.responseData.detectedLanguage||'').split('-')[0].toLowerCase();
+      const txt=document.createElement('textarea');txt.innerHTML=out; // décode les entités HTML renvoyées par l'API
+      chatTr[id]={state:'done',text:txt.value,lang,same:lang==='fr'};
+    }catch(_){chatTr[id]={state:'err'};showToast('Traduction impossible pour le moment.');}
+    renderChat();
+  }
   function chatBottom(){const l=$('chat-list');if(l)l.scrollTop=l.scrollHeight;}
   const chatHour=()=>Math.floor(Date.now()/900000)*900000;
   let chatHourShown=chatHour();
@@ -841,7 +883,8 @@
       return chips||bar?`<div class="react-row ${m.player===selectedPlayer?'mine':''}">${chips}</div>${bar}`.replace('<div class="react-row '+(m.player===selectedPlayer?'mine':'')+'"></div>',''):'';};
     list.innerHTML=chatMsgs.length?chatMsgs.map(m=>{const p=player(m.player),mine=m.player===selectedPlayer,d=new Date(m.at||Date.now());
       const media=mediaOf(m.body);
-      return `<div data-mid="${m.temp?'':m.id}" class="chat-msg ${chatReactFor===m.id?'picked':''} ${mine?'mine':''} ${m.temp?'temp':''} ${media?'media':''} ${!mine&&mentionsMe(m)?'tagged':''}"><div class="chat-meta"><i class="player-dot" style="background:${p.color}"></i><b>${escape(cn(p))}</b><time>${dayKey(d)===today?'':chatDay.format(d)+' '}${chatTime.format(d)}</time></div>${media||`<p>${richBody(m.body)}</p>`}</div>${reactLine(m)}${seenLine(m)}`;}).join(''):'<p class="chat-empty">Pas encore de message. Lance les hostilités.<br><small>Le chat se vide toutes les 15 min.</small></p>';
+      const trBox=!media&&!m.temp&&!mine?translateBlock(m):'';
+      return `<div data-mid="${m.temp?'':m.id}" class="chat-msg ${chatReactFor===m.id?'picked':''} ${mine?'mine':''} ${m.temp?'temp':''} ${media?'media':''} ${!mine&&mentionsMe(m)?'tagged':''}"><div class="chat-meta"><i class="player-dot" style="background:${p.color}"></i><b>${escape(cn(p))}</b><time>${dayKey(d)===today?'':chatDay.format(d)+' '}${chatTime.format(d)}</time></div>${media||`<p>${richBody(m.body)}</p>`}${trBox}</div>${reactLine(m)}${seenLine(m)}`;}).join(''):'<p class="chat-empty">Pas encore de message. Lance les hostilités.<br><small>Le chat se vide toutes les 15 min.</small></p>';
     if(stick||toEnd){chatBottom();
       // les GIF se chargent après coup : on redescend quand chacun arrive
       list.querySelectorAll('img').forEach(img=>{if(!img.complete)img.addEventListener('load',chatBottom,{once:true});});}
@@ -980,6 +1023,7 @@
       if(r&&r.bans&&typeof r.bans==='object'){const key=JSON.stringify(r.bans);if(key!==JSON.stringify(bans)){bans=r.bans;renderProfiles();if(!$('admin-overlay').hidden)renderAdmin();}}
       if(selectedPlayer&&banLeft(selectedPlayer))kick(selectedPlayer);
       if(r&&noteChatSince(r.chat_since))renderChat();
+      if(r&&'chat_cleared' in r){const c=Date.parse(r.chat_cleared||'')||0;if(chatClearedSeen===null)chatClearedSeen=c;else if(c>chatClearedSeen){chatClearedSeen=c;reloadAfterClear();}}
       if(r&&r.reactions&&typeof r.reactions==='object'){const key=JSON.stringify(r.reactions);if(key!==JSON.stringify(chatReacts)){chatReacts=r.reactions;if(chatOpen)renderChat();}}
       if(r&&r.reads&&typeof r.reads==='object'){const key=JSON.stringify(r.reads);if(key!==JSON.stringify(chatReads)){chatReads=r.reads;if(chatOpen)renderChat();}}
       if(r&&Array.isArray(r.online)){const next=new Set(r.online.map(Number));if([...next].join()!==[...online].join()){online=next;renderProfiles();}}}
