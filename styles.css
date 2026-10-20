@@ -694,3 +694,4 @@ body.chat-wide .chat-gif.giphy{max-width:260px;max-height:260px;width:auto;heigh
 .nv-hull.svg{display:block;height:15px;flex:none}
 @media(prefers-reduced-motion:reduce){.nv-sprite,.nv-flame,.nv-smoke,.nv-ripple{animation:none}}
 .chat-clear-btn{font-size:15px;width:auto;min-width:32px;padding:0 6px;border-radius:16px}.chat-clear-btn.arm{background:#c0392b;font:700 12px var(--font);padding:0 10px}
+.admin-actions button.mute{border-color:#c9d3e0;color:#36507a}.admin-actions button.mute:hover{background:#eaf0f8}.admin-actions button.mute.on{border-color:#bfe3c9;color:#1f7a3f}

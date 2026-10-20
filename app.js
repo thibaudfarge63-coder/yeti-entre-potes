@@ -45,7 +45,7 @@
       if(Array.isArray(p.skins))savedSkins.set(id,p.skins.map(String));
       if(Number.isFinite(Number(p.total)))totals.set(id,Number(p.total));
       if(p.banned_until)bans[id]=p.banned_until;else if(p.banned_until===null)delete bans[id];
-      return {id,name:name.slice(0,24),color,locked:!!p.locked,admin:!!p.admin,chat:p.chat?String(p.chat).slice(0,24):''};
+      return {id,name:name.slice(0,24),color,locked:!!p.locked,admin:!!p.admin,muted:!!p.muted,chat:p.chat?String(p.chat).slice(0,24):''};
     }).filter(Boolean).sort((a,b)=>a.id-b.id);
     if(!parsed.length)return;
     PLAYERS=parsed;renderPlayerOptions();
@@ -756,6 +756,8 @@
   }
   // ---------- Chat ----------
   let chatServerSince=0,chatClearArm=0,chatReacts={},chatReactFor=0,chatReads={},chatSeenSent=0,chatMsgs=[],chatLast=0,chatOpen=false,chatLoading=false,chatRead=0,chatInit=false,peekTimer;
+  // Notifs du chat coupées par l'admin pour ce joueur : pas de bulle, pas de compteur, pas d'alerte de tag.
+  function chatMuted(){return !!(selectedPlayer&&player(selectedPlayer).muted);}
   function chatPeek(m){
     const p=player(m.player),el=$('chat-peek');
     el.innerHTML=`<i class="player-dot" style="background:${p.color}"></i><b>${escape(cn(p))}</b> : ${mentionsMe(m)?'🔔 ':''}${escape(plainBody(m.body))}`;el.hidden=false;
@@ -771,9 +773,9 @@
       const known=new Set(chatMsgs.map(m=>m.id));
       const fresh=[];for(const m of list){if(!known.has(Number(m.id))){const n={...m,id:Number(m.id),player:Number(m.player)};chatMsgs.push(n);fresh.push(n);}}
       const others=chatInit?fresh.filter(m=>m.player!==selectedPlayer):[];chatInit=true;
-      if(others.length&&!chatOpen)chatPeek(others[others.length-1]);
+      if(others.length&&!chatOpen&&!chatMuted())chatPeek(others[others.length-1]);
       const tag=others.filter(mentionsMe).pop();
-      if(tag){showToast(`🔔 ${cn(player(tag.player))} t’a tagué : ${plainBody(tag.body).slice(0,80)}`);try{navigator.vibrate&&navigator.vibrate([80,60,80]);}catch(_){}}
+      if(tag&&!chatMuted()){showToast(`🔔 ${cn(player(tag.player))} t’a tagué : ${plainBody(tag.body).slice(0,80)}`);try{navigator.vibrate&&navigator.vibrate([80,60,80]);}catch(_){}}
       chatMsgs=chatMsgs.filter(m=>!m.temp||!list.some(x=>Number(x.player)===m.player&&x.body===m.body));
       chatMsgs.sort((a,b)=>(a.temp?1e15:a.id)-(b.temp?1e15:b.id));chatMsgs=chatMsgs.slice(-150);
       chatLast=Math.max(chatLast,...chatMsgs.filter(m=>!m.temp).map(m=>m.id),0);renderChat(fresh.length>0);
@@ -845,7 +847,7 @@
       list.querySelectorAll('img').forEach(img=>{if(!img.complete)img.addEventListener('load',chatBottom,{once:true});});}
     if(chatOpen){chatRead=chatLast;try{localStorage.setItem('yeti-chat-read',String(chatRead));}catch(_){}sendSeen();}
     const unread=chatMsgs.filter(m=>!m.temp&&m.id>chatRead&&m.player!==selectedPlayer).length;
-    $('chat-badge').hidden=!unread;$('chat-badge').textContent=unread>9?'9+':String(unread);
+    $('chat-badge').hidden=!unread||chatMuted();$('chat-badge').textContent=unread>9?'9+':String(unread);
     const can=!!selectedPlayer&&!privateAccess;
     $('chat-input').disabled=!can;$('chat-send').disabled=!can;$('chat-pick').disabled=!can;if(!can)closePicker();
     $('chat-input').placeholder=can?`Écris en tant que ${cn(player(selectedPlayer))}…`:'Choisis ton pseudo pour écrire';
@@ -1158,12 +1160,20 @@
   function renderAdmin(){
     const list=PLAYERS.filter(p=>p.id!==authed);
     $('admin-list').innerHTML=list.map(p=>{const b=banLeft(p.id);
-      return `<div class="admin-row ${b?'banned':''}"><div class="admin-who">${avatar(p)}<span><b>${escape(p.name)}</b><small>${b?`⛔ ${banText(p.id)}`:online.has(p.id)?'🟢 en ligne':'hors ligne'}</small></span></div><div class="admin-actions">${BAN_TIMES.map(m=>`<button type="button" data-ban="${p.id}" data-min="${m}">${m<60?m+' min':m/60+' h'}</button>`).join('')}${banPerm(p.id)&&b?'':`<button type="button" class="perm" data-ban="${p.id}" data-min="-1">🚫 Définitif</button>`}${b?`<button type="button" class="unban" data-ban="${p.id}" data-min="0">Débannir</button>`:''}</div></div>`;}).join('')||'<p class="br-empty">Personne à virer.</p>';
+      return `<div class="admin-row ${b?'banned':''}"><div class="admin-who">${avatar(p)}<span><b>${escape(p.name)}</b><small>${b?`⛔ ${banText(p.id)}`:online.has(p.id)?'🟢 en ligne':'hors ligne'}${p.muted?' · 🔕 notifs chat coupées':''}</small></span></div><div class="admin-actions">${BAN_TIMES.map(m=>`<button type="button" data-ban="${p.id}" data-min="${m}">${m<60?m+' min':m/60+' h'}</button>`).join('')}${banPerm(p.id)&&b?'':`<button type="button" class="perm" data-ban="${p.id}" data-min="-1">🚫 Définitif</button>`}${b?`<button type="button" class="unban" data-ban="${p.id}" data-min="0">Débannir</button>`:''}<button type="button" class="mute ${p.muted?'on':''}" data-mute="${p.id}">${p.muted?'🔔 Remettre les notifs chat':'🔕 Couper les notifs chat'}</button></div></div>`;}).join('')||'<p class="br-empty">Personne à virer.</p>';
   }
   $('admin-open').addEventListener('click',()=>{$('admin-error').textContent='';renderAdmin();$('admin-overlay').hidden=false;});
   $('admin-close').addEventListener('click',()=>{$('admin-overlay').hidden=true;});
   $('admin-overlay').addEventListener('click',e=>{if(e.target===e.currentTarget)$('admin-overlay').hidden=true;});
   $('admin-list').addEventListener('click',async e=>{
+    const mb=e.target.closest('[data-mute]');
+    if(mb){const target=Number(mb.dataset.mute),s=getSession(),p=PLAYERS.find(x=>x.id===target);if(!p)return;
+      if(!s||s.player!==authed){$('admin-error').textContent='Reconnecte-toi en tant qu’admin.';return;}
+      mb.disabled=true;$('admin-error').textContent='';
+      try{const r=await request('/api/mute',{admin:authed,token:s.token,target,muted:!p.muted});p.muted=!!r.muted;renderAdmin();
+        showToast(p.muted?`🔕 ${p.name} n’aura plus de notifs du chat.`:`🔔 ${p.name} a de nouveau les notifs du chat.`);}
+      catch(error){$('admin-error').textContent=error.message||'Action impossible.';mb.disabled=false;}
+      return;}
     const b=e.target.closest('[data-ban]');if(!b)return;const target=Number(b.dataset.ban),minutes=Number(b.dataset.min),s=getSession();
     if(minutes===-1&&!b.dataset.sure){b.dataset.sure='1';b.textContent='Confirmer l’exclusion ?';b.classList.add('sure');setTimeout(()=>{if(b.isConnected){delete b.dataset.sure;b.textContent='🚫 Définitif';b.classList.remove('sure');}},4000);return;}
     if(!s||s.player!==authed){$('admin-error').textContent='Reconnecte-toi en tant qu’admin.';return;}
