@@ -95,7 +95,7 @@
           throw failure('L’ajout de joueurs n’est pas encore activé sur le serveur du club.', 501, 'not_supported');
         }
         if (data && data.code === '23505') throw failure('Ce joueur existe déjà.', 409, 'duplicate_player');
-        if (data && data.code === '22023' && (name === 'yeti_send_message' || name === 'yeti_create_duel' || name === 'yeti_answer_duel' || name === 'yeti_set_password' || name === 'yeti_change_password' || name === 'yeti_login' || name === 'yeti_ban' || name === 'yeti_admin_mute' || name === 'yeti_mod' || name === 'yeti_push_subscribe' || name === 'yeti_push_test' || name === 'yeti_chat_react' || name === 'yeti_admin_clear_chat' || name === 'yeti_push_diag' || name === 'yeti_create_game' || name === 'yeti_game_state' || name === 'yeti_game_move')) throw failure(data.message || 'Message refusé.', 400, 'invalid_message');
+        if (data && data.code === '22023' && (name === 'yeti_send_message' || name === 'yeti_create_duel' || name === 'yeti_answer_duel' || name === 'yeti_set_password' || name === 'yeti_change_password' || name === 'yeti_login' || name === 'yeti_ban' || name === 'yeti_admin_mute' || name === 'yeti_mod' || name === 'yeti_send_popup' || name === 'yeti_push_subscribe' || name === 'yeti_push_test' || name === 'yeti_chat_react' || name === 'yeti_admin_clear_chat' || name === 'yeti_push_diag' || name === 'yeti_create_game' || name === 'yeti_game_state' || name === 'yeti_game_move')) throw failure(data.message || 'Message refusé.', 400, 'invalid_message');
         if (data && data.code === '22023') {
           throw failure('Ces scores ne peuvent pas être enregistrés. Ils restent en attente.', 400, 'invalid_scores');
         }
@@ -150,7 +150,7 @@
       forgetCode(config);
       return {ok: true};
     }
-    if (path !== '/api/state' && path !== '/api/scores' && path !== '/api/players' && path !== '/api/version' && path !== '/api/chat' && path !== '/api/chat/send' && path !== '/api/chat/seen' && path !== '/api/chat/react' && path !== '/api/chat/clear' && path !== '/api/duel' && path !== '/api/duel/answer' && path !== '/api/skins' && path !== '/api/presence' && path !== '/api/password' && path !== '/api/password/change' && path !== '/api/login' && path !== '/api/session' && path !== '/api/ban' && path !== '/api/mute' && path !== '/api/mod' && path !== '/api/typing' && path !== '/api/push' && path !== '/api/push/test' && path !== '/api/push/diag' && path !== '/api/game/create' && path !== '/api/game/state' && path !== '/api/game/move') {
+    if (path !== '/api/state' && path !== '/api/scores' && path !== '/api/players' && path !== '/api/version' && path !== '/api/chat' && path !== '/api/chat/send' && path !== '/api/chat/seen' && path !== '/api/chat/react' && path !== '/api/chat/clear' && path !== '/api/duel' && path !== '/api/duel/answer' && path !== '/api/skins' && path !== '/api/presence' && path !== '/api/password' && path !== '/api/password/change' && path !== '/api/login' && path !== '/api/session' && path !== '/api/ban' && path !== '/api/mute' && path !== '/api/mod' && path !== '/api/typing' && path !== '/api/popup' && path !== '/api/push' && path !== '/api/push/test' && path !== '/api/push/diag' && path !== '/api/game/create' && path !== '/api/game/state' && path !== '/api/game/move') {
       throw failure('Cette action est introuvable.', 404, 'not_found');
     }
     const invitedState = await validateInvite(config);
@@ -176,6 +176,7 @@
       if (path === '/api/game/state') return await rpc(config, 'yeti_game_state', {p_room_code: code, p_player: Number(body.player) || null, p_token: String(body.token || ''), p_duel: Number(body.duel)});
       if (path === '/api/game/move') return await rpc(config, 'yeti_game_move', {p_room_code: code, p_player: Number(body.player), p_token: String(body.token || ''), p_duel: Number(body.duel), p_ply: Number(body.ply) || 0, p_move: body.move || {}});
       if (path === '/api/mod') return await rpc(config, 'yeti_mod', {p_room_code: code, p_mod: Number(body.mod), p_token: String(body.token || ''), p_target: Number(body.target), p_action: String(body.action || ''), p_body: body.body == null ? null : String(body.body)});
+      if (path === '/api/popup') return await rpc(config, 'yeti_send_popup', {p_room_code: code, p_player: Number(body.player), p_token: String(body.token || ''), p_target: Number(body.target), p_text: String(body.text || ''), p_gif: body.gif ? String(body.gif) : null});
       if (path === '/api/typing') return await rpc(config, 'yeti_typing', {p_room_code: code, p_player: Number(body.player), p_token: String(body.token || ''), p_on: body.on !== false});
       if (path === '/api/mute') return await rpc(config, 'yeti_admin_mute', {p_room_code: code, p_admin: Number(body.admin), p_token: String(body.token || ''), p_target: Number(body.target), p_muted: !!body.muted});
       if (path === '/api/ban') return await rpc(config, 'yeti_ban', {p_room_code: code, p_admin: Number(body.admin), p_token: String(body.token || ''), p_target: Number(body.target), p_minutes: Number(body.minutes)});

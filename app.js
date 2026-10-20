@@ -897,7 +897,7 @@
     const unread=chatMsgs.filter(m=>!m.temp&&m.id>chatRead&&m.player!==selectedPlayer).length;
     $('chat-badge').hidden=!unread||chatMuted();$('chat-badge').textContent=unread>9?'9+':String(unread);
     const can=!!selectedPlayer&&!privateAccess;
-    $('chat-input').disabled=!can;$('chat-send').disabled=!can;$('chat-pick').disabled=!can;if(!can)closePicker();
+    $('chat-input').disabled=!can;$('chat-send').disabled=!can;$('chat-pick').disabled=!can;$('chat-pop').disabled=!can;if(!can)closePicker();
     $('chat-input').placeholder=can?`Écris en tant que ${cn(player(selectedPlayer))}…`:'Choisis ton pseudo pour écrire';
   }
   function toggleChat(open){
@@ -1038,12 +1038,14 @@
       if(r&&r.reads&&typeof r.reads==='object'){const key=JSON.stringify(r.reads);if(key!==JSON.stringify(chatReads)){chatReads=r.reads;if(chatOpen)renderChat();}}
       if(r&&Array.isArray(r.hidden)&&r.hidden.length){const hid=new Set(r.hidden.map(Number)),n=chatMsgs.length;chatMsgs=chatMsgs.filter(m=>m.temp||!hid.has(m.id));if(chatMsgs.length!==n)renderChat();}
       if(r)modPresence(r);
+      if(r&&Array.isArray(r.popups))popPresence(r.popups);
       if(r&&Array.isArray(r.typing)){const t=r.typing.map(Number);if(t.join()!==chatTyping.join()){chatTyping=t;renderTyping();}}
       if(r&&Array.isArray(r.online)){const next=new Set(r.online.map(Number));if([...next].join()!==[...online].join()){online=next;renderProfiles();}}}
     catch(_){}finally{presenceBusy=false;}
   }
   // Toutes les 2,5 s quand le chat est ouvert (pour « … est en train d'écrire »), sinon toutes les 5 s.
-  let presenceTick=0;setInterval(()=>{presenceTick++;if(chatOpen||presenceTick%2===0)pingPresence();},2500);
+  // Toutes les 2,5 s : messages écran et « en train d'écrire » arrivent vite.
+  setInterval(pingPresence,2500);
   // ---------- Modos : « ferme ta… », bans express, alerte spam ----------
   function isMod(){return !!(authed&&authed===selectedPlayer&&player(authed).mod);}
   let modFocus=0,spamDismissed=new Set(),warnSeen=0;try{warnSeen=Number(localStorage.getItem('yeti-warn-seen'))||0;}catch(_){}
@@ -1110,6 +1112,65 @@
     o.innerHTML=`<p><b>🚨 ${escape(cn(p))}</b> a envoyé <b>${it.n} fois</b> le même message : « ${escape(plainBody(it.body).slice(0,80))} »</p><div class="spam-actions"><button type="button" data-spam="purge">🗑️ Supprimer ces messages</button>${p.mod?'':'<button type="button" data-spam="ban30">⛔ Ban 30 s</button><button type="button" data-spam="ban60">⛔ Ban 1 min</button>'}<button type="button" class="ghost" data-spam="ignore">Ignorer</button></div>`;
     o.hidden=false;
   }
+  // ---------- Messages écran : un texte + un GIF en fond, en grand sur l'écran de quelqu'un (3 par quart d'heure) ----------
+  let popSeen=0,popQueue=[],popShowing=false,popTarget=0,popGif='',popGifOffset=0,popGifQ='',popGifTimer=0,popSeq=0;
+  try{popSeen=Number(localStorage.getItem('yeti-pop-seen'))||0;}catch(_){}
+  function popPresence(list){
+    if(!selectedPlayer)return;
+    for(const x of list){const id=Number(x.id);if(id>popSeen&&!popQueue.some(q=>q.id===id)){popQueue.push({...x,id});}}
+    popQueue.sort((a,b)=>a.id-b.id);showNextPop();
+  }
+  function showNextPop(){
+    if(popShowing||!popQueue.length)return;const x=popQueue.shift();popShowing=true;
+    popSeen=Math.max(popSeen,x.id);try{localStorage.setItem('yeti-pop-seen',String(popSeen));}catch(_){}
+    let o=$('pop-show');if(!o){o=document.createElement('div');o.id='pop-show';o.className='pop-show';document.body.appendChild(o);
+      o.addEventListener('click',e=>{if(o.dataset.ready!=='1')return;if(e.target.closest('.pop-close')||e.target===o||e.target.closest('.pop-inner')){o.hidden=true;popShowing=false;setTimeout(showNextPop,300);}});}
+    const gif=/^[A-Za-z0-9]{5,40}$/.test(x.gif||'')?`https://media.giphy.com/media/${x.gif}/giphy.webp`:'';
+    o.style.setProperty('--pop-bg',gif?`url("${gif}")`:'none');o.classList.toggle('nogif',!gif);
+    o.innerHTML=`<div class="pop-bg"></div><div class="pop-inner"><p class="pop-from">💥 Message de <b>${escape(x.from||'?')}</b></p><p class="pop-text">${escape(x.text||'')}</p><button type="button" class="pop-close" disabled>Fermer</button></div>`;
+    o.dataset.ready='0';o.hidden=false;setTimeout(()=>{o.dataset.ready='1';const b=o.querySelector('.pop-close');if(b)b.disabled=false;},1500);
+    try{navigator.vibrate&&navigator.vibrate([120,80,120]);}catch(_){}
+  }
+  function popEl(){
+    let o=$('pop-compose');if(o)return o;
+    o=document.createElement('div');o.className='access-overlay';o.id='pop-compose';o.hidden=true;
+    o.innerHTML=`<form class="access-card pop-card" role="dialog" aria-modal="true" aria-labelledby="pop-title"><span class="brand-mark" aria-hidden="true">💥</span><p class="eyebrow">MESSAGE ÉCRAN</p><h2 id="pop-title">Envahis l’écran de quelqu’un.</h2><p>Ton message s’affiche en grand chez lui, avec le GIF en fond. 3 par quart d’heure.</p>
+      <label>Pour qui ?</label><div class="pop-targets" id="pop-targets"></div>
+      <label for="pop-text">Ton message <small id="pop-count">0/120</small></label><input id="pop-text" type="text" maxlength="120" autocomplete="off" placeholder="Ex. : T’as vu mon score ? 😎">
+      <label for="pop-q">Le GIF en fond</label><input id="pop-q" type="search" placeholder="Chercher un GIF…" autocomplete="off" enterkeyhint="search"><div class="pop-gifs" id="pop-gifs"></div>
+      <button type="submit" class="primary-button" id="pop-send" disabled>💥 Envoyer</button><button type="button" class="text-button add-player-cancel" id="pop-cancel">Annuler</button><p id="pop-error" role="alert"></p></form>`;
+    document.body.appendChild(o);
+    const upd=()=>{const t=$('pop-text').value.trim();$('pop-count').textContent=`${$('pop-text').value.length}/120`;$('pop-send').disabled=!(popTarget&&t&&popGif);};
+    $('pop-text').addEventListener('input',upd);
+    $('pop-targets').addEventListener('click',e=>{const b=e.target.closest('[data-pop-to]');if(!b)return;popTarget=Number(b.dataset.popTo);renderPopTargets();upd();});
+    $('pop-gifs').addEventListener('click',e=>{const b=e.target.closest('[data-pop-gif]');if(b){popGif=b.dataset.popGif;$('pop-gifs').querySelectorAll('[data-pop-gif]').forEach(x=>x.classList.toggle('on',x===b));upd();return;}if(e.target.closest('#pop-more'))loadPopGifs(true);});
+    $('pop-q').addEventListener('input',()=>{popGifQ=$('pop-q').value;clearTimeout(popGifTimer);popGifTimer=setTimeout(()=>{if(popGifQ.trim().length!==1)loadPopGifs(false);},500);});
+    $('pop-q').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();clearTimeout(popGifTimer);popGifQ=$('pop-q').value;loadPopGifs(false);}});
+    $('pop-cancel').addEventListener('click',()=>{o.hidden=true;});
+    o.addEventListener('click',e=>{if(e.target===o)o.hidden=true;});
+    o.querySelector('form').addEventListener('submit',async e=>{e.preventDefault();const s=getSession();
+      if(!s||!authed||s.player!==authed){$('pop-error').textContent='Connecte-toi pour envoyer ça.';return;}
+      $('pop-send').disabled=true;$('pop-error').textContent='';
+      try{const r=await request('/api/popup',{player:authed,token:s.token,target:popTarget,text:$('pop-text').value,gif:popGif});
+        o.hidden=true;showToast(`💥 Envoyé à ${cn(player(popTarget))} ! ${r&&r.left>0?`Encore ${r.left} possible${r.left>1?'s':''} ce quart d’heure.`:'C’était ton dernier pour ce quart d’heure.'}`);
+      }catch(err){$('pop-error').textContent=err.message||'Envoi impossible.';$('pop-send').disabled=false;}});
+    return o;
+  }
+  function renderPopTargets(){$('pop-targets').innerHTML=PLAYERS.filter(p=>p.id!==authed).map(p=>`<button type="button" class="pop-to ${popTarget===p.id?'on':''}" data-pop-to="${p.id}">${avatar(p)}<span>${escape(cn(p))}</span>${online.has(p.id)?'<i class="online-mini"></i>':''}</button>`).join('');}
+  async function loadPopGifs(more){
+    const grid=$('pop-gifs'),cfg=window.YETI_CONFIG||{},code=clubCode();if(!code||!cfg.supabaseUrl){grid.innerHTML='<p class="gif-empty">GIF indisponibles.</p>';return;}
+    if(!more){popGifOffset=0;grid.innerHTML='<p class="gif-empty">Chargement…</p>';}
+    const seq=++popSeq,q=popGifQ.trim();
+    try{const j=await giphyGet(`${cfg.supabaseUrl}/functions/v1/yeti-giphy?code=${encodeURIComponent(code)}&q=${encodeURIComponent(q)}&offset=${popGifOffset}`);if(seq!==popSeq)return;
+      const items=(j.data||[]).filter(g=>/^[A-Za-z0-9]{5,40}$/.test(g.id)).map(g=>`<button type="button" data-pop-gif="${g.id}" class="${g.id===popGif?'on':''}"><img src="${escape(g.url||`https://media.giphy.com/media/${g.id}/100w.webp`)}" alt="${escape(g.title||'GIF')}" loading="lazy"></button>`).join('');
+      const old=$('pop-more');if(old)old.remove();
+      if(!more)grid.innerHTML=items||'<p class="gif-empty">Aucun GIF trouvé.</p>';else grid.insertAdjacentHTML('beforeend',items);
+      popGifOffset+=(j.data||[]).length;if(j.total>popGifOffset&&popGifOffset<240)grid.insertAdjacentHTML('beforeend','<button type="button" id="pop-more" class="pop-more">Plus de GIFs</button>');
+    }catch(e){if(seq===popSeq&&!more)grid.innerHTML='<p class="gif-empty">GIPHY ne répond pas, réessaie.</p>';}
+  }
+  $('chat-pop').addEventListener('click',()=>{if(!authed||authed!==selectedPlayer){showToast('Connecte-toi pour envoyer un message écran.');return;}
+    const o=popEl();closePicker();$('pop-error').textContent='';$('pop-send').disabled=true;popGif='';$('pop-text').value='';$('pop-count').textContent='0/120';$('pop-q').value='';popGifQ='';
+    renderPopTargets();o.hidden=false;loadPopGifs(false);setTimeout(()=>$('pop-text').focus(),60);});
   // ---------- « … est en train d'écrire » ----------
   let typingSent=0,typingOn=false,chatTyping=[];
   function sendTyping(on){const s=getSession();if(!s||!authed||s.player!==authed)return;typingOn=on;typingSent=on?Date.now():0;request('/api/typing',{player:authed,token:s.token,on}).catch(()=>{});}
