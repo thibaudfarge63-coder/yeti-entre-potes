@@ -745,17 +745,37 @@ body.chat-wide .chat-gif.giphy{max-width:260px;max-height:260px;width:auto;heigh
 .chat-dev small{font-size:10px;color:#cfe0c2}
 /* Messages écran */
 .chat-pop-btn{font-size:18px!important}
-#pop-compose{z-index:270}
-.pop-card{max-height:calc(100vh - 40px);overflow:auto}
-.pop-card label small{float:right;color:var(--muted);font-weight:400}
-.pop-targets{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.pop-to{display:flex;align-items:center;gap:6px;border:2px solid var(--line);background:#fff;border-radius:20px;padding:3px 10px 3px 3px;font:600 12px var(--font);position:relative}
-.pop-to .ranking-avatar{width:24px;height:24px}.pop-to.on{border-color:var(--orange);background:#fff3ea}
-.pop-to .online-mini{position:absolute;top:2px;left:20px}
-.pop-gifs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;max-height:210px;overflow:auto;margin:8px 0 14px}
-.pop-gifs button{border:3px solid transparent;padding:0;border-radius:8px;overflow:hidden;background:var(--paper);aspect-ratio:1}
-.pop-gifs button.on{border-color:var(--orange)}.pop-gifs img{width:100%;height:100%;object-fit:cover;display:block}
-.pop-gifs .pop-more{grid-column:1/-1;aspect-ratio:auto;padding:8px;font:600 11px var(--font)}
+#pop-compose{z-index:270;align-items:start;overflow-y:auto}
+.pop-card{width:min(640px,100%);padding:22px 24px 20px;margin:auto 0}
+.pop-head{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+.pop-icon{display:grid;place-items:center;width:46px;height:46px;border-radius:12px;background:#fff0e6;font-size:26px;flex:none}
+.pop-head .eyebrow{margin:0 0 2px;color:var(--orange)}.pop-head h2{margin:0!important;font-size:22px!important}
+.pop-x{margin-left:auto;align-self:flex-start;border:0;background:var(--paper);width:34px;height:34px;border-radius:50%;font-size:14px}
+.pop-step{display:flex;align-items:center;gap:8px;margin:16px 0 8px;font:700 13px var(--font);color:var(--ink)!important}
+.pop-step b{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--green);color:#fff;font-size:11px}
+.pop-step small{margin-left:auto;color:var(--muted);font-weight:500}
+.pop-input{display:block;width:100%;border:1px solid var(--line)!important;border-radius:10px!important;padding:12px 14px!important;margin:0!important;background:var(--paper)!important;font-size:14px}
+.pop-targets{display:flex;flex-wrap:wrap;gap:6px}
+.pop-to{display:flex;align-items:center;gap:6px;border:2px solid var(--line);background:#fff;border-radius:22px;padding:3px 12px 3px 3px;font:600 13px var(--font);position:relative}
+.pop-to .ranking-avatar{width:28px;height:28px}.pop-to.on{border-color:var(--orange);background:#fff3ea;box-shadow:0 0 0 3px #f08b5033}
+.pop-to .online-mini{position:absolute;top:2px;left:24px}
+.pop-preview{position:relative;aspect-ratio:16/9;border-radius:14px;overflow:hidden;background:linear-gradient(135deg,#2b2b2b,#555);display:flex;align-items:center;justify-content:center;margin-bottom:10px}
+.pop-preview-bg{position:absolute;inset:0;background:center/cover no-repeat}
+.pop-preview.has-gif:after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.1),rgba(0,0,0,.5))}
+.pop-preview-text{position:relative;z-index:1;margin:0!important;padding:0 16px;text-align:center;color:#fff!important;font:900 clamp(18px,4.5vw,28px)/1.1 var(--display)!important;text-shadow:0 2px 0 #000,0 0 14px rgba(0,0,0,.7);overflow-wrap:anywhere}
+.pop-preview-hint{position:absolute;z-index:1;left:10px;bottom:8px;font:700 10px var(--font);color:#fff;background:rgba(0,0,0,.45);border-radius:6px;padding:2px 7px}
+.pop-gifs{columns:3 130px;column-gap:6px;max-height:min(46vh,380px);overflow-y:auto;margin-top:10px;padding:2px;border-radius:10px}
+.pop-gifs button{display:block;width:100%;margin:0 0 6px;break-inside:avoid;border:0;padding:0;border-radius:10px;overflow:hidden;position:relative;background:#e7ece2;cursor:pointer}
+.pop-gifs img{display:block;width:100%;height:auto;min-height:70px;object-fit:cover}
+.pop-gifs button:hover img{filter:brightness(1.08)}
+.pop-gifs button.on{outline:4px solid var(--orange);outline-offset:-4px}
+.pop-gifs button.on:after{content:'✓';position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;background:var(--orange);color:#fff;font:900 14px/24px var(--font);text-align:center}
+.pop-gifs .gif-empty{column-span:all;text-align:center;color:var(--muted);font-size:12px;padding:20px}
+.pop-more{display:block;width:100%;margin-top:6px;border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px;font:600 12px var(--font)}
+.pop-foot{position:sticky;bottom:-20px;background:#fff;padding:12px 0 0;margin-top:8px}
+.pop-foot .primary-button{padding:14px;font:700 15px var(--font);border-radius:12px}
+.pop-foot #pop-error{color:#a95335;font-size:12px;margin:8px 0 0;min-height:1em}
+@media(max-width:600px){#pop-compose{padding:0}.pop-preview{aspect-ratio:2/1}.pop-card{border-radius:0;min-height:100%;padding:16px 16px 14px}.pop-gifs{columns:2 120px}.pop-head h2{font-size:19px!important}}
 .pop-show{position:fixed;inset:0;z-index:310;display:flex;align-items:center;justify-content:center;padding:20px;background:#000;animation:pop-in .35s cubic-bezier(.2,1.4,.4,1)}
 .pop-show[hidden]{display:none}
 .pop-bg{position:absolute;inset:0;background:var(--pop-bg) center/cover no-repeat;filter:saturate(1.1)}

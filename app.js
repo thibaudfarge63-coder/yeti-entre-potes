@@ -1134,19 +1134,27 @@
   function popEl(){
     let o=$('pop-compose');if(o)return o;
     o=document.createElement('div');o.className='access-overlay';o.id='pop-compose';o.hidden=true;
-    o.innerHTML=`<form class="access-card pop-card" role="dialog" aria-modal="true" aria-labelledby="pop-title"><span class="brand-mark" aria-hidden="true">💥</span><p class="eyebrow">MESSAGE ÉCRAN</p><h2 id="pop-title">Envahis l’écran de quelqu’un.</h2><p>Ton message s’affiche en grand chez lui, avec le GIF en fond. 3 par quart d’heure.</p>
-      <label>Pour qui ?</label><div class="pop-targets" id="pop-targets"></div>
-      <label for="pop-text">Ton message <small id="pop-count">0/120</small></label><input id="pop-text" type="text" maxlength="120" autocomplete="off" placeholder="Ex. : T’as vu mon score ? 😎">
-      <label for="pop-q">Le GIF en fond</label><input id="pop-q" type="search" placeholder="Chercher un GIF…" autocomplete="off" enterkeyhint="search"><div class="pop-gifs" id="pop-gifs"></div>
-      <button type="submit" class="primary-button" id="pop-send" disabled>💥 Envoyer</button><button type="button" class="text-button add-player-cancel" id="pop-cancel">Annuler</button><p id="pop-error" role="alert"></p></form>`;
+    o.innerHTML=`<form class="access-card pop-card" role="dialog" aria-modal="true" aria-labelledby="pop-title">
+      <div class="pop-head"><span class="pop-icon" aria-hidden="true">💥</span><div><p class="eyebrow">MESSAGE ÉCRAN · 3 PAR QUART D’HEURE</p><h2 id="pop-title">Envahis l’écran de quelqu’un</h2></div><button type="button" class="pop-x" id="pop-x" aria-label="Fermer">✕</button></div>
+      <p class="pop-step"><b>1</b> Pour qui ?</p><div class="pop-targets" id="pop-targets"></div>
+      <p class="pop-step"><b>2</b> Ton message <small id="pop-count">0/120</small></p><input id="pop-text" class="pop-input" type="text" maxlength="120" autocomplete="off" placeholder="Ex. : T’as vu mon score ? 😎">
+      <p class="pop-step"><b>3</b> Le GIF en fond</p>
+      <div class="pop-preview" id="pop-preview"><div class="pop-preview-bg" id="pop-preview-bg"></div><p class="pop-preview-text" id="pop-preview-text">Ton message ici</p><span class="pop-preview-hint" id="pop-preview-hint">Aperçu · choisis un GIF ci-dessous</span></div>
+      <input id="pop-q" class="pop-input" type="search" placeholder="🔍 Chercher un GIF (ex. : rire, bravo, chat…)" autocomplete="off" enterkeyhint="search">
+      <div class="pop-gifs" id="pop-gifs"></div><button type="button" class="pop-more" id="pop-more" hidden>Plus de GIFs</button>
+      <div class="pop-foot"><button type="submit" class="primary-button" id="pop-send" disabled>💥 Envoyer</button><p id="pop-error" role="alert"></p></div></form>`;
     document.body.appendChild(o);
-    const upd=()=>{const t=$('pop-text').value.trim();$('pop-count').textContent=`${$('pop-text').value.length}/120`;$('pop-send').disabled=!(popTarget&&t&&popGif);};
+    const upd=()=>{const t=$('pop-text').value.trim();$('pop-count').textContent=`${$('pop-text').value.length}/120`;$('pop-send').disabled=!(popTarget&&t&&popGif);
+      $('pop-preview-text').textContent=t||'Ton message ici';$('pop-preview').classList.toggle('has-gif',!!popGif);
+      $('pop-preview-bg').style.backgroundImage=popGif?`url("https://media.giphy.com/media/${popGif}/giphy.webp")`:'none';
+      $('pop-preview-hint').textContent=popGif?'Aperçu de ce qu’il verra':'Aperçu · choisis un GIF ci-dessous';};
+    o._upd=upd;
     $('pop-text').addEventListener('input',upd);
     $('pop-targets').addEventListener('click',e=>{const b=e.target.closest('[data-pop-to]');if(!b)return;popTarget=Number(b.dataset.popTo);renderPopTargets();upd();});
-    $('pop-gifs').addEventListener('click',e=>{const b=e.target.closest('[data-pop-gif]');if(b){popGif=b.dataset.popGif;$('pop-gifs').querySelectorAll('[data-pop-gif]').forEach(x=>x.classList.toggle('on',x===b));upd();return;}if(e.target.closest('#pop-more'))loadPopGifs(true);});
+    $('pop-gifs').addEventListener('click',e=>{const b=e.target.closest('[data-pop-gif]');if(b){popGif=b.dataset.popGif;$('pop-gifs').querySelectorAll('[data-pop-gif]').forEach(x=>x.classList.toggle('on',x===b));upd();}});
+    $('pop-more').addEventListener('click',()=>loadPopGifs(true));$('pop-x').addEventListener('click',()=>{o.hidden=true;});
     $('pop-q').addEventListener('input',()=>{popGifQ=$('pop-q').value;clearTimeout(popGifTimer);popGifTimer=setTimeout(()=>{if(popGifQ.trim().length!==1)loadPopGifs(false);},500);});
     $('pop-q').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();clearTimeout(popGifTimer);popGifQ=$('pop-q').value;loadPopGifs(false);}});
-    $('pop-cancel').addEventListener('click',()=>{o.hidden=true;});
     o.addEventListener('click',e=>{if(e.target===o)o.hidden=true;});
     o.querySelector('form').addEventListener('submit',async e=>{e.preventDefault();const s=getSession();
       if(!s||!authed||s.player!==authed){$('pop-error').textContent='Connecte-toi pour envoyer ça.';return;}
@@ -1163,14 +1171,13 @@
     const seq=++popSeq,q=popGifQ.trim();
     try{const j=await giphyGet(`${cfg.supabaseUrl}/functions/v1/yeti-giphy?code=${encodeURIComponent(code)}&q=${encodeURIComponent(q)}&offset=${popGifOffset}`);if(seq!==popSeq)return;
       const items=(j.data||[]).filter(g=>/^[A-Za-z0-9]{5,40}$/.test(g.id)).map(g=>`<button type="button" data-pop-gif="${g.id}" class="${g.id===popGif?'on':''}"><img src="${escape(g.url||`https://media.giphy.com/media/${g.id}/100w.webp`)}" alt="${escape(g.title||'GIF')}" loading="lazy"></button>`).join('');
-      const old=$('pop-more');if(old)old.remove();
-      if(!more)grid.innerHTML=items||'<p class="gif-empty">Aucun GIF trouvé.</p>';else grid.insertAdjacentHTML('beforeend',items);
-      popGifOffset+=(j.data||[]).length;if(j.total>popGifOffset&&popGifOffset<240)grid.insertAdjacentHTML('beforeend','<button type="button" id="pop-more" class="pop-more">Plus de GIFs</button>');
+      if(!more){grid.innerHTML=items||'<p class="gif-empty">Aucun GIF trouvé.</p>';grid.scrollTop=0;}else grid.insertAdjacentHTML('beforeend',items);
+      popGifOffset+=(j.data||[]).length;$('pop-more').hidden=!(j.total>popGifOffset&&popGifOffset<240);
     }catch(e){if(seq===popSeq&&!more)grid.innerHTML='<p class="gif-empty">GIPHY ne répond pas, réessaie.</p>';}
   }
   $('chat-pop').addEventListener('click',()=>{if(!authed||authed!==selectedPlayer){showToast('Connecte-toi pour envoyer un message écran.');return;}
     const o=popEl();closePicker();$('pop-error').textContent='';$('pop-send').disabled=true;popGif='';$('pop-text').value='';$('pop-count').textContent='0/120';$('pop-q').value='';popGifQ='';
-    renderPopTargets();o.hidden=false;loadPopGifs(false);setTimeout(()=>$('pop-text').focus(),60);});
+    renderPopTargets();if(o._upd)o._upd();o.hidden=false;loadPopGifs(false);setTimeout(()=>$('pop-text').focus(),60);});
   // ---------- « … est en train d'écrire » ----------
   let typingSent=0,typingOn=false,chatTyping=[];
   function sendTyping(on){const s=getSession();if(!s||!authed||s.player!==authed)return;typingOn=on;typingSent=on?Date.now():0;request('/api/typing',{player:authed,token:s.token,on}).catch(()=>{});}
