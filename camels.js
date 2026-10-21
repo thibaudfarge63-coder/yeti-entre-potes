@@ -5,7 +5,7 @@
   const COLORS = ['#e53935', '#1e88e5', '#f9a825', '#43a047'];
   const LIGHT = ['#ffd6d4', '#d3e8fb', '#fff0b8', '#d6f0d4'];
   const CNAME = ['Rouge', 'Bleu', 'Jaune', 'Vert'];
-  const NEED = [1, 2, 4];
+  const NEED = [1, 2, 3, 4];
   // Piste : 56 cases dans le sens des aiguilles d'une montre, case 0 = pied de l'escalier du haut. [ligne, colonne]
   const TRACK = (() => {
     const t = [[0, 7]];
@@ -76,7 +76,8 @@
     const form = me ? `<div class="cam-new">
         <p class="duel-pick-label">Invite jusqu’à 3 potes (les places libres sont jouées par l’ordi) :</p>
         <div class="duel-pick cam-pick">${players.map(p => `<button type="button" class="duel-opp ${pick.has(p.id) ? 'on' : ''}" data-cam-pick="${p.id}" aria-pressed="${pick.has(p.id)}">${ctx.avatar(p)}<span>${esc(p.name)}</span></button>`).join('')}</div>
-        <p class="duel-pick-label">Pour gagner : les 4 chameaux au centre.</p>
+        <p class="duel-pick-label">La partie se termine quand un joueur a rentré au centre :</p>
+        <div class="cam-need">${NEED.map(n => `<button type="button" class="${need === n ? 'on' : ''}" data-cam-need="${n}">${n} chameau${n > 1 ? 'x' : ''}${n === 1 ? ' · rapide' : n === 4 ? ' · classique' : ''}</button>`).join('')}</div>
         <button type="button" class="cam-go" data-cam-create ${creating ? 'disabled' : ''}>🐪 ${pick.size ? `Inviter ${pick.size} pote${pick.size > 1 ? 's' : ''}` : 'Jouer contre 3 bots'}</button>
       </div>` : '<p class="br-empty">Connecte-toi pour lancer une partie.</p>';
     const mine = list.filter(g => g.seats.includes(me) && g.status !== 'done');
