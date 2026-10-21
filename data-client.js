@@ -113,6 +113,23 @@
     }
   }
 
+  // Fonctions serveur (Edge) : le jeu Skull King.
+  async function edge(config, name, payload) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
+    try {
+      const response = await fetch(`${config.base}/functions/v1/${name}`, {method: 'POST', headers: {'Content-Type': 'application/json', apikey: config.key},
+        body: JSON.stringify(payload), signal: controller.signal, credentials: 'omit', referrerPolicy: 'no-referrer'});
+      let data = null;
+      try { data = await response.json(); } catch (_) { throw failure('Le serveur de jeu ne répond pas correctement.', 503, 'invalid_response'); }
+      if (!response.ok) throw failure((data && data.error) || 'Le serveur de jeu est indisponible.', response.status, 'game_error');
+      return data;
+    } catch (error) {
+      if (error && error.code && error.status) throw error;
+      throw failure('Connexion au serveur de jeu interrompue. Réessaie.', 503, 'unavailable');
+    } finally { clearTimeout(timer); }
+  }
+
   async function readState(config, code) {
     const data = await rpc(config, 'yeti_get_state', {p_room_code: code});
     if (!Array.isArray(data.players) || !Array.isArray(data.scores)) {
@@ -150,7 +167,7 @@
       forgetCode(config);
       return {ok: true};
     }
-    if (path !== '/api/state' && path !== '/api/scores' && path !== '/api/players' && path !== '/api/version' && path !== '/api/chat' && path !== '/api/chat/send' && path !== '/api/chat/seen' && path !== '/api/chat/react' && path !== '/api/chat/clear' && path !== '/api/duel' && path !== '/api/duel/answer' && path !== '/api/skins' && path !== '/api/presence' && path !== '/api/password' && path !== '/api/password/change' && path !== '/api/login' && path !== '/api/session' && path !== '/api/ban' && path !== '/api/mute' && path !== '/api/mod' && path !== '/api/typing' && path !== '/api/popup' && path !== '/api/push' && path !== '/api/push/test' && path !== '/api/push/diag' && path !== '/api/game/create' && path !== '/api/game/state' && path !== '/api/game/move' && !path.startsWith('/api/camel/')) {
+    if (path !== '/api/state' && path !== '/api/scores' && path !== '/api/players' && path !== '/api/version' && path !== '/api/chat' && path !== '/api/chat/send' && path !== '/api/chat/seen' && path !== '/api/chat/react' && path !== '/api/chat/clear' && path !== '/api/duel' && path !== '/api/duel/answer' && path !== '/api/skins' && path !== '/api/presence' && path !== '/api/password' && path !== '/api/password/change' && path !== '/api/login' && path !== '/api/session' && path !== '/api/ban' && path !== '/api/mute' && path !== '/api/mod' && path !== '/api/typing' && path !== '/api/popup' && path !== '/api/push' && path !== '/api/push/test' && path !== '/api/push/diag' && path !== '/api/game/create' && path !== '/api/game/state' && path !== '/api/game/move' && !path.startsWith('/api/camel/') && !path.startsWith('/api/skull')) {
       throw failure('Cette action est introuvable.', 404, 'not_found');
     }
     const invitedState = await validateInvite(config);
@@ -181,6 +198,9 @@
       if (path === '/api/camel/answer') return await rpc(config, 'yeti_camel_answer', {p_room_code: code, p_player: Number(body.player), p_token: String(body.token || ''), p_game: Number(body.game), p_accept: !!body.accept});
       if (path === '/api/camel/start') return await rpc(config, 'yeti_camel_start', {p_room_code: code, p_player: Number(body.player), p_token: String(body.token || ''), p_game: Number(body.game)});
       if (path === '/api/camel/act') return await rpc(config, 'yeti_camel_act', {p_room_code: code, p_player: Number(body.player), p_token: String(body.token || ''), p_game: Number(body.game), p_seq: body.seq == null ? null : Number(body.seq), p_action: String(body.action || ''), p_horse: body.horse == null ? null : Number(body.horse)});
+      if (path === '/api/skull/list') return await rpc(config, 'yeti_sk_list', {p_room_code: code});
+      if (path === '/api/skull/version') return await rpc(config, 'yeti_sk_version', {p_room_code: code, p_game: Number(body.game)});
+      if (path === '/api/skull') return await edge(config, 'yeti-skull', {...body, code});
       if (path.startsWith('/api/camel/')) throw failure('Cette action est introuvable.', 404, 'not_found');
       if (path === '/api/mod') return await rpc(config, 'yeti_mod', {p_room_code: code, p_mod: Number(body.mod), p_token: String(body.token || ''), p_target: Number(body.target), p_action: String(body.action || ''), p_body: body.body == null ? null : String(body.body)});
       if (path === '/api/popup') return await rpc(config, 'yeti_send_popup', {p_room_code: code, p_player: Number(body.player), p_token: String(body.token || ''), p_target: Number(body.target), p_text: String(body.text || ''), p_gif: body.gif ? String(body.gif) : null});
