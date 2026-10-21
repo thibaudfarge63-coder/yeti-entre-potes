@@ -177,7 +177,7 @@
       let msg='';
       if(skinAfter.curse&&(!skinBefore.curse||skinBefore.curse.id!==skinAfter.curse.id))msg=`${skinAfter.curse.emoji} Malédiction : ${skinAfter.curse.name} ! ${skinAfter.curse.until}`;
       else if(skinBefore.curse&&!skinAfter.curse)msg='Malédiction levée, tu retrouves ton skin.';
-      if(gained.length){const g=gained[gained.length-1];msg=(g.kind==='ultra'?'💎 ULTRA RARE débloqué : ':'Nouveau skin : ')+`${g.emoji} ${g.name} !`+(gained.length>1?` (+${gained.length-1} autre${gained.length>2?'s':''})`:'')+(msg?' · '+msg:'');}
+      if(gained.length){const g=gained[gained.length-1];msg=(g.kind==='ultra'?'💎 ULTRA RARE débloqué : ':'Nouveau skin : ')+`${g.emoji} ${g.name} !`+(window.YetiCostumes&&YetiCostumes.hasWall(g.id)?` + paroi ${YetiCostumes.wallName(g.id)}`:'')+(gained.length>1?` (+${gained.length-1} autre${gained.length>2?'s':''})`:'')+(msg?' · '+msg:'');}
       if(msg)setTimeout(()=>showToast(msg),1200);
     }
     afterModeThrow(score);
@@ -190,8 +190,8 @@
       const ruffle=window.RufflePlayer?.newest();if(!ruffle)throw new Error('Le moteur du jeu n’a pas pu être chargé.');
       $('game-container').replaceChildren();const element=ruffle.createPlayer();$('game-container').appendChild(element);
       playerApi=element.ruffle(1);
-      const skinId=skinFor(selectedPlayer),podium=podiumOf(selectedPlayer),trail=trailFor(selectedPlayer),key=skinId+'|'+(podium||'')+'|'+trail;let data=null;
-      try{data=window.YetiSkins?await window.YetiSkins.build(skinId,podium):null;}catch(_){data=null;showToast('Le skin n’a pas pu être appliqué, jeu d’origine chargé.');}
+      const skinId=skinFor(selectedPlayer),podium=podiumOf(selectedPlayer),trail=trailFor(selectedPlayer),wall=wallFor(selectedPlayer),key=skinId+'|'+(podium||'')+'|'+trail+'|'+wall;let data=null;
+      try{data=window.YetiSkins?await window.YetiSkins.build(skinId,podium,wall==='none'?null:wall):null;}catch(_){data=null;showToast('Le skin n’a pas pu être appliqué, jeu d’origine chargé.');}
       const tr=TRAILS.find(t=>t.id===trail);
       await playerApi.load({...(data?{data}:{url:'game.swf?v=3'}),parameters:{yetiTrail:tr?tr.cfg:'none'},autoplay:'on',quality:'medium',backgroundColor:'#c9e8f7',allowScriptAccess:false,allowNetworking:'none',openUrlMode:'deny',splashScreen:false,contextMenu:'off',warnOnUnsupportedContent:false});
       playerApi.traceObserver=handleTrace;gameLoaded=true;loadedSkin=key;
@@ -374,7 +374,7 @@
     const bests=PLAYERS.map(p=>({id:p.id,best:stats(allScores().filter(s=>s.player===p.id)).best})).filter(r=>r.best!==null).sort((a,b)=>b.best-a.best);
     const i=bests.findIndex(r=>r.id===id);return ['gold','silver','bronze'][i]||null;
   }
-  function gameKey(id){return skinFor(id)+'|'+(podiumOf(id)||'')+'|'+trailFor(id);}
+  function gameKey(id){return skinFor(id)+'|'+(podiumOf(id)||'')+'|'+trailFor(id)+'|'+wallFor(id);}
   // ---------- Traînées derrière le pingouin (débloquées en duel 1v1 et en Battle royale) ----------
   // cfg est lu par le jeu (game.swf) : c = couleurs (de la queue vers le pingouin), w = épaisseur, n = longueur,
   // a = opacité, s = étincelles par image, y = couleurs qui défilent.
@@ -392,6 +392,15 @@
     {id:'trcomet',kind:'win',need:3,emoji:'☄️',name:'Comète',cfg:'c=1e3cff.6fb6ff.ffffff;w=17;n=30;a=90;s=4;y=0'},
     {id:'trneon',kind:'podium',need:10,emoji:'💖',name:'Néon',cfg:'c=ff00c8.ff6bf0.ffffff;w=9;n=24;a=100;s=1;y=0'},
     {id:'trgalaxy',kind:'win',need:7,emoji:'🌌',name:'Galaxie',cfg:'c=2b0057.7c4dff.ff6bf0.ffffff;w=15;n=28;a=95;s=5;y=1'},
+    {id:'trsakura',kind:'duel',need:15,emoji:'🌸',name:'Sakura',cfg:'c=ff9ec7.ffc8dd.ffffff;w=10;n=22;a=90;s=3;y=0'},
+    {id:'trice',kind:'podium',need:15,emoji:'🧊',name:'Givre',cfg:'c=7cc4ff.c9ecff.ffffff;w=12;n=24;a=88;s=3;y=0'},
+    {id:'trsun',kind:'win',need:12,emoji:'☀️',name:'Soleil',cfg:'c=ff6a00.ffb000.ffe600.ffffff;w=16;n=26;a=95;s=4;y=0'},
+    {id:'trblade',kind:'dstreak',need:3,emoji:'🗡️',name:'La lame',cfg:'c=4a5568.c0c7ce.ffffff;w=6;n=26;a=100;s=1;y=0'},
+    {id:'trstorm',kind:'dstreak',need:5,emoji:'🌪️',name:'Tornade',cfg:'c=3a4250.8a94a0.d8dee6.ffffff;w=16;n=28;a=85;s=3;y=1'},
+    {id:'trink',kind:'throws',need:1000,emoji:'🖋️',name:'L’encre',cfg:'c=000000.1b1f4a.2b3a8c;w=12;n=24;a=90;s=0;y=0'},
+    {id:'trmatrix',kind:'podium',need:25,emoji:'💚',name:'Matrix',cfg:'c=001a05.00ff5a.d6ffd9;w=9;n=30;a=95;s=2;y=1'},
+    {id:'trlava',kind:'duel',need:50,emoji:'🌋',name:'Lave',cfg:'c=2a0000.8b0000.ff3b00.ffb000;w=18;n=30;a=100;s=4;y=1'},
+    {id:'trprism',kind:'floor',need:400,emoji:'🔷',name:'Prisme',cfg:'c=00e5ff.7c4dff.ff00c8.ffe600;w=12;n=28;a=95;s=3;y=1'},
     // Ultra rares : il faut être un monstre.
     {id:'trsonic',ultra:true,kind:'best',need:500,emoji:'🚀',name:'Mur du son',cfg:'c=ffffff.00f0ff.7a00ff.ff00e6.ffffff;w=22;n=36;a=100;s=7;y=1'},
     {id:'trorbit',ultra:true,kind:'best',need:530,emoji:'🛰️',name:'Hors orbite',cfg:'c=000000.1e3cff.00f0ff.ffffff.fff36b;w=26;n=40;a=100;s=8;y=1'},
@@ -400,6 +409,9 @@
     {id:'trreign',ultra:true,kind:'bstreak',need:5,emoji:'👑',name:'Le règne',cfg:'c=4b0082.ffd700.ffffff.ffd700.4b0082;w=20;n=38;a=100;s=6;y=1'},
     {id:'trdragon',ultra:true,kind:'duel',need:100,emoji:'🐉',name:'Souffle du dragon',cfg:'c=3a0000.c81e00.ff5a00.ffd000.ffffff;w=28;n=42;a=100;s=8;y=1'},
     {id:'trhole',ultra:true,kind:'win',need:30,emoji:'🕳️',name:'Trou noir',cfg:'c=000000.2b0057.000000.7c4dff.000000;w=30;n=44;a=100;s=5;y=1'},
+    {id:'trreaper',ultra:true,kind:'dstreak',need:10,emoji:'💀',name:'La faucheuse',cfg:'c=000000.2b0057.4a0000.000000.ffffff;w=24;n=40;a=100;s=6;y=1'},
+    {id:'trthunder',ultra:true,kind:'bstreak',need:10,emoji:'🌩️',name:'Le tonnerre',cfg:'c=1a1a40.00e5ff.ffffff.fff36b.ffffff;w=22;n=40;a=100;s=9;y=1'},
+    {id:'trinfinity',ultra:true,kind:'throws',need:5000,emoji:'♾️',name:'L’infini',cfg:'c=ff2a2a.ff8a00.ffe600.33dd00.00aaff.8a2be2.ff00c8;w=26;n=46;a=100;s=8;y=1'},
     {id:'trdivine',ultra:true,kind:'combo',need:1,emoji:'😇',name:'Le divin',cfg:'c=ffffff.fffbe0.ffe9a8.ffffff.d8f6ff;w=30;n=48;a=100;s=10;y=1'},
   ];
   // Le divin : 50 duels gagnés ET 20 victoires en Battle royale.
@@ -447,6 +459,33 @@
     renderSkins();
     if(gameLoaded&&loadedSkin!==gameKey(selectedPlayer)){await loadGame();const t=TRAILS.find(x=>x.id===id);showToast(t?`${t.ultra?'💎 ':''}${t.emoji} Traînée ${t.name} équipée : lance le pingouin pour la voir !`:'Traînée retirée.');}
   }
+  // ---------- Parois (bordures de glace) : choisies à part du skin, débloquées avec certains skins ----------
+  let wallChoices={};try{wallChoices=JSON.parse(localStorage.getItem('yeti-walls')||'{}')||{};}catch(_){}
+  const C2=()=>window.YetiCostumes;
+  function wallsOpen(id){const st=skinState(id),C=C2();return st&&C&&C.walls?C.walls().filter(w=>st.unlocked.has(w)):[];}
+  // 'auto' (par défaut) = la paroi du skin porté s'il en a une.
+  function wallFor(id){if(!id||!C2()||!C2().walls)return 'none';const ch=wallChoices[id]||'auto';
+    if(ch==='none')return 'none';
+    if(ch==='auto'){const s=skinFor(id);return C2().hasWall(s)?s:'none';}
+    return wallsOpen(id).includes(ch)?ch:'none';}
+  function wallCards(){
+    const C=C2();if(!selectedPlayer||!C||!C.walls)return '';
+    const open=new Set(wallsOpen(selectedPlayer)),ch=wallChoices[selectedPlayer]||'auto',cur=wallFor(selectedPlayer),busy=activeRound||loadingGame,all=C.walls();
+    const src=w=>window.YetiSkins.byId(w);
+    const auto=`<button type="button" class="skin-card wall-card ${ch==='auto'?'active':''}" data-wall="auto" ${busy?'disabled':''} aria-pressed="${ch==='auto'}"><span class="wall-preview auto">${cur!=='none'&&ch==='auto'?`<img src="${C.wallPreview(cur)}" alt="">`:''}<i>🔗</i></span><span class="skin-name">Auto</span><span class="skin-min">${ch==='auto'?'✓ ':''}Celle du skin</span></button>`;
+    const none=`<button type="button" class="skin-card wall-card ${ch==='none'?'active':''}" data-wall="none" ${busy?'disabled':''} aria-pressed="${ch==='none'}"><span class="wall-preview ice"></span><span class="skin-name">Glace</span><span class="skin-min">${ch==='none'?'✓ Équipée':'L’originale'}</span></button>`;
+    const cards=all.map(w=>{const k=src(w),ok=open.has(w),active=ch===w;
+      const sub=ok?(active?'✓ Équipée · ':'✓ ')+`${k.emoji} ${k.name}`:`🔒 ${k.emoji} ${k.name} : ${k.kind==='record'?k.min+' m de record':k.tag}`;
+      return `<button type="button" class="skin-card wall-card ${active?'active':''} ${ok?'':'locked'}" data-wall="${w}" ${ok&&!busy?'':'disabled'} aria-pressed="${active}" title="${escape(C.wallName(w)+' — débloquée avec '+k.name+' ('+(k.kind==='record'?k.min+' m de record':k.tag)+')')}"><span class="wall-preview"><img src="${C.wallPreview(w)}" alt=""></span><span class="skin-name">${escape(C.wallName(w))}</span><span class="skin-min">${escape(sub)}</span></button>`;}).join('');
+    return `<div class="skin-group wall-group"><span class="skin-group-label">Parois · ${open.size}/${all.length} · combine-les avec n’importe quel skin</span><div class="skin-group-cards">${auto}${none}${cards}</div></div>`;
+  }
+  async function chooseWall(id){
+    if(!selectedPlayer||activeRound||loadingGame)return;
+    if(id!=='auto'&&id!=='none'&&!wallsOpen(selectedPlayer).includes(id))return;
+    wallChoices[selectedPlayer]=id;try{localStorage.setItem('yeti-walls',JSON.stringify(wallChoices));}catch(_){}
+    renderSkins();
+    if(gameLoaded&&loadedSkin!==gameKey(selectedPlayer)){await loadGame();const C=C2();showToast(id==='none'?'🧊 Paroi de glace d’origine.':id==='auto'?'🔗 La paroi suit ton skin.':`🧱 Paroi ${C.wallName(id)} posée !`);}
+  }
   function skinFor(id){
     const st=skinState(id);if(!st)return 'yeti';
     if(st.curse)return st.curse.id;
@@ -474,7 +513,7 @@
         return `<button type="button" class="skin-card kind-${k.kind} ${active?'active':''} ${open?'':'locked'} ${k.id==='prime'?'prime':''}" data-skin="${k.id}" ${can?'':'disabled'} aria-pressed="${active}" title="${escape(k.name+' — '+k.tag+' · '+cond)}"><span class="skin-emoji">${k.photo?`<img class="skin-photo" src="${k.photo}" alt="">`:k.emoji||'<span class=\'skin-yeti\'>Y.</span>'}</span><span class="skin-name">${escape(k.name)}</span><span class="skin-min">${sub}</span></button>`;
       }).join('');
       return `<div class="skin-group"><span class="skin-group-label">${label}</span><div class="skin-group-cards">${cards}</div></div>`;
-    }).join('')+trailCards();
+    }).join('')+wallCards()+trailCards();
     if(box._html!==html){box.innerHTML=html;box._html=html;}
   }
   async function chooseSkin(id){
@@ -712,7 +751,7 @@
   });
   $('restart-game').addEventListener('click',loadGame);
   $('party').addEventListener('click',()=>{$('party').hidden=true;});
-  $('skins').addEventListener('click',e=>{const t=e.target.closest('[data-trail]');if(t&&!t.disabled){chooseTrail(t.dataset.trail);return;}const b=e.target.closest('[data-skin]');if(b&&!b.disabled)chooseSkin(b.dataset.skin);});
+  $('skins').addEventListener('click',e=>{const t=e.target.closest('[data-trail]');if(t&&!t.disabled){chooseTrail(t.dataset.trail);return;}const w=e.target.closest('[data-wall]');if(w&&!w.disabled){chooseWall(w.dataset.wall);return;}const b=e.target.closest('[data-skin]');if(b&&!b.disabled)chooseSkin(b.dataset.skin);});
   const isPhone=()=>matchMedia('(pointer:coarse)').matches&&Math.min(screen.width,screen.height)<=820;
   document.documentElement.classList.toggle('is-phone',isPhone());
   $('fullscreen-game').hidden=!isPhone();
