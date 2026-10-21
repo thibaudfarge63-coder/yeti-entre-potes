@@ -679,6 +679,7 @@
   let audioCtx=null;
   function sound(kind){try{audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='triangle';o.frequency.value=kind==='capture'?220:330;g.gain.setValueAtTime(.18,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+.12);o.connect(g).connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+.13);}catch(_){}}
   function openBoard(id){
+    if(window.YetiCamels&&YetiCamels.openId)YetiCamels.close(true);
     if(!window.YetiGames){showToast('Le module de jeux n’est pas chargé, recharge la page.');return;}
     if(activeRound){showToast('Termine ton lancer avant d’ouvrir la partie.');return;}
     YetiGames.open(id,{root:$('board-stage'),request,player:pid=>player(pid),avatar,escape,toast:showToast,sound,
@@ -706,7 +707,16 @@
     try{const r=await request('/api/duel',{challenger:selectedPlayer,opponent:opp});await refresh();showToast(`⚔️ Défi envoyé à ${player(opp).name}, en attente de sa réponse…`);if(r&&r.id){knownDuels&&knownDuels.add(Number(r.id));}}
     catch(error){showToast(error.message||'Impossible de créer le duel.');}finally{duelOpp=null;renderCompet();}});
   $('duel-pick').addEventListener('click',e=>{const b=e.target.closest('[data-opp]');if(!b)return;const id=Number(b.dataset.opp);duelOpp=duelOpp===id?null:id;renderCompet();});
-  document.querySelector('.compet-tabs').addEventListener('click',e=>{const t=e.target.closest('[data-tab]');if(!t)return;competTab=t.dataset.tab;renderCompet();});
+  document.querySelector('.compet-tabs').addEventListener('click',e=>{const t=e.target.closest('[data-tab]');if(!t)return;competTab=t.dataset.tab;renderCompet();if(competTab==='camel'&&window.YetiCamels)YetiCamels.refresh();});
+  // ---------- Petits chameaux (jusqu'à 4, bots aux places libres) ----------
+  if(window.YetiCamels)YetiCamels.init({root:$('board-stage'),panel:$('camel-panel'),request,player:pid=>PLAYERS.find(p=>p.id===pid)||null,players:()=>PLAYERS,avatar,escape,toast:showToast,sound,
+    party:()=>{try{if(typeof celebrate==='function')celebrate();}catch(_){}},
+    ready:()=>!privateAccess&&!!lastStateSig,
+    session:()=>{const s=getSession();return s&&authed&&s.player===authed?s:null;},
+    badge:n=>{const b=$('ct-camel-badge');if(b){b.hidden=!n;b.textContent=n;}},
+    onOpen:()=>{if(window.YetiGames&&YetiGames.openId)YetiGames.close();$('game-stage').hidden=true;document.querySelector('.game-footer').hidden=true;try{if(playerApi){if(playerApi.suspend)playerApi.suspend();else if(playerApi.pause)playerApi.pause();}}catch(_){}
+      $('board-stage').scrollIntoView({behavior:'smooth',block:'start'});},
+    onClose:()=>{$('game-stage').hidden=false;document.querySelector('.game-footer').hidden=false;try{if(playerApi){if(playerApi.resume)playerApi.resume();else if(playerApi.play)playerApi.play();}}catch(_){}}});
   // ---------- Top 10 de chaque joueur ----------
   let topPlayer=null;
   function topOf(id){return allScores().filter(s=>s.player===id).sort((a,b)=>b.score-a.score||Date.parse(a.played_at)-Date.parse(b.played_at)).slice(0,10);}
@@ -1246,6 +1256,7 @@
     if(what==='chat')toggleChat(true);
     if(what==='duel'||what==='game'){competTab='duel';renderCompet();const c=$('compet');if(c)c.scrollIntoView({behavior:'smooth',block:'start'});}
     if(what==='game'){let gid=0;try{gid=Number(new URL(url,location.href).searchParams.get('id'))||0;}catch(_){}if(gid){const go=()=>{if(selectedPlayer&&lastStateSig)openBoard(gid);else setTimeout(go,800);};go();}}
+    if(what==='camel'){competTab='camel';renderCompet();const c=$('compet');if(c)c.scrollIntoView({behavior:'smooth',block:'start'});let gid=0;try{gid=Number(new URL(url,location.href).searchParams.get('id'))||0;}catch(_){}if(gid&&window.YetiCamels){const go=()=>{if(selectedPlayer&&lastStateSig)YetiCamels.open(gid);else setTimeout(go,800);};go();}}
     if(what==='top'){const c=document.querySelector('.top-card');if(c)c.scrollIntoView({behavior:'smooth',block:'center'});}
   }
   window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;renderAppButtons();});
