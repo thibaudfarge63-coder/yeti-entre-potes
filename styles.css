@@ -795,3 +795,76 @@ body.chat-wide .chat-gif.giphy{max-width:260px;max-height:260px;width:auto;heigh
 .wall-preview.auto{background:repeating-linear-gradient(45deg,#eef2ea 0 6px,#f8faf5 6px 12px)}
 .wall-preview i{position:absolute;right:3px;bottom:1px;font-style:normal;font-size:14px;filter:drop-shadow(0 1px 1px #0005)}
 .wall-card.locked .wall-preview{filter:grayscale(1);opacity:.4}
+/* ---------- Petits chameaux ---------- */
+.board-stage.cam-stage{--cam-sand:#f3e2b8;background:linear-gradient(170deg,#3b2a17,#24190d);color:#fbf3df}
+.cam-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.cam-head h3{margin:0;font:800 18px var(--display);color:#ffd98a}
+.cam-need-tag{margin-left:auto;font-size:12px;color:#e6cf9c}
+.cam-players{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
+.cam-pl{display:flex;align-items:center;gap:7px;padding:6px 8px;border-radius:10px;background:#ffffff10;border:2px solid transparent;border-left:5px solid var(--c);min-width:0}
+.cam-pl b{display:block;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cam-pl small{display:block;font-size:11px;opacity:.8}
+.cam-pl>span:last-child{min-width:0}
+.cam-pl.turn{border-color:var(--c);background:#ffffff22;box-shadow:0 0 12px color-mix(in srgb,var(--c) 60%,transparent)}
+.cam-pl.win{background:linear-gradient(120deg,#ffe48a33,#ffffff10)}
+.cam-pl.me b::after{content:' (toi)';font-weight:400;opacity:.7}
+.cam-pl .ranking-avatar{width:28px;height:28px;flex:0 0 28px;font-size:13px}
+.cam-bot{font-size:20px;flex:0 0 28px;text-align:center}
+.cam-main{display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:14px;align-items:start}
+.cam-board{position:relative;width:100%;max-width:620px;aspect-ratio:1;margin:0 auto;border-radius:12px;box-shadow:0 8px 30px #0008}
+.cam-svg{display:block;width:100%;height:100%}
+.cam-svg text{font:700 .5px sans-serif;text-anchor:middle}
+.cam-svg .cam-num{font-size:.55px}
+.cam-svg .cam-arrow{fill:#fff;font-size:.5px}
+.cam-svg .cam-oasis{font-size:1.4px;opacity:.55}
+.cam-piece{position:absolute;width:6.2%;height:6.2%;transform:translate(-50%,-50%);border-radius:50%;border:2px solid #fff;background:var(--c);display:grid;place-items:center;padding:0;box-shadow:0 2px 5px #0007;transition:left .14s ease,top .14s ease,transform .15s;z-index:2;cursor:default}
+.cam-piece span{font-size:clamp(11px,2.6vw,19px);line-height:1;filter:drop-shadow(0 1px 0 #0005)}
+.cam-piece.stable{width:7.2%;height:7.2%}
+.cam-piece.home{width:3.2%;height:3.2%;border-width:1px}
+.cam-piece.home span{font-size:9px}
+.cam-piece.moving{z-index:4;transform:translate(-50%,-62%) scale(1.12)}
+.cam-piece.can{cursor:pointer;z-index:3;animation:cam-glow 1s ease-in-out infinite}
+.cam-piece.can:hover{transform:translate(-50%,-50%) scale(1.18)}
+@keyframes cam-glow{0%,100%{box-shadow:0 0 0 2px #fff,0 0 8px 3px #fff8}50%{box-shadow:0 0 0 3px #ffe14d,0 0 16px 6px #ffe14dbb}}
+.cam-side{display:flex;flex-direction:column;gap:10px;align-items:stretch}
+.cam-die{align-self:center;width:84px;height:84px;border-radius:16px;background:#fff;border:4px solid var(--c,#999);display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);padding:9px;gap:2px;box-shadow:0 6px 0 #0004,0 10px 20px #0006;cursor:default;transition:transform .15s}
+.cam-die i{display:block;border-radius:50%;margin:3px}
+.cam-die i.on{background:#1d1d1d}
+.cam-die.ready{cursor:pointer;animation:cam-bounce 1.1s ease-in-out infinite}
+.cam-die.rolling{animation:cam-roll .25s linear infinite}
+@keyframes cam-bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes cam-roll{0%{transform:rotate(0) scale(.95)}50%{transform:rotate(180deg) scale(1.05)}100%{transform:rotate(360deg) scale(.95)}}
+.cam-status{margin:0;text-align:center;font-size:14px;min-height:38px}
+.cam-say{margin:0;text-align:center;font-size:12.5px;color:#ffd98a;min-height:18px}
+.cam-actions{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.cam-actions button,.cam-acts button,.cam-go{border:0;border-radius:999px;padding:8px 13px;font:700 13px var(--body,inherit);background:#ffffff1f;color:inherit;cursor:pointer}
+.cam-actions .cam-yes,.cam-acts .cam-yes,.cam-go{background:#f2a33a;color:#2b1700}
+.cam-actions .cam-no,.cam-acts .cam-no,.cam-actions .cam-quit{background:#ffffff14;color:#ffb4a8}
+.cam-rules{font-size:12px;opacity:.85}
+.cam-rules summary{cursor:pointer;font-weight:700}
+.cam-rules ul{padding-left:18px;margin:6px 0 0}
+.cam-lobby{max-width:560px;margin:0 auto;display:grid;gap:12px;text-align:center}
+.cam-seats{display:grid;grid-template-columns:1fr 1fr;gap:8px;text-align:left}
+/* panneau des compétitions */
+.camel-panel{display:grid;gap:8px}
+.cam-new{display:grid;gap:8px;padding-bottom:6px}
+.cam-need{display:flex;flex-wrap:wrap;gap:6px}
+.cam-need button{border:1px solid var(--line);background:var(--paper);border-radius:999px;padding:6px 11px;font-size:12.5px;cursor:pointer}
+.cam-need button.on{background:#fff1d6;border-color:#f2a33a;font-weight:700}
+.cam-go{justify-self:start;color:#2b1700}
+.cam-go:disabled{opacity:.6}
+.cam-row{border:1px solid var(--line);border-radius:12px;padding:8px 10px;display:grid;gap:6px;background:var(--paper)}
+.cam-chips{display:flex;flex-wrap:wrap;gap:5px}
+.cam-chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:3px 8px;border-radius:999px;background:#0000000a}
+.cam-chip i{width:9px;height:9px;border-radius:50%;background:var(--c)}
+.cam-chip.turn{outline:2px solid var(--c);font-weight:700}
+.cam-chip.win{background:#fff1c2;font-weight:700}
+.cam-row-foot{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cam-st{font-size:12.5px;color:var(--muted)}
+.cam-st b{color:var(--ink,#222)}
+.cam-st .cam-you{color:#c45a00}
+.cam-acts{margin-left:auto;display:flex;gap:6px}
+.cam-acts button{background:#0000000d;color:inherit}
+@media(max-width:760px){.cam-main{grid-template-columns:1fr}.cam-players{grid-template-columns:1fr 1fr}.cam-side{order:-1;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:center}.cam-die{width:64px;height:64px;padding:7px}.cam-status{flex:1 1 150px;text-align:left}.cam-say{flex:1 1 100%}.cam-rules{flex:1 1 100%}.cam-piece span{font-size:clamp(9px,3.4vw,16px)}}
+.board-stage .cam-piece:disabled,.board-stage .cam-die:disabled{opacity:1;cursor:default}
+.board-stage .cam-piece{color:inherit;min-height:0;min-width:0;line-height:1}
