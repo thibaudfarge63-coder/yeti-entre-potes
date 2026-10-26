@@ -139,7 +139,7 @@
     else status = cur.game === 'naval' && cur.state.phase === 'place' ? `⏳ ${esc(pl(other()).name)} place sa flotte…` : `⏳ ${esc(pl(other()).name)} réfléchit…`;
     const others = ctx.otherTurns ? ctx.otherTurns(cur.id) : [];
     const banner = others.length ? `<div class="gb-other">${others.map(o => `<button type="button" data-act="switch" data-id="${o.id}">${esc(o.text)} ▶</button>`).join('')}</div>` : '';
-    return banner + `<div class="gb-head"><button type="button" class="gb-back" data-act="exit">← Retour au Yéti</button><div class="gb-title"><b>${g.icon} ${g.name}</b><span>${esc(A.name)} vs ${esc(B.name)}${startedText() ? ' · ' + startedText() : ''}</span></div><span class="gb-status ${myTurn() ? 'go' : ''} ${cur.finished_at ? 'end' : ''}" id="gb-status">${status}</span></div>`;
+    return banner + `<div class="gb-head"><button type="button" class="gb-back" data-act="exit" title="Ta place est gardée : reviens quand tu veux avec « Tes parties en cours »">🚪 Quitter la partie</button><div class="gb-title"><b>${g.icon} ${g.name}</b><span>${esc(A.name)} vs ${esc(B.name)}${startedText() ? ' · ' + startedText() : ''}</span></div><span class="gb-status ${myTurn() ? 'go' : ''} ${cur.finished_at ? 'end' : ''}" id="gb-status">${status}</span></div>`;
   }
   function actions() {
     if (!isPlayer() || cur.status !== 'accepted') return '';

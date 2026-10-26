@@ -12,19 +12,20 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Yeti rich club">
-  <link rel="stylesheet" href="styles.css?v=20261026-75">
+  <link rel="stylesheet" href="styles.css?v=20261026-76">
   <link rel="stylesheet" href="chess-pieces.css?v=1">
   <script>window.RufflePlayer = window.RufflePlayer || {}; window.RufflePlayer.config = {autoplay:"on",unmuteOverlay:"visible",backgroundColor:"#c9e8f7",contextMenu:"off",warnOnUnsupportedContent:false};</script>
   <script src="ruffle/ruffle.js" defer></script>
-  <script src="config.js?v=20261026-75" defer></script>
-  <script src="data-client.js?v=20261026-75" defer></script>
-  <script src="costumes.js?v=20261026-75" defer></script>
-  <script src="skins.js?v=20261026-75" defer></script>
+  <script src="config.js?v=20261026-76" defer></script>
+  <script src="data-client.js?v=20261026-76" defer></script>
+  <script src="costumes.js?v=20261026-76" defer></script>
+  <script src="skins.js?v=20261026-76" defer></script>
   <script src="chess-engine.js?v=1" defer></script>
-  <script src="games.js?v=20261026-75" defer></script>
-  <script src="camels.js?v=20261026-75" defer></script>
-  <script src="skull.js?v=20261026-75" defer></script>
-  <script src="app.js?v=20261026-75" defer></script>
+  <script src="games.js?v=20261026-76" defer></script>
+  <script src="camels.js?v=20261026-76" defer></script>
+  <script src="skull-art.js?v=20261026-76" defer></script>
+  <script src="skull.js?v=20261026-76" defer></script>
+  <script src="app.js?v=20261026-76" defer></script>
 </head>
 <body>
   <div class="page-shell">
@@ -39,6 +40,7 @@
       <div class="crack-alert" id="crack-alert" hidden role="alert"><span class="warn-sign" aria-hidden="true">!</span><div><strong>ATTENTION GROS CRACK</strong><span id="crack-alert-text"></span></div><span class="warn-sign" aria-hidden="true">!</span></div>
 <section class="compet" id="compet" aria-labelledby="compet-title">
         <div class="compet-heading"><div><p class="eyebrow">LES COMPÉTITIONS</p><h2 id="compet-title">Battle royale &amp; duels.</h2></div><p class="compet-rules">Une session officielle par jour : 10 lancers, ta moyenne fait foi. Chaque jour rapporte des points selon ton rang (10, 8, 6, 5, 4, 3, 2, 1) pour le classement du mois.</p></div>
+        <div class="resume-bar" id="resume-bar" hidden role="region" aria-label="Tes parties en cours"></div>
         <div class="compet-tabs" role="tablist"><button type="button" class="compet-tab active" role="tab" data-tab="br" aria-selected="true"><span class="ct-ico">🏟️</span><span><b>Battle royale</b><small id="ct-br-sub">Session du jour · 10 lancers</small></span></button><button type="button" class="compet-tab" role="tab" data-tab="duel" aria-selected="false"><span class="ct-ico">⚔️</span><span><b>Duels 1v1</b><small id="ct-duel-sub"><span class="ct-logos" aria-label="Yéti, échecs, bataille navale"><i title="Yéti">🏔️</i><i title="Échecs">♟️</i><i title="Bataille navale">🚢</i></span></small></span><i class="ct-badge" id="ct-duel-badge" hidden></i></button><button type="button" class="compet-tab" role="tab" data-tab="camel" aria-selected="false"><span class="ct-ico">🐪</span><span><b>Petits chameaux</b><small>Jusqu’à 4, avec des dés</small></span><i class="ct-badge" id="ct-camel-badge" hidden></i></button><button type="button" class="compet-tab" role="tab" data-tab="skull" aria-selected="false"><span class="ct-ico">☠️</span><span><b>Skull King</b><small>Jeu de plis, 2 à 9</small></span><i class="ct-badge" id="ct-skull-badge" hidden></i></button></div>
         <div class="compet-grid">
           <article class="br-card compet-panel" data-panel="br"><div class="card-title"><div><h3>🏟️ Battle royale</h3><p id="br-date"></p></div><div class="br-tabs" id="br-tabs"><button type="button" data-br="day" class="active">Aujourd’hui</button><button type="button" data-br="month">Ce mois-ci</button></div></div>

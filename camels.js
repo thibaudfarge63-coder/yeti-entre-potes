@@ -25,7 +25,7 @@
   const SLOT = [[1.5, 1.5], [1.5, 4.5], [4.5, 1.5], [4.5, 4.5]];
 
   let ctx = null, root = null, cur = null, timer = null, busy = false, anim = null, pos = null, seenSeq = 0, autoT = 0, fast = false;
-  let listTimer = null, list = [], panelEl = null, pick = new Set(), need = 4, creating = false, lastBadge = -1, knownInv = null;
+  let listTimer = null, list = [], listLoaded = false, panelEl = null, pick = new Set(), need = 4, creating = false, lastBadge = -1, knownInv = null;
 
   const esc = t => ctx.escape(String(t));
   const pl = id => (id && ctx.player(id)) || null;
@@ -57,7 +57,7 @@
   }
   async function loadList() {
     if (!ctx || !ctx.ready()) return;
-    try { const r = await ctx.request('/api/camel/list', {}); list = (r && r.games) || []; } catch (_) { return; }
+    try { const r = await ctx.request('/api/camel/list', {}); list = (r && r.games) || []; listLoaded = true; } catch (_) { return; }
     const me = meId();
     if (me) {
       const inv = list.filter(g => g.status === 'lobby' && g.seats.some((p, i) => p === me && g.seat_state[i] === 'invited'));
@@ -84,6 +84,7 @@
         <div class="cam-need">${NEED.map(n => `<button type="button" class="${need === n ? 'on' : ''}" data-cam-need="${n}">${n} chameau${n > 1 ? 'x' : ''}${n === 1 ? ' · rapide' : n === 4 ? ' · classique' : ''}</button>`).join('')}</div>
         <button type="button" class="cam-go" data-cam-create ${creating ? 'disabled' : ''}>🐪 ${pick.size ? `Inviter ${pick.size} pote${pick.size > 1 ? 's' : ''}` : 'Jouer contre 3 bots'}</button>
       </div>` : '<p class="br-empty">Connecte-toi pour lancer une partie.</p>';
+    const boss = !!(ctx.boss && ctx.boss());
     const mine = list.filter(g => g.seats.includes(me) && g.status !== 'done');
     const others = list.filter(g => !g.seats.includes(me) && g.status === 'playing');
     const done = list.filter(g => g.status === 'done').slice(0, 5);
@@ -102,9 +103,9 @@
         st = g.winner !== null && g.winner !== undefined ? `🏆 ${esc(seatName(g, g.winner))} a gagné` : 'Partie arrêtée';
         act = `<button type="button" data-cam-open="${g.id}">Voir</button>`;
       }
-      return `<div class="cam-row"><div class="cam-chips">${chips}</div><div class="cam-row-foot"><span class="cam-st">${st} · ${g.need} 🐪 pour gagner<small class="cam-when">${startText(g)}</small></span><span class="cam-acts">${act}</span></div></div>`;
+      return `<div class="cam-row"><div class="cam-chips">${chips}</div><div class="cam-row-foot"><span class="cam-st">${st} · ${g.need} 🐪 pour gagner<small class="cam-when">${startText(g)}</small></span><span class="cam-acts">${act}${boss ? `<button type="button" class="del-game" data-del-kind="camel" data-del-id="${g.id}" title="Supprimer cette partie" aria-label="Supprimer">🗑️</button>` : ''}</span></div></div>`;
     };
-    const html = form
+    const html = form + (boss && list.length ? '<div class="del-bar"><button type="button" class="del-all" data-del-kind="camel" data-del-scope="done">🗑️ Vider les terminées</button><button type="button" class="del-all hard" data-del-kind="camel" data-del-scope="all">💣 Tout supprimer</button></div>' : '')
       + (mine.length ? '<p class="duel-sep">Tes parties</p>' + mine.map(row).join('') : '')
       + (others.length ? '<p class="duel-sep">Parties en cours du club</p>' + others.map(row).join('') : '')
       + (done.length ? '<p class="duel-sep">Terminées</p>' + done.map(row).join('') : '')
@@ -136,7 +137,7 @@
   async function open(id) {
     if (!ctx) return;
     if (cur && cur.id !== id) close(true);
-    ctx.onOpen && ctx.onOpen();
+    ctx.onOpen && ctx.onOpen(id);
     root = ctx.root; root.hidden = false; root.className = 'board-stage cam-stage';
     cur = {id, loading: true}; pos = null; seenSeq = 0; anim = null; fast = false;
     root.innerHTML = '<div class="gb-loading"><span class="spinner"></span><p>On selle les chameaux…</p></div>';
@@ -265,7 +266,7 @@
     const g = cur;
     if (g.status === 'lobby') return renderLobby();
     if (!root.querySelector('.cam-board')) {
-      root.innerHTML = `<div class="cam-head"><button type="button" class="gb-back" data-cam-close>← Retour au Yéti</button><h3>🐪 Petits chameaux</h3><span class="cam-need-tag"></span></div>
+      root.innerHTML = `<div class="cam-head"><button type="button" class="gb-back" data-cam-close title="Ta place est gardée : reviens quand tu veux avec « Tes parties en cours »">🚪 Quitter la partie</button><h3>🐪 Petits chameaux</h3><span class="cam-need-tag"></span></div>
         <div class="cam-players"></div>
         <div class="cam-main"><div class="cam-board">${boardSVG()}${[0, 1, 2, 3].map(s => [0, 1, 2, 3].map(h => `<button type="button" class="cam-piece" data-s="${s}" data-h="${h}" style="--c:${COLORS[s]}" aria-label="Chameau ${CNAME[s].toLowerCase()} ${h + 1}"><span>🐪</span></button>`).join('')).join('')}</div>
         <div class="cam-side"><button type="button" class="cam-die" aria-label="Lancer le dé"></button><p class="cam-status"></p><p class="cam-say" aria-live="polite"></p><div class="cam-actions"></div>
@@ -316,7 +317,7 @@
   }
   function renderLobby() {
     const g = cur, me = meId(), i = g.seats.indexOf(me), invited = i >= 0 && g.seat_state[i] === 'invited';
-    root.innerHTML = `<div class="cam-head"><button type="button" class="gb-back" data-cam-close>← Retour au Yéti</button><h3>🐪 Petits chameaux</h3><span class="cam-need-tag">${g.need} chameau${g.need > 1 ? 'x' : ''} au centre pour gagner</span></div>
+    root.innerHTML = `<div class="cam-head"><button type="button" class="gb-back" data-cam-close title="Ta place est gardée : reviens quand tu veux avec « Tes parties en cours »">🚪 Quitter la partie</button><h3>🐪 Petits chameaux</h3><span class="cam-need-tag">${g.need} chameau${g.need > 1 ? 'x' : ''} au centre pour gagner</span></div>
       <div class="cam-lobby"><p>${g.host === me ? 'Tes potes ont reçu l’invitation. La partie démarre quand tout le monde a répondu, ou dès que tu la lances (les places libres seront jouées par l’ordi).' : invited ? `<b>${esc(pl(g.host) ? pl(g.host).name : '?')}</b> t’invite à jouer !` : 'En attente des invités…'}</p>
       <div class="cam-seats">${[0, 1, 2, 3].map(s => `<div class="cam-pl" style="--c:${COLORS[s]}">${g.seats[s] && pl(g.seats[s]) ? ctx.avatar(pl(g.seats[s])) : '<span class="cam-bot">🤖</span>'}<span><b>${esc(seatName(g, s))}</b><small>${CNAME[s]} · ${{host: 'organise', joined: '✅ prêt', invited: '⏳ invité', bot: 'ordi'}[g.seat_state[s]] || ''}</small></span></div>`).join('')}</div>
       <div class="cam-actions">${invited ? '<button type="button" class="cam-yes" data-cam-act="join">Rejoindre</button><button type="button" class="cam-no" data-cam-act="decline">Refuser</button>' : ''}${g.host === me ? '<button type="button" class="cam-yes" data-cam-act="start">🐪 Lancer maintenant</button><button type="button" class="cam-no" data-cam-act="cancel">Annuler la partie</button>' : ''}</div></div>`;
@@ -366,5 +367,9 @@
   window.YetiCamels = Object.freeze({
     init, open, close, refresh: loadList,
     get openId() { return cur ? cur.id : null; },
+    get loaded() { return listLoaded; },
+    // parties en cours où ce joueur a encore sa place (pour « Reprendre »)
+    mine: me => list.filter(g => g.status === 'playing' && g.seats.includes(me) && isHuman(g, g.seats.indexOf(me)))
+      .map(g => ({id: g.id, label: '🐪 Petits chameaux', turn: myTodo(g, me)})),
   });
 })();

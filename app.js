@@ -659,12 +659,54 @@
       else if(st.done)status=st.winner===0?'<span class="duel-st">🤝 Égalité</span>':isMine?(st.winner===me?'<span class="duel-st win">🏆 Gagné</span>':'<span class="duel-st lose">Perdu</span>'):`<span class="duel-st">🏆 ${escape(player(st.winner).name)}</span>`;
       else if(isMine&&myN<d.throws)status=playMode.kind==='duel'&&playMode.id===d.id?'<span class="duel-st live">En cours…</span>':`<button type="button" class="br-btn small" data-duel="${d.id}" ${activeRound?'disabled':''}>Jouer</button>`;
       else if(isMine)status=`<span class="duel-st">En attente de ${escape(player(d.challenger===me?d.opponent:d.challenger).name)}</span>`;
-      return `<div class="duel-row">${sc(A,fa,st.aa,st.winner===d.challenger)}<span class="duel-vs">VS${startTag(d)}</span>${sc(B,fb,st.ba,st.winner===d.opponent)}${status}</div>`;};
-    $('duel-list').innerHTML=(mineD.length?mineD.map(d=>line(d,duelState(d))).join(''):`<p class="br-empty">${me?'Aucun duel pour toi. Défie quelqu’un !':'Choisis ton pseudo pour voir tes duels.'}</p>`)+(others.length?'<p class="duel-sep">Derniers duels du club</p>'+others.map(x=>line(x.d,x.st)).join(''):'');
+      return `<div class="duel-row">${sc(A,fa,st.aa,st.winner===d.challenger)}<span class="duel-vs">VS${startTag(d)}</span>${sc(B,fb,st.ba,st.winner===d.opponent)}${status}${delBtn('duel',d.id)}</div>`;};
+    $('duel-list').innerHTML=(isBoss()?clearBtn('duel'):'')+(mineD.length?mineD.map(d=>line(d,duelState(d))).join(''):`<p class="br-empty">${me?'Aucun duel pour toi. Défie quelqu’un !':'Choisis ton pseudo pour voir tes duels.'}</p>`)+(others.length?'<p class="duel-sep">Derniers duels du club</p>'+others.map(x=>line(x.d,x.st)).join(''):'');
   }
   // Heure de début : acceptation du défi (ou envoi du défi s'il attend encore une réponse)
   function whenShort(t){return dayKey(t)===dayKey(new Date())?hhmm(t):new Intl.DateTimeFormat('fr-FR',{timeZone:'Europe/Paris',day:'2-digit',month:'2-digit'}).format(new Date(t))+' '+hhmm(t);}
   function startTag(d){const t=d.started_at||d.created_at;if(!t)return '';return `<small title="${d.started_at?'Début de la partie':'Défi envoyé'}">${d.started_at?'🕒 ':'✉️ '}${whenShort(t)}</small>`;}
+  // ---------- Suppression des parties (Thibaud et Alexandre : admin ou modo) ----------
+  function isBoss(){const s=getSession();return !!(s&&authed&&s.player===authed&&player(authed)&&player(authed).mod);}
+  function delBtn(kind,id){return isBoss()?`<button type="button" class="del-game" data-del-kind="${kind}" data-del-id="${id}" title="Supprimer cette partie de la liste" aria-label="Supprimer">🗑️</button>`:'';}
+  function clearBtn(kind){return `<div class="del-bar"><button type="button" class="del-all" data-del-kind="${kind}" data-del-scope="done">🗑️ Vider les terminées</button><button type="button" class="del-all hard" data-del-kind="${kind}" data-del-scope="all">💣 Tout supprimer</button></div>`;}
+  async function delGame(kind,id,scope){
+    const s=getSession();if(!isBoss()||!s){showToast('Réservé à Thibaud et Alexandre.');return false;}
+    const what=scope==='all'?'TOUTES les parties de ce jeu (même en cours)':scope==='done'?'toutes les parties terminées de ce jeu':'cette partie';
+    if(!window.confirm(`Supprimer ${what} ? C’est définitif.`))return false;
+    try{const r=await request('/api/admin/delete-game',{player:authed,token:s.token,kind,id:id||0,scope:scope||'one'});showToast(`🗑️ ${r&&r.deleted?r.deleted:0} partie${r&&r.deleted>1?'s':''} supprimée${r&&r.deleted>1?'s':''}.`);
+      if(kind==='duel')await refresh();else if(kind==='camel'&&window.YetiCamels)YetiCamels.refresh();else if(window.YetiSkull)YetiSkull.refresh();return true;}
+    catch(e){showToast(e.message||'Suppression impossible.');return false;}
+  }
+  document.addEventListener('click',e=>{const b=e.target.closest('[data-del-kind]');if(!b)return;e.preventDefault();e.stopPropagation();delGame(b.dataset.delKind,Number(b.dataset.delId)||0,b.dataset.delScope||'one');},true);
+  // ---------- Quitter une partie et y revenir (même compte, même après une fermeture du site) ----------
+  const RESUME='yeti-resume';
+  function remember(kind,id){try{localStorage.setItem(RESUME,JSON.stringify({kind,id,player:authed}));}catch(_){}}
+  function forget(){try{localStorage.removeItem(RESUME);}catch(_){}}
+  let resumeTried=false;
+  function myActiveGames(){
+    const me=authed&&selectedPlayer===authed?authed:0;if(!me)return [];
+    const out=[];
+    for(const d of duels)if(d.game&&d.game!=='yeti'&&d.status==='accepted'&&!d.finished_at&&(d.challenger===me||d.opponent===me)){const o=player(d.challenger===me?d.opponent:d.challenger);out.push({kind:'duel',id:d.id,label:`${GAME_INFO[d.game].icon} ${GAME_INFO[d.game].name} contre ${o?o.name:'?'}`,turn:boardTodo(d,me)});}
+    if(window.YetiCamels&&YetiCamels.mine)for(const g of YetiCamels.mine(me))out.push({kind:'camel',...g});
+    if(window.YetiSkull&&YetiSkull.mine)for(const g of YetiSkull.mine(me))out.push({kind:'skull',...g});
+    return out;
+  }
+  function openAny(kind,id){if(kind==='duel')openBoard(id);else if(kind==='camel'&&window.YetiCamels)YetiCamels.open(id);else if(kind==='skull'&&window.YetiSkull)YetiSkull.open(id);}
+  function openNow(){return (window.YetiGames&&YetiGames.openId&&{kind:'duel',id:YetiGames.openId})||(window.YetiCamels&&YetiCamels.openId&&{kind:'camel',id:YetiCamels.openId})||(window.YetiSkull&&YetiSkull.openId&&{kind:'skull',id:YetiSkull.openId})||null;}
+  function renderResume(){
+    const bar=$('resume-bar');if(!bar)return;
+    const games=myActiveGames(),cur=openNow();
+    // retour automatique dans la partie ouverte avant une fermeture du site ou un bug
+    if(!resumeTried&&authed&&lastStateSig){let saved=null;try{saved=JSON.parse(localStorage.getItem(RESUME)||'null');}catch(_){}
+      if(!saved||saved.player!==authed)resumeTried=true;
+      else{const g=games.find(x=>x.kind===saved.kind&&x.id===saved.id);if(g&&!cur){resumeTried=true;showToast('♻️ On te remet dans ta partie en cours.');openAny(g.kind,g.id);return;}
+        if(saved.kind==='duel'||(saved.kind==='camel'&&window.YetiCamels&&YetiCamels.loaded)||(saved.kind==='skull'&&window.YetiSkull&&YetiSkull.loaded)){resumeTried=true;if(!g)forget();}}}
+    const list=games.filter(g=>!cur||cur.kind!==g.kind||cur.id!==g.id);
+    const html=list.length?`<span class="resume-t">♻️ Tes parties en cours</span>${list.map(g=>`<button type="button" class="${g.turn?'turn':''}" data-resume-kind="${g.kind}" data-resume-id="${g.id}">${escape(g.label)}${g.turn?' · <b>à toi !</b>':''}</button>`).join('')}`:'';
+    if(bar._html!==html){bar._html=html;bar.innerHTML=html;bar.hidden=!html;}
+  }
+  setInterval(()=>{if(!document.hidden)renderResume();},3000);
+  document.addEventListener('click',e=>{const b=e.target.closest('[data-resume-kind]');if(!b)return;openAny(b.dataset.resumeKind,Number(b.dataset.resumeId));});
   const DUEL_LOGOS='<span class="ct-logos" aria-label="Yéti, échecs, bataille navale"><i title="Yéti">🏔️</i><i title="Échecs">♟️</i><i title="Bataille navale">🚢</i></span>';
   function boardTodo(d,me){if(d.status!=='accepted'||d.finished_at||(d.challenger!==me&&d.opponent!==me))return false;if(d.game==='naval'&&d.turn===null)return !d.placed.includes(me);return d.turn===me;}
   function boardLine(d,st,me){
@@ -677,7 +719,7 @@
     else if(open)status='<span class="duel-st live">En cours…</span>';
     else if(isMine)status=`<button type="button" class="br-btn small ${boardTodo(d,me)?'':'ghost'}" data-board="${d.id}">${boardTodo(d,me)?'▶ À toi de jouer':'Ouvrir la partie'}</button>`;
     else status=`<button type="button" class="br-btn small ghost" data-board="${d.id}">👁️ Regarder</button>`;
-    return `<div class="duel-row game-${d.game}">${side(A,st.winner===d.challenger)}<span class="duel-vs">VS${startTag(d)}</span>${side(B,st.winner===d.opponent)}${status}</div>`;
+    return `<div class="duel-row game-${d.game}">${side(A,st.winner===d.challenger)}<span class="duel-vs">VS${startTag(d)}</span>${side(B,st.winner===d.opponent)}${status}${delBtn('duel',d.id)}</div>`;
   }
   // ---------- Échecs / bataille navale : la partie remplace la fenêtre du Yéti ----------
   let audioCtx=null;
@@ -689,9 +731,9 @@
     if(activeRound){showToast('Termine ton lancer avant d’ouvrir la partie.');return;}
     YetiGames.open(id,{root:$('board-stage'),request,player:pid=>player(pid),avatar,escape,toast:showToast,sound,
       session:()=>{const s=getSession();return s&&authed&&s.player===authed?s:null;},
-      onOpen:()=>{$('game-stage').hidden=true;document.querySelector('.game-footer').hidden=true;try{if(playerApi){if(playerApi.suspend)playerApi.suspend();else if(playerApi.pause)playerApi.pause();}}catch(_){}
+      onOpen:()=>{remember('duel',id);$('game-stage').hidden=true;document.querySelector('.game-footer').hidden=true;try{if(playerApi){if(playerApi.suspend)playerApi.suspend();else if(playerApi.pause)playerApi.pause();}}catch(_){}
         renderCompet();$('board-stage').scrollIntoView({behavior:'smooth',block:'start'});},
-      onClose:()=>{$('game-stage').hidden=false;document.querySelector('.game-footer').hidden=false;try{if(playerApi){if(playerApi.resume)playerApi.resume();else if(playerApi.play)playerApi.play();}}catch(_){}renderCompet();},
+      onClose:()=>{forget();$('game-stage').hidden=false;document.querySelector('.game-footer').hidden=false;try{if(playerApi){if(playerApi.resume)playerApi.resume();else if(playerApi.play)playerApi.play();}}catch(_){}renderCompet();renderResume();},
       onFinished:()=>{refresh();},
       otherTurns:cid=>duels.filter(d=>d.id!==cid&&d.game!=='yeti'&&boardTodo(d,selectedPlayer)).map(d=>({id:d.id,text:`${GAME_INFO[d.game].icon} À toi de jouer contre ${player(d.challenger===selectedPlayer?d.opponent:d.challenger).name}`})),
       rematch:(game,opp)=>{if(!opp)return;YetiGames.close();createGame(game,opp);}});
@@ -717,19 +759,19 @@
   if(window.YetiSkull)YetiSkull.init({root:$('board-stage'),panel:$('skull-panel'),request,player:pid=>PLAYERS.find(p=>p.id===pid)||null,players:()=>PLAYERS,avatar,escape,toast:showToast,sound,
     ready:()=>!privateAccess&&!!lastStateSig,
     session:()=>{const s=getSession();return s&&authed&&s.player===authed?s:null;},
-    badge:n=>{const b=$('ct-skull-badge');if(b){b.hidden=!n;b.textContent=n;}},
-    onOpen:()=>{if(window.YetiGames&&YetiGames.openId)YetiGames.close();if(window.YetiCamels&&YetiCamels.openId)YetiCamels.close(true);$('game-stage').hidden=true;document.querySelector('.game-footer').hidden=true;try{if(playerApi){if(playerApi.suspend)playerApi.suspend();else if(playerApi.pause)playerApi.pause();}}catch(_){}
+    badge:n=>{const b=$('ct-skull-badge');if(b){b.hidden=!n;b.textContent=n;}},boss:()=>isBoss(),
+    onOpen:id=>{if(id)remember('skull',id);if(window.YetiGames&&YetiGames.openId)YetiGames.close();if(window.YetiCamels&&YetiCamels.openId)YetiCamels.close(true);$('game-stage').hidden=true;document.querySelector('.game-footer').hidden=true;try{if(playerApi){if(playerApi.suspend)playerApi.suspend();else if(playerApi.pause)playerApi.pause();}}catch(_){}
       $('board-stage').scrollIntoView({behavior:'smooth',block:'start'});},
-    onClose:()=>{$('game-stage').hidden=false;document.querySelector('.game-footer').hidden=false;try{if(playerApi){if(playerApi.resume)playerApi.resume();else if(playerApi.play)playerApi.play();}}catch(_){}}});
+    onClose:()=>{forget();$('game-stage').hidden=false;document.querySelector('.game-footer').hidden=false;try{if(playerApi){if(playerApi.resume)playerApi.resume();else if(playerApi.play)playerApi.play();}}catch(_){}renderResume();}});
   // ---------- Petits chameaux (jusqu'à 4, bots aux places libres) ----------
   if(window.YetiCamels)YetiCamels.init({root:$('board-stage'),panel:$('camel-panel'),request,player:pid=>PLAYERS.find(p=>p.id===pid)||null,players:()=>PLAYERS,avatar,escape,toast:showToast,sound,
     party:()=>{try{if(typeof celebrate==='function')celebrate();}catch(_){}},
     ready:()=>!privateAccess&&!!lastStateSig,
     session:()=>{const s=getSession();return s&&authed&&s.player===authed?s:null;},
-    badge:n=>{const b=$('ct-camel-badge');if(b){b.hidden=!n;b.textContent=n;}},
-    onOpen:()=>{if(window.YetiGames&&YetiGames.openId)YetiGames.close();if(window.YetiSkull&&YetiSkull.openId)YetiSkull.close(true);$('game-stage').hidden=true;document.querySelector('.game-footer').hidden=true;try{if(playerApi){if(playerApi.suspend)playerApi.suspend();else if(playerApi.pause)playerApi.pause();}}catch(_){}
+    badge:n=>{const b=$('ct-camel-badge');if(b){b.hidden=!n;b.textContent=n;}},boss:()=>isBoss(),
+    onOpen:id=>{if(id)remember('camel',id);if(window.YetiGames&&YetiGames.openId)YetiGames.close();if(window.YetiSkull&&YetiSkull.openId)YetiSkull.close(true);$('game-stage').hidden=true;document.querySelector('.game-footer').hidden=true;try{if(playerApi){if(playerApi.suspend)playerApi.suspend();else if(playerApi.pause)playerApi.pause();}}catch(_){}
       $('board-stage').scrollIntoView({behavior:'smooth',block:'start'});},
-    onClose:()=>{$('game-stage').hidden=false;document.querySelector('.game-footer').hidden=false;try{if(playerApi){if(playerApi.resume)playerApi.resume();else if(playerApi.play)playerApi.play();}}catch(_){}}});
+    onClose:()=>{forget();$('game-stage').hidden=false;document.querySelector('.game-footer').hidden=false;try{if(playerApi){if(playerApi.resume)playerApi.resume();else if(playerApi.play)playerApi.play();}}catch(_){}renderResume();}});
   // ---------- Top 10 de chaque joueur ----------
   let topPlayer=null;
   function topOf(id){return allScores().filter(s=>s.player===id).sort((a,b)=>b.score-a.score||Date.parse(a.played_at)-Date.parse(b.played_at)).slice(0,10);}

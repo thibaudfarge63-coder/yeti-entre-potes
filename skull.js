@@ -6,7 +6,7 @@
   const fmtT = t => { const d = new Date(t), tz = {timeZone: 'Europe/Paris'}, day = x => new Intl.DateTimeFormat('fr-FR', {...tz, day: '2-digit', month: '2-digit'}).format(x);
     const h = new Intl.DateTimeFormat('fr-FR', {...tz, hour: '2-digit', minute: '2-digit'}).format(d).replace(':', 'h'); return day(d) === day(new Date()) ? h : day(d) + ' ' + h; };
   const startText = g => (g.started_at ? `🕒 début ${fmtT(g.started_at)}` : g.created_at ? `✉️ créée ${fmtT(g.created_at)}` : '');
-  const SUIT = {g: {name: 'Vert', icon: '⚓', cls: 'g'}, y: {name: 'Jaune', icon: '🪙', cls: 'y'}, p: {name: 'Violet', icon: '🔭', cls: 'p'}, k: {name: 'Noir (atout)', icon: '🏴', cls: 'k'}};
+  const SUIT = {g: {name: 'Vert', icon: '⚓', cls: 'g'}, y: {name: 'Jaune', icon: '🧭', cls: 'y'}, p: {name: 'Violet', icon: '🔭', cls: 'p'}, k: {name: 'Noir (atout)', icon: '⚔️', cls: 'k'}};
   const SPECIAL = {
     escape: {icon: '🏳️', name: 'Fuite', tip: 'Ne gagne que si le pli n’a que des Fuites. Perd contre toute autre carte.'},
     loot: {icon: '💰', name: 'Butin', tip: 'Comme une Fuite. Alliance avec le gagnant du pli : +20 chacun si les deux réussissent leur pari.'},
@@ -14,7 +14,7 @@
     pirate: {icon: '🗡️', name: 'Pirate', tip: 'Bat les Sirènes et les cartes numérotées ; perd contre le Roi et le Second.'},
     mermaid: {icon: '🧜‍♀️', name: 'Sirène', tip: 'Bat les cartes numérotées et le Roi ; perd contre les Pirates.'},
     king: {icon: '👑', name: 'Le Roi', tip: 'Bat les Pirates, le Second et les cartes numérotées ; perd contre une Sirène.'},
-    second: {icon: '⚔️', name: 'Second', tip: 'Bat tout sauf le Roi et les Sirènes. Aucun bonus pour les Pirates capturés.'},
+    second: {icon: '🎖️', name: 'Second', tip: 'Bat tout sauf le Roi et les Sirènes. Aucun bonus pour les Pirates capturés.'},
     kraken: {icon: '🐙', name: 'Kraken', tip: 'Personne ne gagne le pli. Celui qui l’aurait gagné ouvre le suivant.'},
     whale: {icon: '🐋', name: 'Baleine blanche', tip: 'Les spéciales deviennent des Fuites ; la carte numérotée la plus haute gagne, toutes couleurs confondues.'},
     ray: {icon: '🐠', name: 'Raie tachetée', tip: 'Comme la Baleine, mais la carte numérotée la plus basse gagne.'},
@@ -46,6 +46,7 @@
     const s = SPECIAL[k.t]; return s ? `${s.name} : ${s.tip}` : id;
   }
   // d = déclaration éventuelle (cartes posées)
+  const ART = (n, cls) => (window.SkullArt && SkullArt.has(n) ? SkullArt.svg(n, cls) : '');
   function cardHTML(id, opts = {}) {
     const k = kind(id), d = opts.d || {};
     let cls = 'skc', inner = '';
@@ -54,13 +55,17 @@
       let v = k.val;
       if (k.val === '0/14') v = d.zero === undefined ? '0/14' : d.zero;
       cls += ' n-' + (k.joker ? 'joker' + (d.color ? ' ' + d.color : '') : suit) + (k.ext ? ' ext' : '');
-      inner = `<b class="skc-v">${v}</b><span class="skc-i">${k.joker ? '🃏' : S.icon}</span><b class="skc-v r">${v}</b>${k.ext ? '<i class="skc-x">ext</i>' : ''}`;
+      const mark = k.joker ? (d.color ? ART('suit-' + d.color, 'mini') : '') : ART('suit-' + suit, 'mini');
+      const big = k.joker ? ART('joker', 'big') : ART('suit-' + suit, 'big');
+      inner = big ? `<span class="skc-c tl"><b>${v}</b>${mark}</span><span class="skc-art">${big}</span><span class="skc-c br"><b>${v}</b>${mark}</span>${k.ext ? '<i class="skc-x">ext</i>' : ''}`
+        : `<b class="skc-v">${v}</b><span class="skc-i">${k.joker ? '🃏' : S.icon}</span><b class="skc-v r">${v}</b>${k.ext ? '<i class="skc-x">ext</i>' : ''}`;
     } else {
       const S = SPECIAL[k.t] || {icon: '?', name: id};
       let name = S.name;
       if (k.t === 'tigress' && d.tig) name += d.tig === 'pirate' ? ' · Pirate' : ' · Fuite';
       cls += ' sp sp-' + k.t;
-      inner = `<span class="skc-i big">${S.icon}</span><span class="skc-n">${name}</span>`;
+      const big = ART(k.t, 'big');
+      inner = `<span class="skc-art">${big || `<span class="skc-i big">${S.icon}</span>`}</span><span class="skc-n">${name}</span>`;
     }
     if (opts.cls) cls += ' ' + opts.cls;
     const tag = opts.button ? 'button' : 'div';
@@ -69,7 +74,7 @@
   const ORDER = id => { const k = kind(id); if (k.t !== 'num') return 1000 + Object.keys(SPECIAL).indexOf(k.t); const so = {g: 0, y: 1, p: 2, k: 3}[k.suit] ?? 2.5; return so * 100 + (k.val === '0/14' ? 0 : k.val === 15 ? 15 : k.val) + (k.ext ? 0.5 : 0); };
 
   // ---------- état ----------
-  let ctx = null, panelEl = null, root = null, list = [], listTimer = null, knownInv = null, lastBadge = -1;
+  let ctx = null, panelEl = null, root = null, list = [], listLoaded = false, listTimer = null, knownInv = null, lastBadge = -1;
   let pick = new Set(), rounds = 10, opts = Object.fromEntries(OPTIONS.map(([k]) => [k, true])), creating = false;
   let cur = null, timer = null, busy = false, showTrickUntil = 0, shownTrickKey = '', lastRoundSeen = 0, pendingDecl = null, nudgeAt = 0;
   const esc = s => ctx.escape(String(s));
@@ -89,7 +94,7 @@
   }
   async function loadList() {
     if (!ctx || !ctx.ready()) return;
-    try { const r = await ctx.request('/api/skull/list', {}); list = (r && r.games) || []; } catch (_) { return; }
+    try { const r = await ctx.request('/api/skull/list', {}); list = (r && r.games) || []; listLoaded = true; } catch (_) { return; }
     const me = meId();
     if (me) {
       const inv = list.filter(g => g.status === 'lobby' && g.seats.some((p, i) => p === me && g.seat_state[i] === 'invited'));
@@ -113,6 +118,7 @@
           <p class="sk-note">Fuites, Pirates et cartes de couleur sont toujours là. À 2 joueurs, le Joker 15, la Planche et les 0/14 sont retirés.${noLev ? ' Le Casier a besoin d’au moins un léviathan.' : ''}</p></details>
         <button type="button" class="sk-go" data-sk-create ${creating || !pick.size ? 'disabled' : ''}>☠️ ${pick.size ? `Inviter ${pick.size} pote${pick.size > 1 ? 's' : ''}` : 'Choisis au moins un pote'}</button>
       </div>` : '<p class="br-empty">Connecte-toi pour lancer une partie.</p>';
+    const boss = !!(ctx.boss && ctx.boss());
     const mine = list.filter(g => g.seats.includes(me) && g.status !== 'done');
     const others = list.filter(g => !g.seats.includes(me) && g.status === 'playing');
     const done = list.filter(g => g.status === 'done').slice(0, 5);
@@ -133,9 +139,9 @@
         st = best >= 0 ? `🏆 ${esc(nameOf(g.players[best]))} gagne avec ${g.scores[best]} pts` : 'Terminée';
         act = `<button type="button" data-sk-open="${g.id}">Voir</button>`;
       }
-      return `<div class="cam-row"><div class="cam-chips">${chips}</div><div class="cam-row-foot"><span class="cam-st">${st} · ${g.R} manche${g.R > 1 ? 's' : ''}<small class="cam-when">${startText(g)}</small></span><span class="cam-acts">${act}</span></div></div>`;
+      return `<div class="cam-row"><div class="cam-chips">${chips}</div><div class="cam-row-foot"><span class="cam-st">${st} · ${g.R} manche${g.R > 1 ? 's' : ''}<small class="cam-when">${startText(g)}</small></span><span class="cam-acts">${act}${boss ? `<button type="button" class="del-game" data-del-kind="skull" data-del-id="${g.id}" title="Supprimer cette partie" aria-label="Supprimer">🗑️</button>` : ''}</span></div></div>`;
     };
-    const html = form + (mine.length ? '<p class="duel-sep">Tes parties</p>' + mine.map(row).join('') : '')
+    const html = form + (boss && list.length ? '<div class="del-bar"><button type="button" class="del-all" data-del-kind="skull" data-del-scope="done">🗑️ Vider les terminées</button><button type="button" class="del-all hard" data-del-kind="skull" data-del-scope="all">💣 Tout supprimer</button></div>' : '') + (mine.length ? '<p class="duel-sep">Tes parties</p>' + mine.map(row).join('') : '')
       + (others.length ? '<p class="duel-sep">En cours dans le club</p>' + others.map(row).join('') : '')
       + (done.length ? '<p class="duel-sep">Terminées</p>' + done.map(row).join('') : '')
       + (!mine.length && !others.length && !done.length ? '<p class="br-empty">Aucune partie pour l’instant.</p>' : '');
@@ -164,7 +170,7 @@
   async function open(id) {
     if (!ctx) return;
     if (cur && cur.id !== id) close(true);
-    ctx.onOpen && ctx.onOpen();
+    ctx.onOpen && ctx.onOpen(id);
     root = ctx.root; root.hidden = false; root.className = 'board-stage sk-stage';
     root.innerHTML = '<div class="gb-loading"><span class="spinner"></span><p>On mélange les cartes…</p></div>';
     cur = {id, loading: true}; showTrickUntil = 0; shownTrickKey = ''; lastRoundSeen = 0; pendingDecl = null;
@@ -233,7 +239,7 @@
     const collect = showing && Date.now() > showTrickUntil - 1000;
     const myTurn = G.turn === me && me >= 0 && ['play', 'salvo', 'plank'].includes(G.phase);
     root.classList.toggle('sk-full', fullView);
-    const top = `<div class="skb-top"><button type="button" class="gb-back" data-sk-close>← Retour au Yéti</button><b class="skb-title">☠️ Skull King</b>
+    const top = `<div class="skb-top"><button type="button" class="gb-back" data-sk-close title="Ta place est gardée : reviens quand tu veux avec « Tes parties en cours »">🚪 Quitter la partie</button><b class="skb-title">☠️ Skull King</b>
       <span class="skb-round">${G.phase === 'done' ? 'Partie terminée' : `Manche <b>${G.round}</b>/${G.R} · ${G.dealt} carte${G.dealt > 1 ? 's' : ''}`}</span>
       <span class="skb-tools"><button type="button" data-sk-sheet title="Feuille de score">📜 Scores</button><button type="button" data-sk-full title="${fullView ? 'Quitter le plein écran' : 'Plein écran'}">${fullView ? '✕' : '⛶'}</button></span></div>`;
     const st = statusBar(G, me, myTurn);
@@ -270,7 +276,7 @@
         if (last.destroyed && last.destroyed.length) caption += '<br>🔒 Léviathans détruits';
         if (last.removed !== null && last.removed !== undefined) caption += '<br>🪵 Un Pirate passe par la planche';
       } else if (G.phase === 'bid') caption = `<span class="skb-big">${G.round}</span>Manche ${G.round} : les paris`;
-      else if (G.trick && G.trick.lead) caption = `<span class="skb-lead n-${G.trick.lead}">${SUIT[G.trick.lead].icon}</span>${SUIT[G.trick.lead].name}`;
+      else if (G.trick && G.trick.lead) caption = `<span class="skb-lead n-${G.trick.lead}">${ART('suit-' + G.trick.lead) || SUIT[G.trick.lead].icon}</span>${SUIT[G.trick.lead].name}`;
       else caption = cards.length ? 'Pas de couleur demandée' : `Pli ${G.tricks + 1}/${G.dealt}`;
     }
     const center = G.phase === 'done' ? `<div class="skb-center final">${finalBoard(G)}</div>` : `<div class="skb-center">${caption}</div>`;
@@ -296,7 +302,7 @@
     const html = `<div class="skb">${top}<div class="skb-status ${st.mine ? 'mine' : ''}">${st.html}</div>
       <div class="skb-main"><div class="skb-table P${G.P}"><div class="skb-felt"></div>${center}${seats}${played}</div><aside class="skb-panels">${panels}</aside></div>
       ${acts.length ? `<div class="cam-actions skb-acts">${acts.join('')}</div>` : ''}${hand}${declDialog()}${sheet}
-      <details class="sk-help"><summary>Aide des cartes</summary><ul>${Object.values(SPECIAL).map(s => `<li>${s.icon} <b>${s.name}</b> : ${s.tip}</li>`).join('')}<li>🃏 <b>Joker 15</b> : un 15 jaune, violet ou vert, jamais noir.</li><li>🏴 <b>Noir</b> : l’atout, bat les trois autres couleurs.</li></ul></details></div>`;
+      <details class="sk-help"><summary>Aide des cartes</summary><ul>${Object.values(SPECIAL).map(s => `<li>${s.icon} <b>${s.name}</b> : ${s.tip}</li>`).join('')}<li>🃏 <b>Joker 15</b> : un 15 jaune, violet ou vert, jamais noir.</li><li>⚔️ <b>Noir</b> : l’atout, bat les trois autres couleurs.</li></ul></details></div>`;
     if (root._html !== html) { root.innerHTML = html; root._html = html; bind(); }
   }
   function historyHTML(G) {
@@ -313,7 +319,7 @@
   }
   function renderLobby() {
     const g = cur, me = meId(), i = g.seats.indexOf(me), invited = i >= 0 && g.seat_state[i] === 'invited';
-    const html = `<div class="cam-head"><button type="button" class="gb-back" data-sk-close>← Retour au Yéti</button><h3>☠️ Skull King</h3><span class="cam-need-tag">${g.config.rounds} manche${g.config.rounds > 1 ? 's' : ''}</span></div>
+    const html = `<div class="cam-head"><button type="button" class="gb-back" data-sk-close title="Ta place est gardée : reviens quand tu veux avec « Tes parties en cours »">🚪 Quitter la partie</button><h3>☠️ Skull King</h3><span class="cam-need-tag">${g.config.rounds} manche${g.config.rounds > 1 ? 's' : ''}</span></div>
       <div class="cam-lobby"><p>${g.host === me ? 'Invitations envoyées. La partie démarre quand tout le monde a répondu, ou dès que tu la lances avec ceux qui ont rejoint.' : invited ? `<b>${esc(nameOf(g.host))}</b> t’invite à jouer !` : 'En attente des invités…'}</p>
       <div class="cam-seats">${g.seats.map((p, k) => `<div class="cam-pl">${pl(p) ? ctx.avatar(pl(p)) : ''}<span><b>${esc(nameOf(p))}</b><small>${{host: 'organise', joined: '✅ prêt', invited: '⏳ invité'}[g.seat_state[k]] || ''}</small></span></div>`).join('')}</div>
       <div class="cam-actions">${invited ? '<button type="button" class="cam-yes" data-sk-join="1">Rejoindre</button><button type="button" class="cam-no" data-sk-join="0">Refuser</button>' : ''}${g.host === me ? `<button type="button" class="cam-yes" data-sk-start ${g.seat_state.filter(x => x !== 'invited').length < 2 ? 'disabled' : ''}>☠️ Lancer maintenant</button><button type="button" class="cam-no" data-sk-cancel>Annuler la partie</button>` : ''}</div></div>`;
@@ -324,7 +330,7 @@
     const {id, need} = pendingDecl;
     const choices = need === 'tig' ? [['tig', 'pirate', '🗡️ Pirate'], ['tig', 'escape', '🏳️ Fuite']]
       : need === 'zero' ? [['zero', 0, '0'], ['zero', 14, '14']]
-      : [['color', 'y', '🪙 Jaune'], ['color', 'p', '🔭 Violet'], ['color', 'g', '⚓ Vert']];
+      : [['color', 'y', '🧭 Jaune'], ['color', 'p', '🔭 Violet'], ['color', 'g', '⚓ Vert']];
     return `<div class="sk-decl" role="dialog"><div class="sk-decl-card">${cardHTML(id, {escape: esc})}<p>${need === 'tig' ? 'La Tigresse joue en…' : need === 'zero' ? 'Cette carte vaut…' : 'Couleur du Joker 15 :'}</p>
       <div class="sk-decl-btns">${choices.map(([k, v, l]) => `<button type="button" data-sk-decl="${k}" data-v="${v}">${l}</button>`).join('')}</div><button type="button" class="cam-no" data-sk-decl-cancel>Annuler</button></div></div>`;
   }
@@ -368,5 +374,7 @@
     finally { busy = false; if (root) root.classList.remove('sk-busy'); }
   }
 
-  window.YetiSkull = Object.freeze({init, open, close, refresh: loadList, cardHTML, get openId() { return cur ? cur.id : null; }});
+  window.YetiSkull = Object.freeze({init, open, close, refresh: loadList, cardHTML, get openId() { return cur ? cur.id : null; }, get loaded() { return listLoaded; },
+    // parties en cours de ce joueur (pour « Reprendre »)
+    mine: me => list.filter(g => g.status === 'playing' && (g.players || g.seats).includes(me)).map(g => ({id: g.id, label: `☠️ Skull King · manche ${g.round}/${g.R}`, turn: (g.waiting || []).includes(me)}))});
 })();
