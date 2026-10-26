@@ -679,6 +679,11 @@
   }
   document.addEventListener('click',e=>{const b=e.target.closest('[data-del-kind]');if(!b)return;e.preventDefault();e.stopPropagation();delGame(b.dataset.delKind,Number(b.dataset.delId)||0,b.dataset.delScope||'one');},true);
   // ---------- Quitter une partie et y revenir (même compte, même après une fermeture du site) ----------
+  // Erreurs du navigateur envoyées au journal de diagnostic (yeti_private.push_debug, étape « jserr ») pour comprendre les bugs d'un joueur.
+  let errSent=0;
+  function reportErr(msg){if(errSent>=8||!msg)return;errSent++;try{request('/api/push/diag',{player:selectedPlayer||0,step:'jserr',msg:String(msg).slice(0,280),ua:navigator.userAgent.slice(0,300)}).catch(()=>{});}catch(_){}}
+  window.addEventListener('error',e=>reportErr((e.message||'erreur')+' @'+String(e.filename||'').split('/').pop()+':'+(e.lineno||0)+':'+(e.colno||0)));
+  window.addEventListener('unhandledrejection',e=>{const r=e.reason;if(r&&r.code&&r.status)return;reportErr('promesse : '+(r&&r.message||r));});
   const RESUME='yeti-resume';
   function remember(kind,id){try{localStorage.setItem(RESUME,JSON.stringify({kind,id,player:authed}));}catch(_){}}
   function forget(){try{localStorage.removeItem(RESUME);}catch(_){}}

@@ -179,21 +179,43 @@
   }
   function close(silent) {
     clearInterval(timer); timer = null; cur = null; pendingDecl = null; sheetOpen = false; fullView = false;
-    if (root) { root.hidden = true; root.innerHTML = ''; root._html = ''; root.className = 'board-stage'; }
+    if (root) { root.hidden = true; root.innerHTML = ''; root._html = ''; root._mode = ''; root.className = 'board-stage'; }
     if (!silent && ctx && ctx.onClose) ctx.onClose();
     loadList();
   }
+  // Robustesse (connexions lentes, onglet mis en veille) : chargements qui ne bloquent jamais la table,
+  // rechargement complet toutes les 10 s et au retour sur l'onglet, alerte « connexion lente » après plusieurs échecs.
+  let loading = null, loadedAt = 0, fails = 0, netBad = false, pendingPlay = null, polling = false;
+  function setNet(bad) { if (bad !== netBad) { netBad = bad; render(); } }
   async function poll() {
-    if (!cur || busy || document.hidden) return;
-    try { const v = await ctx.request('/api/skull/version', {game: cur.id}); if (cur && v && v.version !== cur.version) await load(false); else render(); } catch (_) {}
+    if (!cur || document.hidden || polling) return;
+    polling = true;
+    try {
+      const v = await ctx.request('/api/skull/version', {game: cur.id});
+      fails = 0; setNet(false);
+      if (cur && v && (v.version !== cur.version || Date.now() - loadedAt > 10000)) await load(false); else render();
+    } catch (_) { fails += 1; if (fails >= 3) setNet(true); }
+    finally { polling = false; }
   }
-  async function load(first) {
-    if (!cur || busy) return;
-    busy = true;
-    try { const g = await api({action: 'state', game: cur.id}); if (cur && g.id === cur.id) take(g); }
-    catch (err) { if (first && root) { root.innerHTML = `<div class="gb-loading"><p>${esc(err.message || 'Partie introuvable.')}</p><button type="button" data-sk-close>Fermer</button></div>`; root.querySelector('[data-sk-close]').onclick = () => close(); clearInterval(timer); cur = null; } }
-    finally { busy = false; }
+  function load(first) {
+    if (!cur) return Promise.resolve();
+    if (loading) return loading;
+    const id = cur.id;
+    loading = (async () => {
+      try { const g = await api({action: 'state', game: id}); loadedAt = Date.now(); fails = 0; netBad = false; if (cur && g.id === cur.id) take(g); }
+      catch (err) {
+        if (first && root && cur && cur.loading) { root.innerHTML = `<div class="gb-loading"><p>${esc(err.message || 'Partie introuvable.')}</p><button type="button" data-sk-close>Fermer</button></div>`; root._mode = ''; root.querySelector('[data-sk-close]').onclick = () => close(); clearInterval(timer); cur = null; }
+        else { fails += 1; if (fails >= 2) setNet(true); }
+      }
+      finally { loading = null; }
+    })();
+    return loading;
   }
+  const wake = () => { if (cur && !document.hidden) { fails = 0; load(false); } };
+  document.addEventListener('visibilitychange', wake);
+  window.addEventListener('focus', wake);
+  window.addEventListener('online', wake);
+  window.addEventListener('pageshow', wake);
   function take(g) {
     const was = cur && cur.game;
     cur = g;
@@ -219,15 +241,17 @@
     const waitBid = G.hasBid.map((h, s) => (h ? null : esc(seatName(G, s)))).filter(Boolean);
     if (G.phase === 'done') return {mine: false, html: '🏁 Partie terminée'};
     if (G.phase === 'bid') {
-      if (me >= 0 && !G.hasBid[me]) return {mine: true, html: `<span>Manche ${G.round} : <b>combien de plis vas-tu gagner ?</b></span><span class="skb-bids">${Array.from({length: G.dealt + 1}, (_, n) => `<button type="button" data-sk-bid="${n}">${n}</button>`).join('')}</span>`};
-      return {mine: false, html: `${me >= 0 ? `Ton pari : <b>${G.bids[me]}</b>. ` : ''}En attente du pari de ${waitBid.join(', ')}…`};
+      if (me >= 0 && !G.hasBid[me]) return {mine: true, html: `<span>Manche ${G.round} : <b>combien de plis vas-tu gagner ?</b> <span class="skb-first">⛵ ${G.starter === me ? 'Tu commenceras' : `${esc(seatName(G, G.starter))} commencera`}</span></span><span class="skb-bids">${Array.from({length: G.dealt + 1}, (_, n) => `<button type="button" data-sk-bid="${n}">${n}</button>`).join('')}</span>`};
+      return {mine: false, html: `${me >= 0 ? `Ton pari : <b>${G.bids[me]}</b>. ` : ''}En attente du pari de ${waitBid.join(', ')}… <span class="skb-first">⛵ ${G.starter === me ? '<b>Tu commenceras</b>' : `<b>${esc(seatName(G, G.starter))}</b> commencera`} la manche</span>`};
     }
+    const opening = G.trick && !G.trick.cards.length && (G.phase === 'play');
     if (myTurn) {
       if (G.phase === 'plank') return {mine: true, html: '<b>Supplice de la planche :</b> touche le Pirate à retirer du pli.'};
       if (G.phase === 'salvo') return {mine: true, html: '<b>Dernière salve :</b> pose une carte de plus, celle que tu veux.'};
       const lead = G.trick && G.trick.lead;
-      return {mine: true, html: `<b>À toi de jouer une carte.</b>${lead ? ` Couleur demandée : ${SUIT[lead].icon} ${SUIT[lead].name.toLowerCase()}.` : ''}`};
+      return {mine: true, html: opening ? `⛵ <b>Tu commences ${G.tricks === 0 ? 'la manche' : 'ce pli'} :</b> pose la carte de ton choix.` : `<b>À toi de jouer une carte.</b>${lead ? ` Couleur demandée : ${SUIT[lead].icon} ${SUIT[lead].name.toLowerCase()}.` : ''}`};
     }
+    if (opening && G.turn !== null && G.turn !== undefined) return {mine: false, html: `⛵ <b>${esc(seatName(G, G.turn))}</b> commence ${G.tricks === 0 ? 'la manche' : 'ce pli'}…`};
     if (G.turn !== null && G.turn !== undefined) return {mine: false, html: `<b>${esc(seatName(G, G.turn))}</b> ${G.phase === 'plank' ? 'choisit le Pirate à faire passer par la planche' : G.phase === 'salvo' ? 'tire sa Dernière salve' : 'doit jouer une carte'}…`};
     return {mine: false, html: '…'};
   }
@@ -251,7 +275,7 @@
       const bid = G.phase === 'done' ? '' : b !== null ? `<i class="skb-bid" title="Pari">🎯 ${b}</i>` : `<i class="skb-bid ${G.hasBid[s] ? 'ok' : 'wait'}" title="Pari">${G.hasBid[s] ? '🎯 ✓' : '🎯 …'}</i>`;
       const won = G.phase !== 'bid' && G.phase !== 'done' ? `<i class="skb-won" title="Plis gagnés">✋ ${G.won[s]}</i>` : '';
       return `<div class="skb-seat ${active ? 'turn' : ''} ${s === me ? 'me' : ''} ${winSeat === s ? 'win' : ''}" style="left:${pos.x}%;top:${pos.y}%">
-        ${pl(p) ? ctx.avatar(pl(p)) : ''}<b>${esc(nameOf(p))}${s === G.starter && G.phase !== 'done' ? ' <i title="Ouvre la manche">⛵</i>' : ''}</b>
+        ${pl(p) ? ctx.avatar(pl(p)) : ''}<b>${esc(nameOf(p))}</b>${(G.phase === 'bid' ? s === G.starter : G.trick && (G.trick.cards.length ? G.trick.cards[0].s === s : G.turn === s)) && G.phase !== 'done' ? '<i class="skb-lead-tag">⛵ commence</i>' : ''}
         <span class="skb-badges">${bid}${won}</span></div>`;
     }).join('');
     // cartes posées devant chaque joueur
@@ -277,7 +301,7 @@
         if (last.removed !== null && last.removed !== undefined) caption += '<br>🪵 Un Pirate passe par la planche';
       } else if (G.phase === 'bid') caption = `<span class="skb-big">${G.round}</span>Manche ${G.round} : les paris`;
       else if (G.trick && G.trick.lead) caption = `<span class="skb-lead n-${G.trick.lead}">${ART('suit-' + G.trick.lead) || SUIT[G.trick.lead].icon}</span>${SUIT[G.trick.lead].name}`;
-      else caption = cards.length ? 'Pas de couleur demandée' : `Pli ${G.tricks + 1}/${G.dealt}`;
+      else caption = cards.length ? 'Pas de couleur demandée' : `Pli ${G.tricks + 1}/${G.dealt}<br>⛵ <b>${G.turn === me ? 'Tu commences' : `${esc(seatName(G, G.turn ?? G.starter))} commence`}</b>`;
     }
     const center = G.phase === 'done' ? `<div class="skb-center final">${finalBoard(G)}</div>` : `<div class="skb-center">${caption}</div>`;
     // panneaux des joueurs (colonne de droite, comme sur BGA)
@@ -299,11 +323,25 @@
       hand = `<div class="skb-handbar"><b>Ta main</b>${pend}</div><div class="skb-hand ${canPlay ? 'active' : ''}">${sorted.map(id => cardHTML(id, {button: true, escape: esc, cls: canPlay ? (G.playable.includes(id) ? 'can' : 'no') : '', attrs: `data-sk-card="${id}" ${canPlay && G.playable.includes(id) ? '' : 'disabled'}`})).join('') || '<p class="sk-empty">Plus de carte pour cette manche.</p>'}</div>`;
     }
     const sheet = sheetOpen ? `<div class="sk-decl" role="dialog" aria-label="Feuille de score"><div class="sk-decl-card skb-sheet"><p>📜 Feuille de score</p>${historyHTML(G)}<button type="button" class="cam-no" data-sk-sheet>Fermer</button></div></div>` : '';
-    const html = `<div class="skb">${top}<div class="skb-status ${st.mine ? 'mine' : ''}">${st.html}</div>
-      <div class="skb-main"><div class="skb-table P${G.P}"><div class="skb-felt"></div>${center}${seats}${played}</div><aside class="skb-panels">${panels}</aside></div>
-      ${acts.length ? `<div class="cam-actions skb-acts">${acts.join('')}</div>` : ''}${hand}${declDialog()}${sheet}
-      <details class="sk-help"><summary>Aide des cartes</summary><ul>${Object.values(SPECIAL).map(s => `<li>${s.icon} <b>${s.name}</b> : ${s.tip}</li>`).join('')}<li>🃏 <b>Joker 15</b> : un 15 jaune, violet ou vert, jamais noir.</li><li>⚔️ <b>Noir</b> : l’atout, bat les trois autres couleurs.</li></ul></details></div>`;
-    if (root._html !== html) { root.innerHTML = html; root._html = html; bind(); }
+    // Mise à jour par morceaux : la main n'est redessinée que si elle change (un clic sur une carte n'est plus perdu
+    // quand la table se met à jour au même moment), et l'aide ouverte reste ouverte.
+    const parts = {
+      top: top + `<div class="skb-status ${st.mine ? 'mine' : ''}">${st.html}</div>` + (netBad ? '<div class="skb-net">📶 Connexion lente, on réessaie… <button type="button" data-sk-reload>🔄 Recharger la table</button></div>' : ''),
+      main: `<div class="skb-main"><div class="skb-table P${G.P}"><div class="skb-felt"></div>${center}${seats}${played}</div><aside class="skb-panels">${panels}</aside></div>`,
+      acts: acts.length ? `<div class="cam-actions skb-acts">${acts.join('')}</div>` : '',
+      hand, over: declDialog() + sheet,
+      help: `<details class="sk-help"><summary>Aide des cartes</summary><ul>${Object.values(SPECIAL).map(s => `<li>${s.icon} <b>${s.name}</b> : ${s.tip}</li>`).join('')}<li>🃏 <b>Joker 15</b> : un 15 jaune, violet ou vert, jamais noir.</li><li>⚔️ <b>Noir</b> : l’atout, bat les trois autres couleurs.</li></ul></details>`,
+    };
+    if (root._mode !== 'table' || !root.querySelector('.skb')) {
+      root.innerHTML = `<div class="skb">${Object.keys(parts).map(k => `<div class="skb-part" data-part="${k}"></div>`).join('')}</div>`;
+      root._mode = 'table'; root._html = ''; root._parts = {}; root.onclick = onClick;
+    }
+    for (const [k, h] of Object.entries(parts)) {
+      if (root._parts[k] === h) continue;
+      root._parts[k] = h; root.querySelector(`[data-part="${k}"]`).innerHTML = h;
+    }
+    root.querySelectorAll('[data-sk-close]').forEach(b => b.onclick = () => close());
+    if (pendingPlay) { const el = root.querySelector(`[data-sk-card="${pendingPlay}"]`); if (el) el.classList.add('sending'); }
   }
   function historyHTML(G) {
     if (!G.history.length) return '<p class="sk-note">Aucune manche terminée.</p>';
@@ -323,7 +361,7 @@
       <div class="cam-lobby"><p>${g.host === me ? 'Invitations envoyées. La partie démarre quand tout le monde a répondu, ou dès que tu la lances avec ceux qui ont rejoint.' : invited ? `<b>${esc(nameOf(g.host))}</b> t’invite à jouer !` : 'En attente des invités…'}</p>
       <div class="cam-seats">${g.seats.map((p, k) => `<div class="cam-pl">${pl(p) ? ctx.avatar(pl(p)) : ''}<span><b>${esc(nameOf(p))}</b><small>${{host: 'organise', joined: '✅ prêt', invited: '⏳ invité'}[g.seat_state[k]] || ''}</small></span></div>`).join('')}</div>
       <div class="cam-actions">${invited ? '<button type="button" class="cam-yes" data-sk-join="1">Rejoindre</button><button type="button" class="cam-no" data-sk-join="0">Refuser</button>' : ''}${g.host === me ? `<button type="button" class="cam-yes" data-sk-start ${g.seat_state.filter(x => x !== 'invited').length < 2 ? 'disabled' : ''}>☠️ Lancer maintenant</button><button type="button" class="cam-no" data-sk-cancel>Annuler la partie</button>` : ''}</div></div>`;
-    if (root._html !== html) { root.innerHTML = html; root._html = html; bind(); }
+    if (root._html !== html || root._mode !== 'lobby') { root.innerHTML = html; root._html = html; root._mode = 'lobby'; bind(); }
   }
   function declDialog() {
     if (!pendingDecl) return '';
@@ -344,16 +382,17 @@
     if (b.dataset.skBid !== undefined) return act({action: 'bid', n: Number(b.dataset.skBid)});
     if (b.dataset.skCard) {
       const id = b.dataset.skCard, need = G.decl && G.decl[id];
-      if (need) { pendingDecl = {id, need}; root._html = ''; render(); return; }
+      if (need) { pendingDecl = {id, need}; root._parts = {}; render(); return; }
       return act({action: 'play', card: id});
     }
     if (b.dataset.skDecl) {
       if (!pendingDecl || busy) return;
       const {id} = pendingDecl; const k = b.dataset.skDecl, v = k === 'zero' ? Number(b.dataset.v) : b.dataset.v;
-      pendingDecl = null; root._html = ''; render(); return act({action: 'play', card: id, decl: {[k]: v}});
+      pendingDecl = null; root._parts = {}; render(); return act({action: 'play', card: id, decl: {[k]: v}});
     }
-    if ('skDeclCancel' in b.dataset) { pendingDecl = null; root._html = ''; render(); return; }
+    if ('skDeclCancel' in b.dataset) { pendingDecl = null; root._parts = {}; render(); return; }
     if (b.dataset.skPlank !== undefined) return act({action: 'plank', idx: Number(b.dataset.skPlank)});
+    if ('skReload' in b.dataset) { fails = 0; netBad = false; root._parts = {}; await load(false); render(); return; }
     if ('skSheet' in b.dataset) { sheetOpen = !sheetOpen; render(); return; }
     if ('skFull' in b.dataset) { fullView = !fullView; render(); if (fullView) root.scrollTop = 0; else root.scrollIntoView({block: 'start'}); return; }
     if ('skNudge' in b.dataset) { nudgeAt = Date.now(); return act({action: 'nudge'}); }
@@ -368,10 +407,17 @@
   async function act(body) {
     if (!cur || busy) return;
     busy = true;
+    if (body.action === 'play') { pendingPlay = body.card; render(); }
     root.classList.add('sk-busy');
-    try { const g = await api({...body, game: cur.id}); busy = false; take(g); }
-    catch (err) { busy = false; ctx.toast(err.message || 'Action refusée.'); load(false); }
-    finally { busy = false; if (root) root.classList.remove('sk-busy'); }
+    try {
+      if (loading) await loading; // une mise à jour de la table est en cours : on attend au lieu d'ignorer le clic
+      let g;
+      try { g = await api({...body, game: cur.id}); }
+      catch (err) { if (err && err.code === 'unavailable') { await new Promise(r => setTimeout(r, 800)); g = await api({...body, game: cur.id}); } else throw err; }
+      loadedAt = Date.now(); fails = 0; netBad = false; pendingPlay = null; busy = false; take(g);
+    }
+    catch (err) { pendingPlay = null; busy = false; ctx.toast(err.message || 'Action refusée.'); load(false); }
+    finally { busy = false; pendingPlay = null; if (root) root.classList.remove('sk-busy'); }
   }
 
   window.YetiSkull = Object.freeze({init, open, close, refresh: loadList, cardHTML, get openId() { return cur ? cur.id : null; }, get loaded() { return listLoaded; },

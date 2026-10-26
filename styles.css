@@ -1124,3 +1124,11 @@ button.skc:disabled{cursor:default}
 .del-bar{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;margin:6px 0}
 .del-all{border:1px solid #c0392b55;background:#fff0ee;color:#a8322a;border-radius:999px;padding:6px 11px;font:700 12px var(--body,inherit);cursor:pointer}
 .del-all.hard{background:#a8322a;color:#fff}
+.skb-part{display:contents}
+.skb-first{display:inline-block;margin-left:6px;padding:2px 8px;border-radius:999px;background:#1b4e3b;color:#fff;font-size:12px;font-weight:700}
+.skb-lead-tag{font-style:normal;font-size:10px;font-weight:800;color:#2b1700;background:#ffd54a;border-radius:999px;padding:1px 6px;white-space:nowrap}
+.skb-net{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;padding:6px 10px;background:#c0392b;color:#fff;font-size:13px;font-weight:700}
+.skb-net button{border:0;border-radius:999px;padding:5px 10px;background:#fff;color:#c0392b;font:800 12px var(--body,inherit);cursor:pointer}
+.skb-hand .skc.sending{transform:translateY(-14px) scale(1.04);box-shadow:inset 0 0 0 3px var(--fr),inset 0 0 0 5px #fff6e0,inset 0 0 0 6px var(--fr),0 0 0 3px #4caf50,0 8px 18px #0009;animation:skbSend .8s ease-in-out infinite alternate}
+@keyframes skbSend{to{opacity:.7}}
+@media(max-width:760px){.skb-lead-tag{font-size:9px;padding:0 4px}}
