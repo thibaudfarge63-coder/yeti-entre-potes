@@ -646,7 +646,7 @@
     const todo=me?duels.filter(d=>d.game!=='yeti'?((d.status==='pending'&&d.opponent===me)||boardTodo(d,me)):((d.challenger===me||d.opponent===me)&&d.status==='accepted'&&duelOf(d,me).length<d.throws)||(d.status==='pending'&&d.opponent===me)).length:0;
     $('ct-duel-badge').hidden=!todo;$('ct-duel-badge').textContent=todo;
     const inv=me?duels.filter(d=>d.status==='pending'&&d.opponent===me).length:0;
-    $('ct-duel-sub').textContent='Yéti · Échecs · Bataille navale'+(inv?` · ${inv} défi${inv>1?'s':''} reçu${inv>1?'s':''} !`:todo?` · ${todo} à jouer`:'');
+    $('ct-duel-sub').innerHTML=DUEL_LOGOS+(inv?`<span class="ct-count">${inv} défi${inv>1?'s':''} reçu${inv>1?'s':''} !</span>`:todo?`<span class="ct-count">${todo} à jouer</span>`:'');
     const myDay=me?dailyOf(me,today).length:0;
     $('ct-br-sub').textContent=!me?'Session du jour · 10 lancers':myDay>=DAILY_N?'✅ Session du jour faite':myDay?`Session en cours ${myDay}/${DAILY_N}`:'▶ Ta session du jour t’attend';
     const mineD=duels.filter(d=>d.challenger===me||d.opponent===me).sort((a,b)=>b.id-a.id).slice(0,8);
@@ -665,6 +665,7 @@
   // Heure de début : acceptation du défi (ou envoi du défi s'il attend encore une réponse)
   function whenShort(t){return dayKey(t)===dayKey(new Date())?hhmm(t):new Intl.DateTimeFormat('fr-FR',{timeZone:'Europe/Paris',day:'2-digit',month:'2-digit'}).format(new Date(t))+' '+hhmm(t);}
   function startTag(d){const t=d.started_at||d.created_at;if(!t)return '';return `<small title="${d.started_at?'Début de la partie':'Défi envoyé'}">${d.started_at?'🕒 ':'✉️ '}${whenShort(t)}</small>`;}
+  const DUEL_LOGOS='<span class="ct-logos" aria-label="Yéti, échecs, bataille navale"><i title="Yéti">🏔️</i><i title="Échecs">♟️</i><i title="Bataille navale">🚢</i></span>';
   function boardTodo(d,me){if(d.status!=='accepted'||d.finished_at||(d.challenger!==me&&d.opponent!==me))return false;if(d.game==='naval'&&d.turn===null)return !d.placed.includes(me);return d.turn===me;}
   function boardLine(d,st,me){
     const A=player(d.challenger),B=player(d.opponent),gi=GAME_INFO[d.game],isMine=d.challenger===me||d.opponent===me,open=window.YetiGames&&YetiGames.openId===d.id;

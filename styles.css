@@ -1057,3 +1057,7 @@ button.skc:disabled{cursor:default}
 .skb-hand .skc:disabled{opacity:1}
 .skb-hand .skc.no:disabled{opacity:.4}
 .sk-stage>.cam-head,.sk-stage>.cam-lobby,.sk-stage>.gb-loading{margin:12px}
+.ct-logos{display:inline-flex;gap:5px;vertical-align:middle;margin-top:3px}
+.ct-logos i{font-style:normal;display:inline-grid;place-items:center;width:32px;height:32px;border-radius:9px;background:#fff;border:1px solid #d9e3da;font-size:19px;line-height:1;box-shadow:0 1px 2px #0001}
+.ct-count{display:inline-block;margin-left:6px;font-weight:700;color:#c0392b;vertical-align:middle}
+@media(max-width:600px){.ct-logos i{width:28px;height:28px;font-size:16px}.ct-count{display:block;margin:3px 0 0}}
