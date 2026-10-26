@@ -2,6 +2,10 @@
    Le dé est tiré par le serveur ; ici on affiche, on anime le journal des coups et on envoie les actions. */
 (() => {
   'use strict';
+  // Heure de début (ou de création tant que la partie attend ses invités), heure de Paris
+  const fmtT = t => { const d = new Date(t), tz = {timeZone: 'Europe/Paris'}, day = x => new Intl.DateTimeFormat('fr-FR', {...tz, day: '2-digit', month: '2-digit'}).format(x);
+    const h = new Intl.DateTimeFormat('fr-FR', {...tz, hour: '2-digit', minute: '2-digit'}).format(d).replace(':', 'h'); return day(d) === day(new Date()) ? h : day(d) + ' ' + h; };
+  const startText = g => (g.started_at ? `🕒 début ${fmtT(g.started_at)}` : g.created_at ? `✉️ créée ${fmtT(g.created_at)}` : '');
   const COLORS = ['#e53935', '#1e88e5', '#f9a825', '#43a047'];
   const LIGHT = ['#ffd6d4', '#d3e8fb', '#fff0b8', '#d6f0d4'];
   const CNAME = ['Rouge', 'Bleu', 'Jaune', 'Vert'];
@@ -98,7 +102,7 @@
         st = g.winner !== null && g.winner !== undefined ? `🏆 ${esc(seatName(g, g.winner))} a gagné` : 'Partie arrêtée';
         act = `<button type="button" data-cam-open="${g.id}">Voir</button>`;
       }
-      return `<div class="cam-row"><div class="cam-chips">${chips}</div><div class="cam-row-foot"><span class="cam-st">${st} · ${g.need} 🐪 pour gagner</span><span class="cam-acts">${act}</span></div></div>`;
+      return `<div class="cam-row"><div class="cam-chips">${chips}</div><div class="cam-row-foot"><span class="cam-st">${st} · ${g.need} 🐪 pour gagner<small class="cam-when">${startText(g)}</small></span><span class="cam-acts">${act}</span></div></div>`;
     };
     const html = form
       + (mine.length ? '<p class="duel-sep">Tes parties</p>' + mine.map(row).join('') : '')

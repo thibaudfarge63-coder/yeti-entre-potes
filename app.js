@@ -646,7 +646,7 @@
     const todo=me?duels.filter(d=>d.game!=='yeti'?((d.status==='pending'&&d.opponent===me)||boardTodo(d,me)):((d.challenger===me||d.opponent===me)&&d.status==='accepted'&&duelOf(d,me).length<d.throws)||(d.status==='pending'&&d.opponent===me)).length:0;
     $('ct-duel-badge').hidden=!todo;$('ct-duel-badge').textContent=todo;
     const inv=me?duels.filter(d=>d.status==='pending'&&d.opponent===me).length:0;
-    $('ct-duel-sub').textContent=inv?`${inv} défi${inv>1?'s':''} reçu${inv>1?'s':''} !`:todo?`${todo} duel${todo>1?'s':''} à jouer`:'Défie un pote';
+    $('ct-duel-sub').textContent='Yéti · Échecs · Bataille navale'+(inv?` · ${inv} défi${inv>1?'s':''} reçu${inv>1?'s':''} !`:todo?` · ${todo} à jouer`:'');
     const myDay=me?dailyOf(me,today).length:0;
     $('ct-br-sub').textContent=!me?'Session du jour · 10 lancers':myDay>=DAILY_N?'✅ Session du jour faite':myDay?`Session en cours ${myDay}/${DAILY_N}`:'▶ Ta session du jour t’attend';
     const mineD=duels.filter(d=>d.challenger===me||d.opponent===me).sort((a,b)=>b.id-a.id).slice(0,8);
@@ -659,9 +659,12 @@
       else if(st.done)status=st.winner===0?'<span class="duel-st">🤝 Égalité</span>':isMine?(st.winner===me?'<span class="duel-st win">🏆 Gagné</span>':'<span class="duel-st lose">Perdu</span>'):`<span class="duel-st">🏆 ${escape(player(st.winner).name)}</span>`;
       else if(isMine&&myN<d.throws)status=playMode.kind==='duel'&&playMode.id===d.id?'<span class="duel-st live">En cours…</span>':`<button type="button" class="br-btn small" data-duel="${d.id}" ${activeRound?'disabled':''}>Jouer</button>`;
       else if(isMine)status=`<span class="duel-st">En attente de ${escape(player(d.challenger===me?d.opponent:d.challenger).name)}</span>`;
-      return `<div class="duel-row">${sc(A,fa,st.aa,st.winner===d.challenger)}<span class="duel-vs">VS</span>${sc(B,fb,st.ba,st.winner===d.opponent)}${status}</div>`;};
+      return `<div class="duel-row">${sc(A,fa,st.aa,st.winner===d.challenger)}<span class="duel-vs">VS${startTag(d)}</span>${sc(B,fb,st.ba,st.winner===d.opponent)}${status}</div>`;};
     $('duel-list').innerHTML=(mineD.length?mineD.map(d=>line(d,duelState(d))).join(''):`<p class="br-empty">${me?'Aucun duel pour toi. Défie quelqu’un !':'Choisis ton pseudo pour voir tes duels.'}</p>`)+(others.length?'<p class="duel-sep">Derniers duels du club</p>'+others.map(x=>line(x.d,x.st)).join(''):'');
   }
+  // Heure de début : acceptation du défi (ou envoi du défi s'il attend encore une réponse)
+  function whenShort(t){return dayKey(t)===dayKey(new Date())?hhmm(t):new Intl.DateTimeFormat('fr-FR',{timeZone:'Europe/Paris',day:'2-digit',month:'2-digit'}).format(new Date(t))+' '+hhmm(t);}
+  function startTag(d){const t=d.started_at||d.created_at;if(!t)return '';return `<small title="${d.started_at?'Début de la partie':'Défi envoyé'}">${d.started_at?'🕒 ':'✉️ '}${whenShort(t)}</small>`;}
   function boardTodo(d,me){if(d.status!=='accepted'||d.finished_at||(d.challenger!==me&&d.opponent!==me))return false;if(d.game==='naval'&&d.turn===null)return !d.placed.includes(me);return d.turn===me;}
   function boardLine(d,st,me){
     const A=player(d.challenger),B=player(d.opponent),gi=GAME_INFO[d.game],isMine=d.challenger===me||d.opponent===me,open=window.YetiGames&&YetiGames.openId===d.id;
@@ -673,7 +676,7 @@
     else if(open)status='<span class="duel-st live">En cours…</span>';
     else if(isMine)status=`<button type="button" class="br-btn small ${boardTodo(d,me)?'':'ghost'}" data-board="${d.id}">${boardTodo(d,me)?'▶ À toi de jouer':'Ouvrir la partie'}</button>`;
     else status=`<button type="button" class="br-btn small ghost" data-board="${d.id}">👁️ Regarder</button>`;
-    return `<div class="duel-row game-${d.game}">${side(A,st.winner===d.challenger)}<span class="duel-vs">VS${d.created_at?`<small>${dayKey(d.created_at)===dayKey(new Date())?hhmm(d.created_at):new Intl.DateTimeFormat('fr-FR',{timeZone:'Europe/Paris',day:'2-digit',month:'2-digit'}).format(new Date(d.created_at))+' '+hhmm(d.created_at)}</small>`:''}</span>${side(B,st.winner===d.opponent)}${status}</div>`;
+    return `<div class="duel-row game-${d.game}">${side(A,st.winner===d.challenger)}<span class="duel-vs">VS${startTag(d)}</span>${side(B,st.winner===d.opponent)}${status}</div>`;
   }
   // ---------- Échecs / bataille navale : la partie remplace la fenêtre du Yéti ----------
   let audioCtx=null;
