@@ -249,7 +249,60 @@
     const slug=p.name.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');const pic={imane:'imany'}[slug]||slug;
     return AVATARS.has(pic)?`<img class="ranking-avatar" src="avatars/${pic}.jpg?v=1" alt="" style="--ring:${p.color}">`:`<span class="ranking-avatar ranking-avatar-empty" style="--ring:${p.color}">${escape(p.name.slice(0,1).toUpperCase())}</span>`;
   }
+  // ---------- Hall of Fame : un classement par jeu ----------
+  // Yéti : meilleur lancer (calculé ici). Autres jeux : résultats gardés en base à la fin de chaque partie (yeti_leaderboards).
+  const LB_GAMES={yeti:{icon:'🏔️',name:'Yéti',sub:'Le meilleur lancer fait la différence.'},chess:{icon:'♟️',name:'Échecs',sub:'Duels aux échecs : victoires, nulles, défaites.'},naval:{icon:'🚢',name:'Bataille navale',sub:'Duels de bataille navale.'},camel:{icon:'🐪',name:'Petits chameaux',sub:'Places finales, bots compris.'},skull:{icon:'☠️',name:'Skull King',sub:'Points et places à la fin de chaque partie.'}};
+  const LB_SORTS={wins:{label:'Victoires',get:r=>r.wins,unit:r=>`victoire${r.wins>1?'s':''}`},avg_pos:{label:'Place moyenne',get:r=>r.avg_pos,asc:true,fmt:v=>oneDecimal.format(v)+'e',unit:()=>'place moy.'},podiums:{label:'Podiums',get:r=>r.podiums,unit:r=>`podium${r.podiums>1?'s':''}`,multi:true},lasts:{label:'Dernières places',get:r=>r.lasts,unit:r=>`fois dernier`},best_pts:{label:'Meilleur score',get:r=>r.best_pts,unit:()=>'pts max',pts:true},avg_pts:{label:'Points moyens',get:r=>r.avg_pts,unit:()=>'pts moy.',pts:true},played:{label:'Parties jouées',get:r=>r.played,unit:r=>`partie${r.played>1?'s':''}`}};
+  let lbGame='yeti',lbSort='wins',lbData=null,lbAt=0,lbHist={},lbLoading=false;
+  async function loadBoards(force){
+    if(lbLoading||privateAccess||(!force&&Date.now()-lbAt<60000))return;lbLoading=true;
+    try{lbData=await request('/api/leaderboards',{});lbAt=Date.now();}catch(_){}
+    try{if(lbGame!=='yeti'){const h=await request('/api/game-history',{kind:lbGame,limit:15});lbHist[lbGame]=(h&&h.games)||[];}}catch(_){}
+    lbLoading=false;if(lbGame!=='yeti')renderGameBoard();
+  }
+  function sortsFor(kind){return Object.keys(LB_SORTS).filter(k=>!(LB_SORTS[k].multi&&(kind==='chess'||kind==='naval'))&&!(LB_SORTS[k].pts&&(kind==='chess'||kind==='naval')));}
+  function renderGameBoard(){
+    const kind=lbGame,G=LB_GAMES[kind],rows=((lbData&&lbData[kind])||[]).filter(r=>player(r.player));
+    $('board-sub').textContent=G.sub;
+    if(!sortsFor(kind).includes(lbSort))lbSort='wins';
+    const S=LB_SORTS[lbSort],val=r=>S.get(r)??(S.asc?999:-1);
+    const sorted=rows.slice().sort((a,b)=>(S.asc?val(a)-val(b):val(b)-val(a))||(b.wins-a.wins)||(a.avg_pos-b.avg_pos)||(b.played-a.played));
+    const games=rows.length?Math.max(...rows.map(r=>r.played)):0;
+    $('board-period').textContent=lbData?`${G.icon} ${G.name} · depuis le début`:'Chargement…';
+    $('lb-sort').hidden=!rows.length;
+    $('lb-sort').innerHTML=sortsFor(kind).map(k=>`<button type="button" class="${k===lbSort?'on':''}" data-lb-sort="${k}">${LB_SORTS[k].label}</button>`).join('');
+    // les records du jeu
+    const top=(f,asc)=>{const c=rows.filter(r=>f(r)!=null&&(asc||f(r)>0));if(!c.length)return null;const best=c.reduce((m,r)=>asc?Math.min(m,f(r)):Math.max(m,f(r)),asc?Infinity:-Infinity);return {v:best,who:c.filter(r=>f(r)===best).map(r=>player(r.player).name)};};
+    const multi=kind==='camel'||kind==='skull',hl=[];
+    const add=(ico,label,t,fmt)=>{if(t)hl.push(`<div class="lb-hl"><span>${ico}</span><b>${escape(t.who.join(', '))}</b><small>${label} · ${fmt?fmt(t.v):t.v}</small></div>`);};
+    add('👑','Le plus de victoires',top(r=>r.wins));
+    add('🎯','Meilleure place moyenne',top(r=>r.played>=2?r.avg_pos:null,true),v=>oneDecimal.format(v)+'e');
+    if(multi)add('🥉','Le plus de podiums',top(r=>r.podiums));
+    add('🐢','Le plus souvent dernier',top(r=>r.lasts));
+    if(kind==='skull')add('💥','Meilleur score',top(r=>r.best_pts),v=>v+' pts');
+    $('lb-highlights').hidden=!hl.length;$('lb-highlights').innerHTML=hl.join('');
+    let rank=0,prev=null;
+    $('leaderboard').innerHTML=sorted.length?sorted.map((r,i)=>{const p=player(r.player),v=S.get(r);if(v!==prev||i===0)rank=i+1;prev=v;
+      const parts=[`${r.played} partie${r.played>1?'s':''}`];
+      if(kind==='chess'||kind==='naval')parts.push(`${r.wins}V · ${r.draws}N · ${r.losses}D`);else{parts.push(`${r.wins} victoire${r.wins>1?'s':''}`);parts.push(`${r.podiums} podium${r.podiums>1?'s':''}`);}
+      parts.push(`moy. ${oneDecimal.format(r.avg_pos)}e`);if(r.lasts)parts.push(`${r.lasts}× dernier`);if(kind==='skull'&&r.best_pts!=null)parts.push(`record ${r.best_pts} pts`);
+      return `<div class="ranking-row ${rank===1?'leader':''}"><span class="rank-number">${String(rank).padStart(2,'0')}</span>${avatar(p)}<div><div class="ranking-name"><span class="player-dot" style="background:${p.color}"></span>${escape(p.name)}</div><div class="ranking-sub">${parts.join(' · ')}</div></div><div class="ranking-score">${v==null?'—':S.fmt?S.fmt(v):v}<small>${S.unit(r)}</small></div></div>`;}).join('')
+      :`<p class="lb-empty">${lbData?`Aucune partie de ${G.name.toLowerCase()} terminée pour l’instant. Le classement commence à la prochaine !`:'Chargement du classement…'}</p>`;
+    // dernières parties : points et places de chacun
+    const hist=lbHist[kind]||[];
+    $('lb-history').hidden=!hist.length;
+    $('lb-history-list').innerHTML=hist.map(g=>`<div class="lb-game"><time>${whenShort(g.at)}</time>${g.rows.map(x=>{const p=player(x.player);return `<span class="lb-res ${x.pos===1?'first':''}">${x.pos===1?'🥇':x.pos===2?'🥈':x.pos===3&&g.n>2?'🥉':x.pos+'e'} ${escape(p?p.name:'?')}${x.pts!=null&&kind!=='camel'?` <b>${x.pts}</b>`:x.pts!=null?` <b>${x.pts}🐪</b>`:''}</span>`;}).join('')}</div>`).join('');
+    $('board-note').textContent=kind==='chess'||kind==='naval'?'Nulle = première place pour les deux. Parties annulées non comptées.':kind==='camel'?'Places au nombre de chameaux rentrés, bots compris. Ex æquo = même place.':'Ex æquo = même place. Les parties effacées des listes restent comptées.';
+  }
+  document.addEventListener('click',e=>{
+    const t=e.target.closest('[data-lb]');if(t){lbGame=t.dataset.lb;document.querySelectorAll('#lb-tabs [data-lb]').forEach(b=>{b.classList.toggle('active',b===t);b.setAttribute('aria-selected',String(b===t));});
+      if(lbGame==='yeti'){$('lb-sort').hidden=true;$('lb-highlights').hidden=true;$('lb-history').hidden=true;$('board-sub').textContent=LB_GAMES.yeti.sub;$('board-note').textContent='Les scores identiques comptent comme des parties distinctes. Les records ex æquo partagent le même rang.';renderLeaderboard(filteredScores());}
+      else{renderGameBoard();loadBoards(true);}return;}
+    const s=e.target.closest('[data-lb-sort]');if(s){lbSort=s.dataset.lbSort;renderGameBoard();}
+  });
+  setInterval(()=>{if(!document.hidden&&lbGame!=='yeti')loadBoards(false);},30000);
   function renderLeaderboard(scores) {
+    if(lbGame!=='yeti'){renderGameBoard();return;}
     const records=PLAYERS.map(p=>({...p,...stats(scores.filter(s=>s.player===p.id))})).sort((a,b)=>(b.best??-1)-(a.best??-1)||a.id-b.id);
     let rank=0,previous=null;
     $('leaderboard').innerHTML=records.map((p,index)=>{

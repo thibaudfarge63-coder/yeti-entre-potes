@@ -12,20 +12,20 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Yeti rich club">
-  <link rel="stylesheet" href="styles.css?v=20261026-77">
+  <link rel="stylesheet" href="styles.css?v=20261116-78">
   <link rel="stylesheet" href="chess-pieces.css?v=1">
   <script>window.RufflePlayer = window.RufflePlayer || {}; window.RufflePlayer.config = {autoplay:"on",unmuteOverlay:"visible",backgroundColor:"#c9e8f7",contextMenu:"off",warnOnUnsupportedContent:false};</script>
   <script src="ruffle/ruffle.js" defer></script>
-  <script src="config.js?v=20261026-77" defer></script>
-  <script src="data-client.js?v=20261026-77" defer></script>
-  <script src="costumes.js?v=20261026-77" defer></script>
-  <script src="skins.js?v=20261026-77" defer></script>
+  <script src="config.js?v=20261116-78" defer></script>
+  <script src="data-client.js?v=20261116-78" defer></script>
+  <script src="costumes.js?v=20261116-78" defer></script>
+  <script src="skins.js?v=20261116-78" defer></script>
   <script src="chess-engine.js?v=1" defer></script>
-  <script src="games.js?v=20261026-77" defer></script>
-  <script src="camels.js?v=20261026-77" defer></script>
-  <script src="skull-art.js?v=20261026-77" defer></script>
-  <script src="skull.js?v=20261026-77" defer></script>
-  <script src="app.js?v=20261026-77" defer></script>
+  <script src="games.js?v=20261116-78" defer></script>
+  <script src="camels.js?v=20261116-78" defer></script>
+  <script src="skull-art.js?v=20261116-78" defer></script>
+  <script src="skull.js?v=20261116-78" defer></script>
+  <script src="app.js?v=20261116-78" defer></script>
 </head>
 <body>
   <div class="page-shell">
@@ -73,7 +73,7 @@
           <div class="last-result" id="last-result" hidden><div><p class="eyebrow" id="last-result-name">DERNIER LANCER</p><strong id="last-result-score">—</strong><span>mètres</span></div><p id="last-result-detail"></p></div>
         </div>
 
-        <aside class="leaderboard-card" aria-labelledby="leaderboard-title"><div class="board-heading"><span class="eyebrow">LES HOSTILITÉS</span><span class="tiny-symbol" aria-hidden="true">↗</span><h2 id="leaderboard-title">Hall of Fame.</h2><p>Le meilleur lancer fait la différence.</p></div><div class="board-period" id="board-period">Depuis le début</div><div id="leaderboard" class="leaderboard"></div><div class="board-bottom"><span aria-hidden="true">✦</span><p>Les scores identiques comptent comme des parties distinctes. Les records ex æquo partagent le même rang.</p></div></aside>
+        <aside class="leaderboard-card" aria-labelledby="leaderboard-title"><div class="board-heading"><span class="eyebrow">LES HOSTILITÉS</span><span class="tiny-symbol" aria-hidden="true">↗</span><h2 id="leaderboard-title">Hall of Fame.</h2><p id="board-sub">Le meilleur lancer fait la différence.</p></div><div class="lb-tabs" id="lb-tabs" role="tablist" aria-label="Choisir le jeu"><button type="button" class="active" data-lb="yeti" title="Yéti">🏔️</button><button type="button" data-lb="chess" title="Échecs">♟️</button><button type="button" data-lb="naval" title="Bataille navale">🚢</button><button type="button" data-lb="camel" title="Petits chameaux">🐪</button><button type="button" data-lb="skull" title="Skull King">☠️</button></div><div class="board-period" id="board-period">Depuis le début</div><div class="lb-sort" id="lb-sort" hidden></div><div class="lb-highlights" id="lb-highlights" hidden></div><div id="leaderboard" class="leaderboard"></div><details class="lb-history" id="lb-history" hidden><summary>Dernières parties</summary><div id="lb-history-list"></div></details><div class="board-bottom"><span aria-hidden="true">✦</span><p id="board-note">Les scores identiques comptent comme des parties distinctes. Les records ex æquo partagent le même rang.</p></div></aside>
       </section>
 
       <section class="analytics" aria-labelledby="analytics-title">
