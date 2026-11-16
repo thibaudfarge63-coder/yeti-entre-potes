@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Test table Skull King (vrai skull.js, partie simulée)</title>
+<link rel="stylesheet" href="../styles.css">
+<script src="../skull-icons.js" defer></script>
+<script src="../skull-art.js" defer></script>
+<script src="../skull.js" defer></script>
+</head>
+<body style="background:#1d1a17;color:#eee;margin:0">
+<div id="panel" hidden></div>
+<div id="stage"></div>
+<script>
+/* Partie simulée : rien n'est envoyé à la vraie base. */
+addEventListener('DOMContentLoaded', () => {
+  const names = {1: 'Toi', 2: 'Alexandre', 3: 'Nina', 4: 'Hugo'};
+  const now = new Date().toISOString();
+  const G = {phase: 'play', round: 5, R: 10, dealt: 5, P: 4, players: [1, 2, 3, 4], opts: {}, scores: [40, 20, -10, 30], starter: 1, turn: 0, tricks: 1,
+    won: [0, 1, 0, 0], bids: [1, 2, 0, 1], hasBid: [true, true, true, true], counts: [4, 3, 3, 3],
+    trick: {leader: 1, cards: [{s: 1, c: 'y12'}, {s: 2, c: 'mer1'}, {s: 3, c: 'k3'}], lead: 'y', salvo: null}, lastTrick: null, history: [], me: 0,
+    hand: ['y9', 'p13', 'esc1', 'king'], playable: ['y9', 'esc1', 'king'], decl: {y9: null, p13: null, esc1: null, king: null}, pend: []};
+  const row = () => ({id: 1, status: 'playing', host: 1, seats: [1, 2, 3, 4], seat_state: ['joined', 'joined', 'joined', 'joined'], config: {rounds: 10, options: {}},
+    version: 1, created_at: now, moved_at: now, server_time: new Date().toISOString(), viewer: 1, game: G});
+  YetiSkull.init({
+    panel: document.getElementById('panel'), root: document.getElementById('stage'),
+    escape: s => s.replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c])),
+    player: id => ({id, name: names[id]}), players: () => Object.keys(names).map(id => ({id: +id, name: names[id]})),
+    session: () => ({player: 1, token: 'test'}), ready: () => true, toast: m => console.log('toast', m), sound() {}, avatar: () => '', badge() {}, boss: () => false,
+    onOpen() {}, onClose() {},
+    request: async (path, body) => {
+      if (path.endsWith('/list')) return {games: []};
+      if (body.action === 'play') { G.hand = G.hand.filter(c => c !== body.card); G.trick.cards.push({s: 0, c: body.card}); G.turn = 1; G.playable = []; }
+      return row();
+    },
+  });
+  YetiSkull.open(1);
+});
+</script>
+</body>
+</html>

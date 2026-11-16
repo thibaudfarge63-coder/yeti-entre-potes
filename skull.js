@@ -75,6 +75,11 @@
   const ORDER = id => { const k = kind(id); if (k.t !== 'num') return 1000 + Object.keys(SPECIAL).indexOf(k.t); const so = {g: 0, y: 1, p: 2, k: 3}[k.suit] ?? 2.5; return so * 100 + (k.val === '0/14' ? 0 : k.val === 15 ? 15 : k.val) + (k.ext ? 0.5 : 0); };
 
   // ---------- état ----------
+  // Cacher sa main (anti-regards indiscrets) : réglage gardé sur l'appareil ; un appui sur le bandeau montre les cartes 8 s
+  let hideHand = false; try { hideHand = localStorage.getItem('yeti-skull-hide') === '1'; } catch (_) {}
+  let peekTimer = null;
+  const unpeek = () => { clearTimeout(peekTimer); peekTimer = null; if (root) root.classList.remove('sk-peek'); };
+  const peek = () => { if (!root) return; root.classList.add('sk-peek'); clearTimeout(peekTimer); peekTimer = setTimeout(unpeek, 8000); };
   let ctx = null, panelEl = null, root = null, list = [], listLoaded = false, listTimer = null, knownInv = null, lastBadge = -1;
   let pick = new Set(), rounds = 10, opts = Object.fromEntries(OPTIONS.map(([k]) => [k, true])), creating = false;
   let cur = null, timer = null, busy = false, showTrickUntil = 0, shownTrickKey = '', lastRoundSeen = 0, pendingDecl = null, nudgeAt = 0;
@@ -321,7 +326,8 @@
       const sorted = G.hand.slice().sort((a, b) => ORDER(a) - ORDER(b));
       const canPlay = myTurn && (G.phase === 'play' || G.phase === 'salvo');
       const pend = G.pend && G.pend.length ? `<span class="skb-pend">Bonus en jeu : ${G.pend.map(x => `${x.pts > 0 ? '+' : ''}${x.pts} ${esc(x.why)}`).join(' · ')}</span>` : '';
-      hand = `<div class="skb-handbar"><b>Ta main</b>${pend}</div><div class="skb-hand ${canPlay ? 'active' : ''}">${sorted.map(id => cardHTML(id, {button: true, escape: esc, cls: canPlay ? (G.playable.includes(id) ? 'can' : 'no') : '', attrs: `data-sk-card="${id}" ${canPlay && G.playable.includes(id) ? '' : 'disabled'}`})).join('') || '<p class="sk-empty">Plus de carte pour cette manche.</p>'}</div>`;
+      hand = `<div class="skb-handbar"><b>Ta main</b>${pend}<button type="button" class="skb-hide" data-sk-hide><span class="on">🙈 Cacher mes cartes</span><span class="off">👁️ Toujours montrer</span></button></div>`
+        + `<div class="skb-hand ${canPlay ? 'active' : ''}"><button type="button" class="skb-veil" data-sk-peek>🙈 Cartes cachées<small>${canPlay ? 'C’est ton tour ! ' : ''}Touche pour les voir 8 s</small></button>${sorted.map(id => cardHTML(id, {button: true, escape: esc, cls: canPlay ? (G.playable.includes(id) ? 'can' : 'no') : '', attrs: `data-sk-card="${id}" ${canPlay && G.playable.includes(id) ? '' : 'disabled'}`})).join('') || '<p class="sk-empty">Plus de carte pour cette manche.</p>'}</div>`;
     }
     const sheet = sheetOpen ? `<div class="sk-decl" role="dialog" aria-label="Feuille de score"><div class="sk-decl-card skb-sheet"><p>📜 Feuille de score</p>${historyHTML(G)}<button type="button" class="cam-no" data-sk-sheet>Fermer</button></div></div>` : '';
     // Mise à jour par morceaux : la main n'est redessinée que si elle change (un clic sur une carte n'est plus perdu
@@ -341,6 +347,7 @@
       if (root._parts[k] === h) continue;
       root._parts[k] = h; root.querySelector(`[data-part="${k}"]`).innerHTML = h;
     }
+    root.classList.toggle('sk-hide', hideHand);
     root.querySelectorAll('[data-sk-close]').forEach(b => b.onclick = () => close());
     if (pendingPlay) { const el = root.querySelector(`[data-sk-card="${pendingPlay}"]`); if (el) el.classList.add('sending'); }
   }
@@ -381,15 +388,18 @@
     const b = e.target.closest('button'); if (!b || b.disabled || !cur) return;
     const G = cur.game;
     if (b.dataset.skBid !== undefined) return act({action: 'bid', n: Number(b.dataset.skBid)});
+    if ('skHide' in b.dataset) { hideHand = !hideHand; try { localStorage.setItem('yeti-skull-hide', hideHand ? '1' : '0'); } catch (_) {} unpeek(); root.classList.toggle('sk-hide', hideHand); return; }
+    if ('skPeek' in b.dataset) { peek(); return; }
     if (b.dataset.skCard) {
       const id = b.dataset.skCard, need = G.decl && G.decl[id];
       if (need) { pendingDecl = {id, need}; root._parts = {}; render(); return; }
+      unpeek();
       return act({action: 'play', card: id});
     }
     if (b.dataset.skDecl) {
       if (!pendingDecl || busy) return;
       const {id} = pendingDecl; const k = b.dataset.skDecl, v = k === 'zero' ? Number(b.dataset.v) : b.dataset.v;
-      pendingDecl = null; root._parts = {}; render(); return act({action: 'play', card: id, decl: {[k]: v}});
+      pendingDecl = null; unpeek(); root._parts = {}; render(); return act({action: 'play', card: id, decl: {[k]: v}});
     }
     if ('skDeclCancel' in b.dataset) { pendingDecl = null; root._parts = {}; render(); return; }
     if (b.dataset.skPlank !== undefined) return act({action: 'plank', idx: Number(b.dataset.skPlank)});
