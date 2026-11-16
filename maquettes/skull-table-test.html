@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Test table Skull King (vrai skull.js, partie simulée)</title>
 <link rel="stylesheet" href="../styles.css">
+<script src="../config.js" defer></script>
 <script src="../skull-icons.js" defer></script>
 <script src="../skull-art.js" defer></script>
 <script src="../skull-fx.js" defer></script>
@@ -32,6 +33,7 @@ addEventListener('DOMContentLoaded', () => {
     onOpen() {}, onClose() {},
     request: async (path, body) => {
       if (path.endsWith('/list')) return {games: []};
+      (window.REQ = window.REQ || []).push([Math.round(performance.now()), body.action || path]);
       if (body.action === 'play') { G.hand = G.hand.filter(c => c !== body.card); G.trick.cards.push({s: 0, c: body.card}); G.turn = 1; G.playable = []; }
       return row();
     },

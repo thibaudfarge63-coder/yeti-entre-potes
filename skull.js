@@ -88,7 +88,28 @@
   const nameOf = id => (pl(id) ? pl(id).name : '?');
   const sess = () => ctx.session();
   const meId = () => { const s = sess(); return s ? s.player : 0; };
-  async function api(body) { const s = sess(); return ctx.request('/api/skull', {...body, player: s ? s.player : 0, token: s ? s.token : ''}); }
+  async function api(body) {
+    const s = sess(), r = await ctx.request('/api/skull', {...body, player: s ? s.player : 0, token: s ? s.token : ''});
+    if (body.action !== 'state' && rt) rt.ping(); // coup enregistré : on prévient tout de suite les autres joueurs
+    return r;
+  }
+  // ---------- temps réel : un simple « ping » Supabase Realtime (aucune donnée de jeu) fait recharger la table des autres joueurs ;
+  // le relevé toutes les 1,5 s reste en secours si la connexion tombe ----------
+  let rt = null;
+  function rtOpen(id) {
+    rtClose();
+    const c = window.YETI_CONFIG || {};
+    if (!c.supabaseUrl || !c.publishableKey || !window.WebSocket) return;
+    const topic = 'realtime:yeti-skull-' + id, me = {ref: 1, hb: null};
+    const ws = new WebSocket(c.supabaseUrl.replace(/^http/, 'ws') + '/realtime/v1/websocket?apikey=' + encodeURIComponent(c.publishableKey) + '&vsn=1.0.0');
+    const send = (event, payload, t = topic) => { if (ws.readyState === 1) ws.send(JSON.stringify({topic: t, event, payload, ref: String(++me.ref), join_ref: '1'})); };
+    ws.onopen = () => { send('phx_join', {config: {broadcast: {self: false}, presence: {key: ''}, postgres_changes: [], private: false}}); me.hb = setInterval(() => send('heartbeat', {}, 'phoenix'), 25000); };
+    ws.onmessage = e => { try { if (JSON.parse(e.data).event === 'broadcast' && cur && cur.id === id) load(false); } catch (_) {} };
+    ws.onclose = () => { clearInterval(me.hb); if (rt === me) { rt = null; setTimeout(() => { if (cur && cur.id === id && !rt) rtOpen(id); }, 3000); } };
+    me.ws = ws; me.ping = () => send('broadcast', {type: 'broadcast', event: 'moved', payload: {}});
+    rt = me;
+  }
+  function rtClose() { const r = rt; rt = null; if (r) { clearInterval(r.hb); r.ws.close(); } }
 
   // ---------- panneau ----------
   function init(options) {
@@ -179,12 +200,12 @@
     ctx.onOpen && ctx.onOpen(id);
     root = ctx.root; root.hidden = false; root.className = 'board-stage sk-stage';
     root.innerHTML = '<div class="gb-loading"><span class="spinner"></span><p>On mélange les cartes…</p></div>';
-    cur = {id, loading: true}; showTrickUntil = 0; shownTrickKey = ''; lastRoundSeen = 0; pendingDecl = null; fxSeen = ''; fxWin = null;
+    rtOpen(id); cur = {id, loading: true}; showTrickUntil = 0; shownTrickKey = ''; lastRoundSeen = 0; pendingDecl = null; fxSeen = ''; fxWin = null;
     await load(true);
     clearInterval(timer); timer = setInterval(poll, 1500);
   }
   function close(silent) {
-    clearInterval(timer); timer = null; cur = null; pendingDecl = null; sheetOpen = false; fullView = false;
+    clearInterval(timer); timer = null; rtClose(); cur = null; pendingDecl = null; sheetOpen = false; fullView = false;
     if (root) { root.hidden = true; root.innerHTML = ''; root._html = ''; root._mode = ''; root.className = 'board-stage'; }
     if (!silent && ctx && ctx.onClose) ctx.onClose();
     loadList();
