@@ -251,7 +251,7 @@
       const key = G.lastTrick.round + ':' + G.lastTrick.n;
       if (shownTrickKey && key !== shownTrickKey) { showTrickUntil = Date.now() + 2800; setTimeout(render, 1850); setTimeout(render, 2850); if (ctx.sound && G.lastTrick.winner === G.me) ctx.sound('capture'); fxWin = G.lastTrick; }
       shownTrickKey = key;
-    }
+    } else if (G && !shownTrickKey) shownTrickKey = 'none'; // début de partie : le tout premier pli s'affiche (et s'anime) aussi
     if (G && was && G.history.length > lastRoundSeen && lastRoundSeen > 0) roundSummary(G.history[G.history.length - 1], G);
     if (G) lastRoundSeen = G.history.length;
     if (g.status === 'done' && was && was.phase !== 'done') ctx.toast('🏁 Partie terminée !');

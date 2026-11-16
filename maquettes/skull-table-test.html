@@ -23,8 +23,9 @@ addEventListener('DOMContentLoaded', () => {
     won: [0, 1, 0, 0], bids: [1, 2, 0, 1], hasBid: [true, true, true, true], counts: [4, 3, 3, 3],
     trick: {leader: 1, cards: [{s: 1, c: 'y12'}, {s: 2, c: 'mer1'}, {s: 3, c: 'k3'}], lead: 'y', salvo: null}, lastTrick: null, history: [], me: 0,
     hand: ['y9', 'p13', 'esc1', 'king'], playable: ['y9', 'esc1', 'king'], decl: {y9: null, p13: null, esc1: null, king: null}, pend: []};
-  const row = () => ({id: 1, status: 'playing', host: 1, seats: [1, 2, 3, 4], seat_state: ['joined', 'joined', 'joined', 'joined'], config: {rounds: 10, options: {}},
-    version: 1, created_at: now, moved_at: now, server_time: new Date().toISOString(), viewer: 1, game: G});
+  let ver = 1;
+  const row = () => JSON.parse(JSON.stringify({id: 1, status: 'playing', host: 1, seats: [1, 2, 3, 4], seat_state: ['joined', 'joined', 'joined', 'joined'], config: {rounds: 10, options: {}},
+    version: ver, created_at: now, moved_at: now, server_time: new Date().toISOString(), viewer: 1, game: G}));
   YetiSkull.init({
     panel: document.getElementById('panel'), root: document.getElementById('stage'),
     escape: s => s.replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c])),
@@ -33,16 +34,17 @@ addEventListener('DOMContentLoaded', () => {
     onOpen() {}, onClose() {},
     request: async (path, body) => {
       if (path.endsWith('/list')) return {games: []};
+      if (path.endsWith('/version')) return {version: ver};
       (window.REQ = window.REQ || []).push([Math.round(performance.now()), body.action || path]);
-      if (body.action === 'play') { G.hand = G.hand.filter(c => c !== body.card); G.trick.cards.push({s: 0, c: body.card}); G.turn = 1; G.playable = []; }
+      if (body.action === 'play') { G.hand = G.hand.filter(c => c !== body.card); G.trick.cards.push({s: 0, c: body.card}); G.turn = 1; G.playable = []; ver++; }
       return row();
     },
   });
   // Pilotage du test depuis la console : SIM.opp('king') pose une carte pour le joueur suivant ; SIM.end(index gagnant, {kraken, applied, destroyed}) termine le pli
   window.SIM = {
-    opp(c) { const s = (G.trick.cards.length + 1) % 4; G.trick.cards.push({s, c}); G.counts[s]--; },
+    opp(c) { const s = (G.trick.cards.length + 1) % 4; G.trick.cards.push({s, c}); G.counts[s]--; ver++; },
     end(win, o = {}) { const cards = G.trick.cards.slice(); G.tricks++; G.lastTrick = {round: G.round, n: G.tricks, cards, win, winner: win === null ? null : cards[win].s, kraken: !!o.kraken,
-      removed: null, destroyed: o.destroyed || [], applied: o.applied || null, bonus: []}; G.trick = {leader: 0, cards: [], lead: null, salvo: null}; G.turn = 0; G.playable = G.hand.slice(); },
+      removed: null, destroyed: o.destroyed || [], applied: o.applied || null, bonus: []}; G.trick = {leader: 0, cards: [], lead: null, salvo: null}; G.turn = 0; G.playable = G.hand.slice(); ver++; },
   };
   YetiSkull.open(1);
 });
