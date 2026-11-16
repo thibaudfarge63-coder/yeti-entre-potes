@@ -111,13 +111,16 @@
       ${icon('planks', 4, 14, 92, '#7a4a20', '#0005', -14)}
       <g stroke="#2b2b2b" fill="none" stroke-width="1.1"><path d="M10 30q4-3 8 0q4-3 8 0"/><path d="M72 24q3-2 6 0q3-2 6 0"/></g>`},
   };
-  let U = 0;
+  // Les décors sont rangés une seule fois dans le sprite : le HTML d'une carte reste identique d'un affichage à l'autre
+  // (sinon la table croit qu'elle a changé et se redessine en boucle)
+  let scenesIn = false;
   // Décor d'une carte spéciale : {k: couleur du liseré, svg} ou null
   const scene = t => {
     const S = SCENES[t];
     if (!S || !GI['flying-flag']) return null;
-    const u = 'sks' + (++U);
-    return {k: S.k, svg: `<svg class="skc-scene" viewBox="0 0 100 148" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${S.f(u)}</svg>`};
+    const sprite = !scenesIn && document.getElementById('skull-art');
+    if (sprite) { sprite.insertAdjacentHTML('beforeend', Object.entries(SCENES).map(([k, x]) => `<symbol id="sks-${k}" viewBox="0 0 100 148" preserveAspectRatio="xMidYMid slice">${x.f('-' + k)}</symbol>`).join('')); scenesIn = true; }
+    return {k: S.k, svg: `<svg class="skc-scene" viewBox="0 0 100 148" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><use href="#sks-${t}"/></svg>`};
   };
   window.SkullArt = Object.freeze({svg, has, scene});
 })();
