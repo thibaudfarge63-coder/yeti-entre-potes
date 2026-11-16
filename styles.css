@@ -1198,3 +1198,15 @@ button.skc:disabled{cursor:default}
 .skb-veil small{font:600 12px var(--body,inherit);opacity:.85}
 .sk-hide:not(.sk-peek) .skb-hand.active .skb-veil{box-shadow:inset 0 0 0 3px #ffd54a;animation:skVeil 1.2s ease-in-out infinite alternate}
 @keyframes skVeil{to{box-shadow:inset 0 0 0 3px #ffd54a55}}
+/* ===== Skull King v81 : thème « Abysses » (fond marin, table en roche au liseré lumineux) ===== */
+.skb{background:linear-gradient(115deg,transparent 30%,#9ff3ea12 32%,transparent 36%,transparent 55%,#9ff3ea10 57%,transparent 60%),radial-gradient(ellipse at 50% -10%,#2bb3c0aa,transparent 50%),linear-gradient(180deg,#0a4a63,#052235 45%,#020a14)}
+.skb-table::before{content:'';position:absolute;inset:0;pointer-events:none;opacity:.7;
+  background:radial-gradient(circle,#e6fbff66 0 1.5px,transparent 2.5px) 10% 100%/120px 160px,radial-gradient(circle,#e6fbff44 0 2.5px,transparent 3.5px) 60% 100%/170px 220px;animation:skBubbles 14s linear infinite}
+@keyframes skBubbles{to{background-position:10% -60%,60% -40%}}
+.skb-felt{background:radial-gradient(ellipse at 50% 40%,#1d5d6e,#0b2c38 60%,#061820);
+  box-shadow:0 0 0 6px #0b2c38,0 0 0 9px #3de0ffaa,0 0 40px 8px #3de0ff55,inset 0 0 50px #000a,0 30px 60px #000}
+.skb-felt::before{content:'';position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at 20% 70%,#3de0ff33 0 3px,transparent 4px),radial-gradient(circle at 75% 30%,#ff9cff33 0 3px,transparent 4px),radial-gradient(circle at 60% 80%,#3de0ff33 0 2px,transparent 3px),radial-gradient(circle at 35% 25%,#ffffff22 0 2px,transparent 3px)}
+.skb-felt::after{content:'';position:absolute;inset:6%;border-radius:50%;border:1px dashed #3de0ff55;animation:skSpin 40s linear infinite}
+@keyframes skSpin{to{transform:rotate(360deg)}}
+.skb-seat{background:#04161fdd;border-color:#3de0ff66;box-shadow:0 0 14px #3de0ff33}
+@media(prefers-reduced-motion:reduce){.skb-table::before,.skb-felt::after{animation:none}}

@@ -179,7 +179,7 @@
     ctx.onOpen && ctx.onOpen(id);
     root = ctx.root; root.hidden = false; root.className = 'board-stage sk-stage';
     root.innerHTML = '<div class="gb-loading"><span class="spinner"></span><p>On mélange les cartes…</p></div>';
-    cur = {id, loading: true}; showTrickUntil = 0; shownTrickKey = ''; lastRoundSeen = 0; pendingDecl = null;
+    cur = {id, loading: true}; showTrickUntil = 0; shownTrickKey = ''; lastRoundSeen = 0; pendingDecl = null; fxSeen = ''; fxWin = null;
     await load(true);
     clearInterval(timer); timer = setInterval(poll, 1500);
   }
@@ -228,13 +228,29 @@
     const G = g.game;
     if (G && G.lastTrick) {
       const key = G.lastTrick.round + ':' + G.lastTrick.n;
-      if (shownTrickKey && key !== shownTrickKey) { showTrickUntil = Date.now() + 2800; setTimeout(render, 1850); setTimeout(render, 2850); if (ctx.sound && G.lastTrick.winner === G.me) ctx.sound('capture'); }
+      if (shownTrickKey && key !== shownTrickKey) { showTrickUntil = Date.now() + 2800; setTimeout(render, 1850); setTimeout(render, 2850); if (ctx.sound && G.lastTrick.winner === G.me) ctx.sound('capture'); fxWin = G.lastTrick; }
       shownTrickKey = key;
     }
     if (G && was && G.history.length > lastRoundSeen && lastRoundSeen > 0) roundSummary(G.history[G.history.length - 1], G);
     if (G) lastRoundSeen = G.history.length;
     if (g.status === 'done' && was && was.phase !== 'done') ctx.toast('🏁 Partie terminée !');
     render();
+    if (fxWin) { const lt = fxWin; fxWin = null; fxTrick(lt); }
+  }
+  // ---------- animations des cartes spéciales (skull-fx.js) ----------
+  let fxSeen = '', fxWin = null;
+  const fxBox = () => root && root.querySelector('.skb');
+  const fxCards = () => [...root.querySelectorAll('[data-part="main"] .skb-card > .skc')];
+  const fxPlay = (id, el) => { const t = kind(id).t; if (t !== 'num' && window.SkullFX && el) SkullFX.play(t, el, fxBox()); };
+  // Pli terminé : la dernière carte posée s'anime, puis la spéciale qui a décidé du pli (gagnante, Kraken, Baleine/Raie, Casier)
+  function fxTrick(lt) {
+    const els = fxCards(), last = lt.cards.length - 1;
+    if (!window.SkullFX || els.length !== lt.cards.length) return;
+    const ti = t => lt.cards.findIndex(pc => kind(pc.c).t === t);
+    const i = lt.kraken ? ti('kraken') : lt.applied === 'whale' || lt.applied === 'ray' ? ti(lt.applied) : (lt.destroyed || []).length ? ti('davy') : lt.win;
+    fxPlay(lt.cards[last].c, els[last]);
+    if (i === null || i < 0 || kind(lt.cards[i].c).t === 'num') return;
+    setTimeout(() => { if (els[i].isConnected) SkullFX.win(kind(lt.cards[i].c).t, els[i], fxBox(), els); }, i === last ? 900 : 400);
   }
   function seatName(G, s) { return nameOf(G.players[s]); }
   // ---------- table façon Board Game Arena : joueurs autour de la table, carte posée devant chacun, main en bas ----------
@@ -348,6 +364,11 @@
       root._parts[k] = h; root.querySelector(`[data-part="${k}"]`).innerHTML = h;
     }
     root.classList.toggle('sk-hide', hideHand);
+    if (!showing && G.trick) {
+      const k = `${G.round}:${G.tricks}:${G.trick.cards.length}`;
+      if (fxSeen && k !== fxSeen && G.trick.cards.length) { const els = fxCards(); fxPlay(G.trick.cards[G.trick.cards.length - 1].c, els[els.length - 1]); }
+      fxSeen = k;
+    } else if (!fxSeen) fxSeen = 'start';
     root.querySelectorAll('[data-sk-close]').forEach(b => b.onclick = () => close());
     if (pendingPlay) { const el = root.querySelector(`[data-sk-card="${pendingPlay}"]`); if (el) el.classList.add('sending'); }
   }

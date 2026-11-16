@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="../styles.css">
 <script src="../skull-icons.js" defer></script>
 <script src="../skull-art.js" defer></script>
+<script src="../skull-fx.js" defer></script>
 <script src="../skull.js" defer></script>
 </head>
 <body style="background:#1d1a17;color:#eee;margin:0">
@@ -35,6 +36,12 @@ addEventListener('DOMContentLoaded', () => {
       return row();
     },
   });
+  // Pilotage du test depuis la console : SIM.opp('king') pose une carte pour le joueur suivant ; SIM.end(index gagnant, {kraken, applied, destroyed}) termine le pli
+  window.SIM = {
+    opp(c) { const s = (G.trick.cards.length + 1) % 4; G.trick.cards.push({s, c}); G.counts[s]--; },
+    end(win, o = {}) { const cards = G.trick.cards.slice(); G.tricks++; G.lastTrick = {round: G.round, n: G.tricks, cards, win, winner: win === null ? null : cards[win].s, kraken: !!o.kraken,
+      removed: null, destroyed: o.destroyed || [], applied: o.applied || null, bonus: []}; G.trick = {leader: 0, cards: [], lead: null, salvo: null}; G.turn = 0; G.playable = G.hand.slice(); },
+  };
   YetiSkull.open(1);
 });
 </script>

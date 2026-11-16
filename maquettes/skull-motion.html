@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Maquette Skull King : animations + tables</title>
+<link rel="stylesheet" href="../styles.css">
+<script src="../skull-icons.js" defer></script>
+<script src="../skull-art.js" defer></script>
+<script src="../skull.js" defer></script>
+<script src="../skull-fx.js" defer></script>
+<style>
+  body { margin: 0; font-family: system-ui, -apple-system, sans-serif; color: #f4ead2; min-height: 100vh; transition: background .6s; }
+  header { padding: 12px 14px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; position: sticky; top: 0; z-index: 50; background: #0009; backdrop-filter: blur(8px); }
+  header h1 { font: 800 16px Georgia, serif; margin: 0 8px 0 0; }
+  header button { font: 700 13px system-ui; padding: 7px 12px; border-radius: 99px; border: 1px solid #ffffff40; background: #ffffff14; color: #fff; cursor: pointer; }
+  header button.on { background: #e8b53a; color: #241a08; border-color: #e8b53a; }
+  main { max-width: 980px; margin: 0 auto; padding: 14px 12px 40px; }
+
+  /* ---------- table (structure commune) ---------- */
+  .tbl { position: relative; height: min(56vw, 420px); min-height: 300px; margin: 6px auto 18px; }
+  .felt { position: absolute; inset: 8% 6%; border-radius: 50%; }
+  .seat { position: absolute; transform: translate(-50%, -50%); text-align: center; font: 700 12px system-ui; padding: 6px 10px; border-radius: 12px; min-width: 76px; z-index: 3; }
+  .seat b { display: block; font: 800 13px Georgia, serif; }
+  .seat.s0 { left: 50%; top: 96%; } .seat.s1 { left: 4%; top: 50%; } .seat.s2 { left: 50%; top: 4%; } .seat.s3 { left: 96%; top: 50%; }
+  .trick { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 10px; }
+  .trick .skc { position: relative; z-index: 4; }
+  .trick .skc { width: 66px; height: 96px; }
+  .trick .skc:nth-child(1) { rotate: -7deg; } .trick .skc:nth-child(3) { rotate: 6deg; }
+
+  /* ---------- thème A : pont du navire au crépuscule ---------- */
+  body.th-deck { background:
+      radial-gradient(ellipse at 50% 120%, #0c2236 0 30%, transparent 60%),
+      linear-gradient(180deg, #1a1033 0%, #6b2d4a 32%, #e8763c 48%, #ffb85a 52%, #2a4e72 53%, #0c2236 100%) fixed; }
+  .th-deck .felt { background:
+      repeating-linear-gradient(90deg, #00000022 0 2px, transparent 2px 38px),
+      repeating-linear-gradient(90deg, #8a5a2e 0 37px, #7a4e26 37px 76px);
+    box-shadow: 0 0 0 10px #c9a36a, 0 0 0 13px #5a3a17, inset 0 0 60px #0009, 0 20px 40px #000c; }
+  .th-deck .felt::before { content: ''; position: absolute; inset: -16px; border-radius: 50%; border: 6px dashed #e8cf9a; opacity: .7; }
+  .th-deck .felt::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle at 50% 40%, #ffcf7a33, transparent 60%); }
+  .th-deck .seat { background: linear-gradient(#3b2410, #241505); border: 2px solid #c9a36a; color: #f4dfb5; box-shadow: 0 4px 10px #0008; }
+  .th-deck .deco-lantern { position: absolute; width: 26px; height: 40px; border-radius: 6px 6px 10px 10px; background: radial-gradient(circle at 50% 55%, #fff1b0, #ffb12e 50%, #8a4a10);
+    box-shadow: 0 0 40px 18px #ffb12e66; z-index: 2; animation: flick 2.2s ease-in-out infinite alternate; }
+  @keyframes flick { 50% { box-shadow: 0 0 34px 14px #ffb12e55; } to { box-shadow: 0 0 46px 20px #ffb12e77; } }
+
+  /* ---------- thème B : taverne et carte au trésor ---------- */
+  body.th-tav { background:
+      radial-gradient(ellipse at 50% 40%, #ffb35a33, transparent 55%),
+      repeating-linear-gradient(0deg, #00000033 0 3px, transparent 3px 46px),
+      linear-gradient(90deg, #2a170a, #3d2210 20%, #2a170a 21%, #3d2210 50%, #2a170a 51%, #3d2210 80%, #2a170a 81%, #3d2210) fixed; }
+  .th-tav .felt { background: radial-gradient(ellipse at 50% 50%, #f6e6bf 0 52%, #d9bf86 62%, #5a3418 63%, #3a200c 72%, #2a1608);
+    box-shadow: 0 25px 50px #000d, inset 0 0 0 4px #1d0f05; }
+  .th-tav .felt::before { content: ''; position: absolute; inset: 12% 14%; border-radius: 46%;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 120'%3E%3Cpath d='M20 90 Q60 40 100 70 T180 30' fill='none' stroke='%237a3a1a' stroke-width='2' stroke-dasharray='5 5'/%3E%3Cpath d='M172 22l12 12M184 22l-12 12' stroke='%23b0302a' stroke-width='3'/%3E%3Cpath d='M30 30q10-8 20 0t20 0' fill='none' stroke='%237a5a3a' stroke-width='1.5'/%3E%3Cpath d='M120 100q10-8 20 0t20 0' fill='none' stroke='%237a5a3a' stroke-width='1.5'/%3E%3C/svg%3E") center/80% no-repeat;
+    opacity: .7; }
+  .th-tav .felt::after { content: ''; position: absolute; right: 8%; bottom: 14%; width: 60px; height: 60px; border-radius: 50%;
+    background: conic-gradient(#7a3a1a 0 10deg, transparent 10deg 80deg, #7a3a1a 80deg 100deg, transparent 100deg 170deg, #7a3a1a 170deg 190deg, transparent 190deg 260deg, #7a3a1a 260deg 280deg, transparent 280deg);
+    mask: radial-gradient(circle, #000 60%, transparent 62%); -webkit-mask: radial-gradient(circle, #000 60%, transparent 62%); opacity: .6; }
+  .th-tav .seat { background: #2a1608ee; border: 2px solid #8a5a2e; color: #ffd98a; box-shadow: 0 4px 12px #000a; }
+  .th-tav .deco-candle { position: absolute; width: 10px; height: 34px; background: linear-gradient(#f4ead2, #d9c7a0); border-radius: 3px; z-index: 2; }
+  .th-tav .deco-candle::before { content: ''; position: absolute; left: 50%; top: -14px; width: 10px; height: 16px; translate: -50% 0; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+    background: radial-gradient(circle at 50% 70%, #fff, #ffd23a 40%, #ff7a1a 70%, transparent 72%); box-shadow: 0 0 30px 14px #ffb12e55; animation: flame 1s ease-in-out infinite alternate; }
+  @keyframes flame { to { transform: scale(.85, 1.1) rotate(3deg); } }
+
+  /* ---------- thème C : abysses ---------- */
+  body.th-abyss { background:
+      linear-gradient(115deg, transparent 30%, #9ff3ea12 32%, transparent 36%, transparent 55%, #9ff3ea10 57%, transparent 60%),
+      radial-gradient(ellipse at 50% -10%, #2bb3c0aa, transparent 50%),
+      linear-gradient(180deg, #0a4a63, #052235 45%, #020a14) fixed; }
+  .th-abyss .felt { background: radial-gradient(ellipse at 50% 40%, #1d5d6e, #0b2c38 60%, #061820);
+    box-shadow: 0 0 0 6px #0b2c38, 0 0 0 9px #3de0ffaa, 0 0 40px 8px #3de0ff55, inset 0 0 50px #000a, 0 30px 60px #000; }
+  .th-abyss .felt::before { content: ''; position: absolute; inset: 0; border-radius: 50%;
+    background: radial-gradient(circle at 20% 70%, #3de0ff33 0 3px, transparent 4px), radial-gradient(circle at 75% 30%, #ff9cff33 0 3px, transparent 4px),
+      radial-gradient(circle at 60% 80%, #3de0ff33 0 2px, transparent 3px), radial-gradient(circle at 35% 25%, #ffffff22 0 2px, transparent 3px); }
+  .th-abyss .felt::after { content: ''; position: absolute; inset: 6%; border-radius: 50%; border: 1px dashed #3de0ff55; animation: spin 40s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .th-abyss .seat { background: #04161fdd; border: 1.5px solid #3de0ff88; color: #c9f7ff; box-shadow: 0 0 14px #3de0ff44; }
+  .bub { position: fixed; bottom: -20px; border-radius: 50%; border: 1px solid #e6fbff88; background: #bff3ff11; animation: rise linear infinite; pointer-events: none; z-index: 0; }
+  @keyframes rise { to { transform: translateY(-110vh) translateX(20px); } }
+  body:not(.th-abyss) .bub { display: none; }
+
+  /* ---------- panneau de commandes ---------- */
+  .ctl h2 { font: 800 15px Georgia, serif; margin: 6px 0 10px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .fxb { display: flex; align-items: center; gap: 8px; padding: 6px; border-radius: 12px; background: #0007; border: 1px solid #ffffff22; }
+  .fxb .skc { width: 40px; height: 58px; flex: none; }
+  .fxb .skc .skc-n { display: none; }
+  .fxb div { display: grid; gap: 4px; flex: 1; }
+  .fxb button { font: 700 12px system-ui; border: 0; border-radius: 8px; padding: 6px 4px; cursor: pointer; }
+  .fxb .p { background: #3a5a7a; color: #fff; } .fxb .w { background: #e8b53a; color: #241a08; }
+  .note { font-size: 12px; opacity: .75; margin-top: 14px; line-height: 1.5; }
+  @media (max-width: 600px) {
+    .tbl { height: 300px; }
+    .trick .skc { width: 52px; height: 78px; }
+    .seat { min-width: 60px; padding: 4px 6px; font-size: 10px; } .seat b { font-size: 11px; }
+    .seat.s1 { left: 9%; } .seat.s3 { left: 91%; }
+  }
+</style>
+</head>
+<body class="th-deck">
+<header>
+  <h1>☠️ Animations + tables</h1>
+  <button data-th="th-deck" class="on">A · Pont du navire</button>
+  <button data-th="th-tav">B · Taverne</button>
+  <button data-th="th-abyss">C · Abysses</button>
+  <button id="auto">▶︎ Démo auto</button>
+</header>
+<main>
+  <div class="tbl" id="tbl">
+    <div class="felt"></div>
+    <div class="seat s0"><b>Toi</b>pari 1 · 0 pli</div>
+    <div class="seat s1"><b>Alexandre</b>pari 2 · 1 pli</div>
+    <div class="seat s2"><b>Nina</b>pari 0 · 0 pli</div>
+    <div class="seat s3"><b>Hugo</b>pari 1 · 1 pli</div>
+    <div class="trick" id="trick"></div>
+  </div>
+  <section class="ctl">
+    <h2>Une animation par carte spéciale : quand on la pose, quand elle gagne</h2>
+    <div class="grid" id="grid"></div>
+    <p class="note">Page de test, données simulées. Le Kraken « gagne » en engloutissant tout le pli, le Casier de Davy Jones fait couler les léviathans du pli.
+      Si le téléphone demande moins d'animations (réglage d'accessibilité), on garde juste une lueur.</p>
+  </section>
+</main>
+<script>
+addEventListener('DOMContentLoaded', () => {
+  const ID = {escape: 'esc1', loot: 'loot1', pirate: 'pir1', tigress: 'tig', second: 'second', king: 'king', mermaid: 'mer1', kraken: 'kraken', whale: 'whale', ray: 'ray', davy: 'davy', salvo: 'salvo', plank: 'plank'};
+  const C = id => YetiSkull.cardHTML(id, {escape: s => s});
+  const tbl = document.getElementById('tbl'), trick = document.getElementById('trick');
+  // décors des thèmes
+  const deco = {
+    'th-deck': [['deco-lantern', '8%', '14%'], ['deco-lantern', '88%', '14%']],
+    'th-tav': [['deco-candle', '14%', '20%'], ['deco-candle', '84%', '74%'], ['deco-candle', '82%', '18%']],
+    'th-abyss': [],
+  };
+  const setTheme = th => {
+    document.body.className = th;
+    tbl.querySelectorAll('[class^="deco-"]').forEach(x => x.remove());
+    for (const [c, l, t] of deco[th]) { const d = document.createElement('i'); d.className = c; d.style.left = l; d.style.top = t; tbl.appendChild(d); }
+    document.querySelectorAll('[data-th]').forEach(b => b.classList.toggle('on', b.dataset.th === th));
+  };
+  document.querySelectorAll('[data-th]').forEach(b => b.onclick = () => setTheme(b.dataset.th));
+  setTheme('th-deck');
+  for (let i = 0; i < 14; i++) { const b = document.createElement('i'); b.className = 'bub'; const s = 4 + Math.random() * 14;
+    Object.assign(b.style, {left: Math.random() * 100 + 'vw', width: s + 'px', height: s + 'px', animationDuration: 6 + Math.random() * 10 + 's', animationDelay: -Math.random() * 10 + 's'}); document.body.appendChild(b); }
+
+  let last = null;
+  const lay = type => {
+    const filler = type === 'davy' ? ['y12', 'kraken'] : type === 'kraken' || type === 'whale' || type === 'ray' ? ['y12', 'p9'] : ['y12', 'k3'];
+    trick.innerHTML = filler.map(C).join('') + C(ID[type]);
+    last = trick.lastElementChild;
+    return last;
+  };
+  const play = type => { const el = lay(type); SkullFX.play(type, el, tbl); };
+  const win = type => { if (!last || !last.classList.contains('sp-' + type)) lay(type); SkullFX.win(type, last, tbl, [...trick.children]); };
+
+  document.getElementById('grid').innerHTML = SkullFX.types.map(t => `<div class="fxb">${C(ID[t])}<div><b style="font:700 12px Georgia,serif">${C(ID[t]).match(/skc-n">([^<]+)/)[1]}</b>
+    <button class="p" data-play="${t}">Poser</button><button class="w" data-win="${t}">Gagne</button></div></div>`).join('');
+  document.getElementById('grid').onclick = e => {
+    const b = e.target.closest('button'); if (!b) return;
+    tbl.scrollIntoView({block: 'center', behavior: 'smooth'});
+    if (b.dataset.play) play(b.dataset.play); else win(b.dataset.win);
+  };
+  document.getElementById('auto').onclick = async () => {
+    tbl.scrollIntoView({block: 'center', behavior: 'smooth'});
+    for (const t of SkullFX.types) { play(t); await new Promise(r => setTimeout(r, 1500)); win(t); await new Promise(r => setTimeout(r, 3000)); }
+  };
+  lay('king');
+});
+</script>
+</body>
+</html>
