@@ -13,3 +13,7 @@ Jeu original : Yetisports 3 / Seal Bounce, Chris Hilgert et Edelweiss Medienwerk
 Historique : la base garde les 300 derniers lancers du club et, quoi qu’il arrive, les 10 meilleurs lancers de chaque joueur. Les skins débloqués, le nombre de lancers à vie, les sessions Battle royale et les scores des duels sont enregistrés à part, donc la purge ne leur fait rien perdre (voir supabase/2026-10-15_historique_300.sql).
 
 Site statique servi par GitHub Pages. Données du jeu isolées dans le schéma yeti_private de Supabase.
+
+## Crédits
+
+Silhouettes des cartes Skull King : [game-icons.net](https://game-icons.net) (Lorc, Delapouite, Skoll), licence [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/). Décors, cadres et couleurs des cartes faits maison.

@@ -49,7 +49,7 @@
   const ART = (n, cls) => (window.SkullArt && SkullArt.has(n) ? SkullArt.svg(n, cls) : '');
   function cardHTML(id, opts = {}) {
     const k = kind(id), d = opts.d || {};
-    let cls = 'skc', inner = '';
+    let cls = 'skc', inner = '', style = '';
     if (k.t === 'num') {
       const suit = k.joker ? (d.color || 'j') : k.suit, S = SUIT[suit];
       let v = k.val;
@@ -64,12 +64,13 @@
       let name = S.name;
       if (k.t === 'tigress' && d.tig) name += d.tig === 'pirate' ? ' · Pirate' : ' · Fuite';
       cls += ' sp sp-' + k.t;
-      const big = ART(k.t, 'big');
-      inner = `<span class="skc-art">${big || `<span class="skc-i big">${S.icon}</span>`}</span><span class="skc-n">${name}</span>`;
+      const sc = window.SkullArt && SkullArt.scene ? SkullArt.scene(k.t) : null;
+      if (sc) { cls += ' full'; style = `--k:${sc.k}`; inner = `${sc.svg}<span class="skc-n">${name}</span>`; }
+      else inner = `<span class="skc-art"><span class="skc-i big">${S.icon}</span></span><span class="skc-n">${name}</span>`;
     }
     if (opts.cls) cls += ' ' + opts.cls;
     const tag = opts.button ? 'button' : 'div';
-    return `<${tag} ${opts.button ? 'type="button"' : ''} class="${cls}" ${opts.attrs || ''} title="${opts.escape ? opts.escape(tipOf(id)) : ''}">${inner}</${tag}>`;
+    return `<${tag} ${opts.button ? 'type="button"' : ''} class="${cls}" ${style ? `style="${style}"` : ''} ${opts.attrs || ''} title="${opts.escape ? opts.escape(tipOf(id)) : ''}">${inner}</${tag}>`;
   }
   const ORDER = id => { const k = kind(id); if (k.t !== 'num') return 1000 + Object.keys(SPECIAL).indexOf(k.t); const so = {g: 0, y: 1, p: 2, k: 3}[k.suit] ?? 2.5; return so * 100 + (k.val === '0/14' ? 0 : k.val === 15 ? 15 : k.val) + (k.ext ? 0.5 : 0); };
 

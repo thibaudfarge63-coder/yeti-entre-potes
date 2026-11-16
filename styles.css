@@ -1156,3 +1156,34 @@ button.skc:disabled{cursor:default}
 @media(max-width:1150px){.lb-tabs,.lb-sort,.lb-highlights,.lb-history{padding-left:20px;padding-right:20px}}
 @media(max-width:860px){.lb-tabs{padding:0 22px 12px}.lb-highlights{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}.lb-empty{grid-column:1/-1}}
 @media(max-width:600px){.lb-tabs,.lb-sort,.lb-highlights,.lb-history{padding-left:19px;padding-right:19px}}
+/* ===== Skull King v78 : cartes « Grimoire » (liseré + pastilles), spéciales en décor plein cadre ===== */
+.ska{fill:currentColor}
+.skc{--k:#8a6a3a;--on:#fbf1d6;--fr:var(--k);background:radial-gradient(120% 90% at 50% 40%,#fbf1d6,#ecd9ab 70%,#d9bf86);border:3px solid var(--k);box-shadow:0 3px 8px #0006;color:var(--k)}
+.skc::after{display:block;content:'';position:absolute;inset:3px;border:1px dashed color-mix(in srgb,var(--k) 50%,transparent);border-radius:5px;pointer-events:none;z-index:2}
+.skc-art .ska{fill:var(--ic,var(--k))}
+.skc-c{top:2px;left:2px;z-index:3;min-width:19px;padding:3px 2px 4px;border-radius:99px;background:var(--k);color:var(--on);box-shadow:0 1px 0 #0004}
+.skc-c.br{top:auto;left:auto;bottom:2px;right:2px}
+.skc-c b,.skc.n-k .skc-c b{color:inherit;font-size:14px}
+.skc-c .ska.mini{width:10px;height:10px;fill:var(--on)}
+.skb-hand .skc-c b{font-size:16px}
+.skc.n-g{--k:#2f6b2a;color:var(--k)}
+.skc.n-y{--k:#ffbf00;--ic:#d18f00;--on:#3a2600;color:var(--ic);background:radial-gradient(120% 90% at 50% 40%,#fff9d9,#ffe98a 65%,#f7cf45)}
+.skc.n-y::after{border-color:#c98a00aa}
+.skc.n-p{--k:#5a2f86;color:var(--k)}
+.skc.n-k{--k:#17110c;color:var(--k);border:6px double #17110c;background:radial-gradient(120% 90% at 50% 40%,#fbf1d6,#ecd9ab 70%,#d9bf86)}
+.skc.n-k::after{inset:1px;border:1px solid #17110c88}
+.skc.n-k .skc-c{top:0;left:0}.skc.n-k .skc-c.br{top:auto;left:auto;bottom:0;right:0}
+.skc.n-joker{--k:#b8860b;color:#9a6b10}
+.skc.n-joker.g{--k:#2f6b2a}.skc.n-joker.p{--k:#5a2f86}.skc.n-joker.y{--k:#ffbf00;--on:#3a2600}
+.skc.n-g .skc-art,.skc.n-y .skc-art,.skc.n-p .skc-art{background:none}
+.skc .skc-x{background:var(--k);color:var(--on);z-index:3}
+.skc.sp.full{padding:0;background:var(--k);border-color:var(--k)}
+.skc.full::after{inset:3px;border:1px solid #fff7e070}
+.skc-scene{position:absolute;inset:0;width:100%;height:100%;display:block}
+.skc.sp.full .skc-n{left:0;right:0;bottom:0;z-index:3;border-radius:0;padding:7px 1px 4px;background:linear-gradient(transparent,#000c 40%);color:#fff3d1;font:italic 700 9px/1.1 Georgia,'Times New Roman',serif;text-transform:none;letter-spacing:0;text-shadow:0 1px 2px #000}
+.skc.full.sp-king{border:4px double #f2c230}
+.skc.can,.skc.full.can{box-shadow:0 0 0 3px #ffd54a,0 6px 14px #0008}
+.skb-card.win .skc,.sk-played.win .skc{box-shadow:0 0 0 3px #ffd54a,0 0 20px #ffd54acc}
+.skb-hand .skc.sending{box-shadow:0 0 0 3px #4caf50,0 8px 18px #0009}
+@media(max-width:600px){.skc-c{min-width:15px;padding:2px 1px 3px}.skc-c b,.skc.n-k .skc-c b{font-size:11px}.skc-c .ska.mini{width:8px;height:8px}.skc.sp.full .skc-n{font-size:7.5px}}
+@media(max-width:760px){.skb-hand .skc-c b{font-size:13px}}

@@ -1,116 +1,123 @@
-/* Skull King : illustrations originales des cartes (dessins vectoriels faits maison, aucun visuel du jeu d'origine).
-   Un seul jeu de symboles SVG injecté dans la page, réutilisé par <use>. */
+/* Skull King : visuels des cartes (style « Grimoire », liseré + pastilles).
+   - Couleurs : silhouettes de game-icons.net (CC BY 3.0, voir skull-icons.js).
+   - Cartes spéciales : décors plein cadre faits maison (dégradés, vagues, rayons…) + silhouette game-icons.
+   Aucun visuel du jeu d'origine ni de BGA. Un sprite SVG injecté une fois, réutilisé par <use>. */
 (() => {
   'use strict';
-  const INK = '#2a1a0c', GOLD = '#e8b53a', GOLD_D = '#9a6b10', SKIN = '#e7b48c';
-  const S = {
-    // ---- motifs des couleurs (currentColor = couleur de la carte) ----
-    'suit-g': `<g fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="32" cy="11" r="5"/><path d="M32 16v38"/><path d="M21 23h22"/><path d="M11 38c2 12 10 17 21 17s19-5 21-17"/></g>
-      <path fill="currentColor" d="M5 41l8-9 5 10zM59 41l-8-9-5 10z"/>`,
-    'suit-y': `<path fill="currentColor" d="M32 3l5 24 24 5-24 5-5 24-5-24-24-5 24-5z"/>
-      <path fill="currentColor" opacity=".55" d="M50 14l-12 16 12 20-18-12-18 12 12-20-12-16 18 12z"/>
-      <circle cx="32" cy="32" r="6" fill="#fff8e6" stroke="currentColor" stroke-width="3"/><circle cx="32" cy="32" r="2" fill="currentColor"/>`,
-    'suit-p': `<g transform="rotate(-35 32 32)" fill="currentColor"><rect x="5" y="27" width="15" height="10" rx="2"/><rect x="19" y="25" width="15" height="14" rx="1.5"/>
-      <rect x="33" y="22" width="22" height="20" rx="2.5"/><rect x="55" y="20" width="4" height="24" rx="1.5"/>
-      <rect x="22" y="25" width="2.5" height="14" fill="#fff8e6" opacity=".6"/><rect x="37" y="22" width="3" height="20" fill="#fff8e6" opacity=".6"/></g>`,
-    'suit-k': `<g fill="currentColor"><path d="M10 54L45 13c3-4 8-5 9-3s-1 6-5 9L14 58z"/><path d="M54 54L19 13c-3-4-8-5-9-3s1 6 5 9l35 39z"/></g>
-      <g fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"><path d="M8 46c3 1 7 5 8 8M56 46c-3 1-7 5-8 8"/></g>
-      <circle cx="11" cy="57" r="3.5" fill="currentColor"/><circle cx="53" cy="57" r="3.5" fill="currentColor"/>`,
-    // ---- cartes spéciales ----
-    escape: `<rect x="17" y="6" width="3.5" height="54" rx="1.5" fill="#6b4a22"/><circle cx="18.7" cy="6" r="3" fill="${GOLD}"/>
-      <path d="M21 10c8-4 14 4 22 0s12-2 14 0v22c-4-3-8-3-14 0s-14-4-22 0z" fill="#fffdf6" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>
-      <path d="M26 16c6-2 10 2 16 0M26 23c6-2 10 2 16 0" stroke="#d8cfbf" stroke-width="2" fill="none"/>`,
-    loot: `<path d="M20 22c-6 8-10 18-8 26 2 8 10 11 20 11s18-3 20-11c2-8-2-18-8-26z" fill="#a8743a" stroke="${INK}" stroke-width="2"/>
-      <path d="M22 22l-4-10c6 2 10 1 14-2 4 3 8 4 14 2l-4 10z" fill="#c08a4a" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>
-      <path d="M20 22h24" stroke="#5a3a17" stroke-width="3"/>
-      <g fill="${GOLD}" stroke="${GOLD_D}" stroke-width="1.5"><ellipse cx="14" cy="55" rx="7" ry="3.5"/><ellipse cx="14" cy="51" rx="7" ry="3.5"/><ellipse cx="51" cy="56" rx="7" ry="3.5"/><circle cx="32" cy="40" r="8"/></g>
-      <text x="32" y="44.5" text-anchor="middle" font-size="12" font-weight="900" fill="${GOLD_D}" font-family="Georgia,serif">$</text>`,
-    pirate: `<path d="M16 46c0 10 7 14 16 14s16-4 16-14z" fill="#5a3a17"/>
-      <circle cx="32" cy="34" r="15" fill="${SKIN}" stroke="${INK}" stroke-width="2"/>
-      <path d="M15 31c2-12 10-18 17-18s15 6 17 18c-10-4-24-4-34 0z" fill="#c0392b" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>
-      <g fill="#fff"><circle cx="24" cy="20" r="1.6"/><circle cx="32" cy="18" r="1.6"/><circle cx="40" cy="20" r="1.6"/></g>
-      <path d="M48 28l9-5-2 9 4 4-9-1z" fill="#c0392b" stroke="${INK}" stroke-width="1.5" stroke-linejoin="round"/>
-      <path d="M17 29l30 12" stroke="${INK}" stroke-width="2"/><circle cx="38" cy="35.5" r="4.5" fill="${INK}"/>
-      <circle cx="26" cy="35" r="2" fill="${INK}"/><path d="M24 31l5 1" stroke="${INK}" stroke-width="1.8" stroke-linecap="round"/>
-      <path d="M22 44c4 6 16 6 20 0-6 2-14 2-20 0z" fill="#3a2410"/><path d="M27 42c3 1 7 1 10 0" stroke="#7a3a2a" stroke-width="2" fill="none" stroke-linecap="round"/>
-      <circle cx="17.5" cy="39" r="2.2" fill="none" stroke="${GOLD}" stroke-width="1.8"/>`,
-    mermaid: `<path d="M4 54c6-4 10 4 16 0s10 4 16 0 10 4 16 0 8 2 8 2v8H4z" fill="#1b6f95" opacity=".55"/>
-      <path d="M26 30c-4 8-2 16 4 22 2 2 2 5-2 7l-8 3 10 1 6-4 4 6 2-9c-2-4-4-6-4-10 0-6 2-10 2-16z" fill="#2bb3a3" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>
-      <path d="M28 38c3 1 6 1 8 0M28 44c3 1 6 1 8 0" stroke="#17786d" stroke-width="1.6" fill="none"/>
-      <path d="M26 30c2-4 10-4 12 0l-2 4h-8z" fill="${SKIN}" stroke="${INK}" stroke-width="2"/>
-      <circle cx="32" cy="19" r="8" fill="${SKIN}" stroke="${INK}" stroke-width="2"/>
-      <path d="M23 18c0-9 18-10 18 0 4 6 6 14 2 22-2-8-4-12-4-16-2 0-4-2-5-5-3 3-7 4-9 4-2 6-4 10-6 16-2-8 0-14 4-21z" fill="#e8743a" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round"/>
-      <circle cx="29.5" cy="20" r="1.3" fill="${INK}"/><circle cx="34.5" cy="20" r="1.3" fill="${INK}"/><path d="M30 24c1.3 1 2.7 1 4 0" stroke="${INK}" stroke-width="1.3" fill="none" stroke-linecap="round"/>
-      <circle cx="49" cy="14" r="2" fill="#bfe9ff"/><circle cx="53" cy="9" r="1.4" fill="#bfe9ff"/>`,
-    king: `<path d="M10 46L14 18l10 13 8-19 8 19 10-13 4 28z" fill="${GOLD}" stroke="${GOLD_D}" stroke-width="2.2" stroke-linejoin="round"/>
-      <rect x="9" y="45" width="46" height="9" rx="2" fill="${GOLD}" stroke="${GOLD_D}" stroke-width="2.2"/>
-      <g stroke="${GOLD_D}" stroke-width="1.5"><circle cx="14" cy="16" r="3" fill="#fff4c2"/><circle cx="32" cy="10" r="3.5" fill="#fff4c2"/><circle cx="50" cy="16" r="3" fill="#fff4c2"/>
-      <circle cx="21" cy="49.5" r="2.6" fill="#d23a3a"/><circle cx="32" cy="49.5" r="3" fill="#2f6db3"/><circle cx="43" cy="49.5" r="2.6" fill="#2fa36a"/>
-      <path d="M32 26l4 8-4 6-4-6z" fill="#d23a3a"/></g>
-      <path d="M17 41h30" stroke="#fff4c2" stroke-width="1.5" opacity=".7"/>`,
-    second: `<path d="M8 36c6-14 16-20 24-20s18 6 24 20c-6 4-14 6-24 6s-18-2-24-6z" fill="#2b2b33" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>
-      <path d="M8 36c8 5 16 6 24 6s16-1 24-6" fill="none" stroke="${GOLD}" stroke-width="2.5"/>
-      <path d="M32 16c-2 6-2 12 0 18 2-6 2-12 0-18z" fill="${GOLD}"/>
-      <path d="M40 18c6-10 14-12 18-10-6 2-10 6-12 12z" fill="#e9e3d6" stroke="${INK}" stroke-width="1.5"/>
-      <g fill="${GOLD}" stroke="${GOLD_D}" stroke-width="1.2"><rect x="16" y="48" width="12" height="6" rx="1.5"/><rect x="36" y="48" width="12" height="6" rx="1.5"/></g>
-      <g stroke="${GOLD}" stroke-width="1.6"><path d="M17 54l-1 6M21 54v6M25 54l1 6M37 54l-1 6M41 54v6M45 54l1 6"/></g>`,
-    tigress: `<path d="M12 18l6-10 8 8zM52 18l-6-10-8 8z" fill="#e8892a" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>
-      <path d="M15 14l3-4 4 4zM49 14l-3-4-4 4z" fill="#f6d3b0"/>
-      <ellipse cx="32" cy="34" rx="20" ry="19" fill="#e8892a" stroke="${INK}" stroke-width="2"/>
-      <path d="M32 15v8M24 17l2 7M40 17l-2 7M12 30l7 2M12 37l7 0M52 30l-7 2M52 37l-7 0" stroke="${INK}" stroke-width="2.6" stroke-linecap="round"/>
-      <path d="M22 44c2-6 6-8 10-8s8 2 10 8c-2 5-6 8-10 8s-8-3-10-8z" fill="#fff4e4"/>
-      <path d="M21 31c2-3 6-3 8 0-2 2-6 2-8 0zM35 31c2-3 6-3 8 0-2 2-6 2-8 0z" fill="#7cc46a" stroke="${INK}" stroke-width="1.4"/>
-      <circle cx="25" cy="31" r="1.2" fill="${INK}"/><circle cx="39" cy="31" r="1.2" fill="${INK}"/>
-      <path d="M29 40h6l-3 3z" fill="#c2505a"/><path d="M32 43v3M32 46c-2 2-4 2-5 1M32 46c2 2 4 2 5 1" stroke="${INK}" stroke-width="1.5" fill="none" stroke-linecap="round"/>`,
-    kraken: `<g fill="none" stroke-linecap="round"><g stroke="#7a2f6b" stroke-width="7"><path d="M14 58c-6-10 2-18 8-22"/><path d="M50 58c6-10-2-18-8-22"/><path d="M26 60c-2-8 2-14 4-18"/><path d="M38 60c2-8-2-14-4-18"/></g>
-      <g stroke="#b24c9c" stroke-width="3"><path d="M14 58c-6-10 2-18 8-22"/><path d="M50 58c6-10-2-18-8-22"/></g></g>
-      <ellipse cx="32" cy="24" rx="16" ry="17" fill="#8e3a7f" stroke="${INK}" stroke-width="2"/>
-      <ellipse cx="27" cy="14" rx="4" ry="3" fill="#c46cb4" opacity=".7"/>
-      <circle cx="25" cy="27" r="4" fill="#ffd54a" stroke="${INK}" stroke-width="1.5"/><circle cx="39" cy="27" r="4" fill="#ffd54a" stroke="${INK}" stroke-width="1.5"/>
-      <rect x="24.2" y="24" width="1.8" height="6" rx=".9" fill="${INK}"/><rect x="38.2" y="24" width="1.8" height="6" rx=".9" fill="${INK}"/>
-      <g fill="#f3c8e8"><circle cx="11" cy="50" r="1.5"/><circle cx="13" cy="44" r="1.5"/><circle cx="53" cy="50" r="1.5"/><circle cx="51" cy="44" r="1.5"/></g>`,
-    whale: `<path d="M4 52c6-3 10 3 16 0s10 3 16 0 10 3 16 0 8 1 8 1v9H4z" fill="#1b6f95" opacity=".5"/>
-      <path d="M6 34c0-10 10-16 24-16 14 0 22 8 24 16l6-6c2 4 1 9-3 12 2 2 2 4 0 5-4 0-6-2-7-4-4 7-12 9-20 9C14 50 6 44 6 34z" fill="#f4f7fb" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>
-      <path d="M8 38c6 4 16 6 26 4" stroke="#c9d6e2" stroke-width="2" fill="none"/>
-      <circle cx="17" cy="32" r="1.8" fill="${INK}"/><path d="M24 44c2 3 5 4 8 4" stroke="#c9d6e2" stroke-width="1.6" fill="none"/>
-      <path d="M26 17c-1-5-5-7-8-6M26 17c1-6 4-8 8-7M26 17v-6" stroke="#8fd3ff" stroke-width="2.4" fill="none" stroke-linecap="round"/>`,
-    ray: `<path d="M32 20c6 0 10 6 16 8 6 2 12 4 14 8-10 3-20 5-30 5S12 39 2 36c2-4 8-6 14-8 6-2 10-8 16-8z" fill="#c78a4e" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>
-      <path d="M32 41c0 8 2 12 8 19" stroke="${INK}" stroke-width="2.4" fill="none" stroke-linecap="round"/>
-      <g fill="#fff3d6"><circle cx="20" cy="28" r="2.2"/><circle cx="44" cy="28" r="2.2"/><circle cx="26" cy="22" r="1.6"/><circle cx="38" cy="22" r="1.6"/><circle cx="32" cy="30" r="2"/><circle cx="14" cy="32" r="1.4"/><circle cx="50" cy="32" r="1.4"/></g>
-      <circle cx="28" cy="17" r="1.4" fill="${INK}"/><circle cx="36" cy="17" r="1.4" fill="${INK}"/>`,
-    davy: `<path d="M10 30h44v24H10z" fill="#6b4a22" stroke="${INK}" stroke-width="2"/>
-      <path d="M10 30c0-10 8-16 22-16s22 6 22 16z" fill="#7d5730" stroke="${INK}" stroke-width="2"/>
-      <g fill="none" stroke="#8a929c" stroke-width="3"><path d="M4 26c10 12 22 18 28 18s18-6 28-18"/><path d="M6 50c8-6 18-8 26-8s18 2 26 8"/></g>
-      <g stroke="#5c636b" stroke-width="1.2" fill="none"><path d="M4 26c10 12 22 18 28 18s18-6 28-18"/></g>
-      <rect x="25" y="33" width="14" height="13" rx="2" fill="${GOLD}" stroke="${GOLD_D}" stroke-width="1.8"/>
-      <path d="M27.5 33v-4a4.5 4.5 0 0 1 9 0v4" fill="none" stroke="${GOLD_D}" stroke-width="2.4"/><circle cx="32" cy="39" r="2" fill="${INK}"/><path d="M32 40v3" stroke="${INK}" stroke-width="1.8"/>`,
-    salvo: `<path d="M38 22l14-8-4 10 12 2-12 6 6 10-12-6-2 10-4-12z" fill="#ffb12e" stroke="#c0392b" stroke-width="1.6" stroke-linejoin="round"/>
-      <path d="M6 30l30-6 4 12-30 8c-4 1-6-1-6-4z" fill="#2d2d33" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/>
-      <rect x="34" y="22" width="5" height="15" rx="1.5" transform="rotate(-14 36 30)" fill="#3c3c44"/>
-      <circle cx="18" cy="48" r="9" fill="#6b4a22" stroke="${INK}" stroke-width="2"/><circle cx="18" cy="48" r="3" fill="${GOLD}"/>
-      <path d="M18 39v18M9 48h18" stroke="#3a250c" stroke-width="1.6"/>
-      <circle cx="54" cy="46" r="4" fill="#2d2d33"/><circle cx="58" cy="54" r="2.5" fill="#2d2d33" opacity=".7"/>`,
-    plank: `<path d="M4 50c6-4 10 4 16 0s10 4 16 0 10 4 16 0 8 2 8 2v12H4z" fill="#1b6f95"/>
-      <path d="M2 30l40 6v5L2 36z" fill="#b8874a" stroke="${INK}" stroke-width="1.8" stroke-linejoin="round"/>
-      <path d="M8 32l0 5M18 33.5v5M28 35v5" stroke="#7d5730" stroke-width="1.4"/>
-      <path d="M2 36v18" stroke="#5a3a17" stroke-width="4"/>
-      <g fill="#5a3a17" opacity=".6"><ellipse cx="22" cy="34.6" rx="2.4" ry="1.1"/><ellipse cx="31" cy="36" rx="2.4" ry="1.1"/></g>
-      <path d="M50 46c-2-4 0-8 4-8" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="46" cy="18" r="6" fill="#ffd54a" opacity=".85"/>
-      <g fill="#bfe9ff"><circle cx="40" cy="47" r="1.6"/><circle cx="44" cy="44" r="1.2"/></g>`,
+  const GI = window.SKULL_ICONS || {};
+  const GOLD = '#e8b53a', GOLD_D = '#9a6b10';
+  // symboles « maison » (repère 64)
+  const OWN = {
     joker: `<path d="M32 4l7.6 17.4L58 24l-14 12.6L48 56 32 46.4 16 56l4-19.4L6 24l18.4-2.6z" fill="${GOLD}" stroke="${GOLD_D}" stroke-width="2.2" stroke-linejoin="round"/>
       <text x="32" y="41" text-anchor="middle" font-size="17" font-weight="900" fill="#5a3a00" font-family="Georgia,serif">15</text>`,
     back: `<circle cx="32" cy="32" r="26" fill="none" stroke="${GOLD}" stroke-width="2"/><circle cx="32" cy="32" r="20" fill="none" stroke="${GOLD}" stroke-width="1" stroke-dasharray="2 3"/>
       <path fill="${GOLD}" d="M32 8l4 20 20 4-20 4-4 20-4-20-20-4 20-4z"/><circle cx="32" cy="32" r="4" fill="#0f2231" stroke="${GOLD}" stroke-width="2"/>`,
   };
+  // couleurs → silhouette game-icons (repère 512)
+  const SUIT_ICON = {'suit-g': 'parrot-head', 'suit-y': 'open-treasure-chest', 'suit-p': 'treasure-map', 'suit-k': 'pirate-flag'};
+  const giPaths = n => (GI[n] || []).map(d => `<path d="${d}"/>`).join('');
+
   function inject() {
     if (document.getElementById('skull-art')) return;
+    const syms = [
+      ...Object.entries(OWN).map(([k, v]) => `<symbol id="ska-${k}" viewBox="0 0 64 64">${v}</symbol>`),
+      ...Object.entries(SUIT_ICON).map(([k, n]) => `<symbol id="ska-${k}" viewBox="0 0 512 512">${giPaths(n)}</symbol>`),
+      ...Object.keys(GI).map(n => `<symbol id="skg-${n}" viewBox="0 0 512 512">${giPaths(n)}</symbol>`),
+    ];
     const div = document.createElement('div');
-    div.innerHTML = `<svg id="skull-art" xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">${
-      Object.entries(S).map(([k, v]) => `<symbol id="ska-${k}" viewBox="0 0 64 64">${v}</symbol>`).join('')}</svg>`;
+    div.innerHTML = `<svg id="skull-art" xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">${syms.join('')}</svg>`;
     document.body.prepend(div.firstChild);
   }
   if (document.body) inject(); else document.addEventListener('DOMContentLoaded', inject);
-  const svg = (name, cls = '') => `<svg class="ska ${cls}" viewBox="0 0 64 64" aria-hidden="true"><use href="#ska-${name}"/></svg>`;
-  window.SkullArt = Object.freeze({svg, has: n => n in S});
+
+  const has = n => n in OWN || n in SUIT_ICON;
+  const svg = (name, cls = '') => `<svg class="ska ${cls}" viewBox="0 0 ${name in OWN ? 64 : 512} ${name in OWN ? 64 : 512}" aria-hidden="true"><use href="#ska-${name}"/></svg>`;
+
+  /* ---------- décors des cartes spéciales (repère 100 x 148) ---------- */
+  const lin = (id, a, b) => `<linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient>`;
+  const rad = (id, a, b, cx = .5, cy = .45, r = .7) => `<radialGradient id="${id}" cx="${cx}" cy="${cy}" r="${r}"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></radialGradient>`;
+  const waves = (y, fill, amp = 5) => `<path d="M-5 ${y} q8.75 -${amp} 17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 t17.5 0 V160 H-5z" fill="${fill}"/>`;
+  const rays = (cx, cy, n, fill, op) => `<g fill="${fill}" opacity="${op}">${Array.from({length: n}, (_, i) => {
+    const a = i / n * Math.PI * 2, b = a + .09, p = t => `${(cx + Math.cos(t) * 200).toFixed(1)} ${(cy + Math.sin(t) * 200).toFixed(1)}`;
+    return `<path d="M${cx} ${cy}L${p(a)}L${p(b)}z"/>`;
+  }).join('')}</g>`;
+  const star = (x, y, r, fill) => `<path d="M${x} ${y - r}L${x + r * .28} ${y - r * .28}L${x + r} ${y}L${x + r * .28} ${y + r * .28}L${x} ${y + r}L${x - r * .28} ${y + r * .28}L${x - r} ${y}L${x - r * .28} ${y - r * .28}z" fill="${fill}"/>`;
+  const dots = (pts, r, fill, op = 1) => `<g fill="${fill}" opacity="${op}">${pts.map(([x, y, s = 1]) => `<circle cx="${x}" cy="${y}" r="${r * s}"/>`).join('')}</g>`;
+  const bubbles = pts => `<g fill="none" stroke="#fff" stroke-width=".8" opacity=".6">${pts.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}"/>`).join('')}</g>`;
+  const icon = (n, x, y, s, fill, shadow = '#0006', rot = 0) => `<g transform="rotate(${rot} ${x + s / 2} ${y + s / 2})">` +
+    (shadow ? `<use href="#skg-${n}" x="${x + 1.6}" y="${y + 2}" width="${s}" height="${s}" fill="${shadow}"/>` : '') +
+    `<use href="#skg-${n}" x="${x}" y="${y}" width="${s}" height="${s}" fill="${fill}"/></g>`;
+  const SKY = [[12, 14], [30, 8], [52, 20], [78, 10], [90, 28], [20, 34], [66, 36], [44, 6], [86, 50], [8, 52]];
+
+  const SCENES = {
+    escape: {k: '#3d9fd4', f: u => `<defs>${lin('a' + u, '#8fd6ff', '#e6f7ff')}</defs><rect width="100" height="148" fill="url(#a${u})"/>
+      <circle cx="80" cy="22" r="12" fill="#fff" opacity=".9"/><circle cx="80" cy="22" r="20" fill="#fff" opacity=".25"/>
+      <g fill="#fff" opacity=".9"><ellipse cx="22" cy="30" rx="16" ry="6"/><ellipse cx="32" cy="26" rx="10" ry="6"/><ellipse cx="70" cy="58" rx="14" ry="5"/><ellipse cx="62" cy="55" rx="8" ry="5"/></g>
+      ${icon('flying-flag', 8, 26, 86, '#ffffff', '#1d6f9e88', -6)}${waves(112, '#7cc8ee')}${waves(120, '#4aa8d8')}${waves(130, '#2a86bd')}
+      <g stroke="#fff" stroke-width="1.2" fill="none" opacity=".7"><path d="M10 50q6-3 10 0M74 80q5-3 9 0M16 90q5-3 9 0"/></g>`},
+    loot: {k: '#9a6400', f: u => `<defs>${rad('a' + u, '#ffe27a', '#3a1d04', .5, .55, .75)}</defs><rect width="100" height="148" fill="url(#a${u})"/>${rays(50, 82, 22, '#fff2a8', .25)}
+      ${icon('coins-pile', 6, 40, 88, '#ffd23a', '#5a3200')}
+      ${star(18, 30, 6, '#fff')}${star(82, 36, 4.5, '#fff7c2')}${star(74, 18, 3, '#fff')}${star(26, 112, 4, '#fff7c2')}${star(84, 104, 5, '#fff')}
+      ${dots([[12, 128], [30, 132], [70, 130], [88, 126], [50, 136]], 3.2, '#e8a800')}`},
+    pirate: {k: '#a3301a', f: u => `<defs>${lin('a' + u, '#ff5a36', '#ffd27a')}</defs><rect width="100" height="148" fill="url(#a${u})"/>
+      <circle cx="50" cy="70" r="36" fill="#fff0b0" opacity=".85"/><circle cx="50" cy="70" r="46" fill="#fff0b0" opacity=".25"/>
+      ${icon('pirate-captain', 4, 18, 92, '#2b0f14', '')}${waves(116, '#5a1f2a')}${waves(126, '#3a1220')}
+      <g stroke="#2b0f14" fill="none"><path d="M8 40l4-1 1 3 2-5 2 4 3-1"/><path d="M82 30l3-1 1 2 2-4 2 3 3-1"/></g>`},
+    tigress: {k: '#c4560e', f: u => `<defs>${rad('a' + u, '#ffc15a', '#c4500a', .5, .45, .8)}</defs><rect width="100" height="148" fill="url(#a${u})"/>
+      <g fill="#3a1500" opacity=".28"><path d="M-4 20q30 6 40-6-8 14-40 18z"/><path d="M104 40q-30 2-38-12 4 16 38 22z"/><path d="M-4 96q26-4 34 8-12-4-34 2z"/><path d="M104 118q-24-8-36 2 14-2 36 8z"/><path d="M-4 140q20-8 30-2-10 0-30 8z"/></g>
+      <g fill="#1f6b2a"><path d="M-6 0q22 10 26 34-14-10-26-12z"/><path d="M106 0q-20 12-22 34 12-12 22-12z"/><path d="M-6 148q14-26 34-24-16 6-22 24z" fill="#2d8a3a"/><path d="M106 148q-14-26-34-24 16 6 22 24z" fill="#2d8a3a"/></g>
+      ${icon('tiger-head', 6, 28, 88, '#1c0b02', '#fff5')}`},
+    second: {k: '#1b2a5a', f: u => `<defs>${rad('a' + u, '#3a58b8', '#0c1430', .5, .45, .8)}</defs><rect width="100" height="148" fill="url(#a${u})"/>${rays(50, 64, 28, '#ffd75a', .18)}
+      <text x="50" y="104" text-anchor="middle" font-family="Georgia,serif" font-size="96" font-weight="900" fill="#ffd75a" opacity=".13">II</text>
+      ${icon('captain-hat-profile', 10, 26, 80, '#ffcc33', '#000a', -8)}
+      <g fill="none" stroke="#ffcc33" stroke-width="4" stroke-linejoin="round"><path d="M32 106l18 8 18-8"/><path d="M32 116l18 8 18-8"/></g>
+      <path d="M12 14l5 10 5-10z" fill="#c8102e"/><circle cx="17" cy="27" r="5" fill="#ffcc33" stroke="#9a6b10"/>${star(17, 27, 3, '#9a6b10')}
+      <path d="M78 14l5 10 5-10z" fill="#2b6cff"/><circle cx="83" cy="27" r="5" fill="#ffcc33" stroke="#9a6b10"/>${star(83, 27, 3, '#9a6b10')}
+      ${star(20, 80, 3, '#fff')}${star(82, 86, 2.5, '#fff')}${star(70, 16, 2, '#fff')}`},
+    king: {k: '#8c0b18', f: u => `<defs>${rad('a' + u, '#e2202f', '#2a0206', .5, .5, .75)}</defs><rect width="100" height="148" fill="url(#a${u})"/>${rays(50, 74, 36, '#ffcc33', .3)}
+      <circle cx="50" cy="76" r="34" fill="none" stroke="#ffcc33" stroke-width="1" stroke-dasharray="2 3" opacity=".8"/>
+      ${icon('pirate-skull', 14, 44, 72, '#f6ecd2', '#000b')}${icon('jewel-crown', 22, 8, 56, '#ffcc33', '#5a0008', 10)}
+      ${star(12, 20, 4, '#ffe680')}${star(88, 30, 5, '#ffe680')}${star(14, 104, 3.5, '#ffe680')}${star(86, 112, 4, '#ffe680')}${star(50, 130, 3, '#ffe680')}
+      ${dots([[20, 124], [80, 128], [10, 70, .8], [90, 66, .8]], 3, '#ffcc33')}`},
+    mermaid: {k: '#0e7c86', f: u => `<defs>${lin('a' + u, '#3fd0d6', '#063c52')}</defs><rect width="100" height="148" fill="url(#a${u})"/>
+      <g fill="#fff" opacity=".13"><path d="M20 0l14 0-24 148-14 0z"/><path d="M58 0l10 0 6 148-14 0z"/><path d="M86 0l8 0 20 148-12 0z"/></g>
+      ${icon('mermaid', 6, 18, 90, '#ff9c8a', '#063c5299')}
+      <g fill="#1e8a4a"><path d="M8 148q-6-20 2-34 2 14-2 34z"/><path d="M14 148q4-26 -2-40 10 14 6 40z" fill="#26a85a"/><path d="M90 148q6-22-2-36-2 14 2 36z"/></g>
+      <path d="M-5 140q30-8 55-2t55 0V160H-5z" fill="#e8d29a"/>${bubbles([[18, 40, 3], [22, 30, 2], [80, 70, 2.5], [84, 60, 1.6], [70, 110, 2], [30, 100, 1.8]])}`},
+    kraken: {k: '#4a2060', f: u => `<defs>${lin('a' + u, '#0f1220', '#4a5878')}</defs><rect width="100" height="148" fill="url(#a${u})"/>
+      <path d="M72 0l-10 26 8 0-12 30 22-36-9 0 8-20z" fill="#ffe94d"/>
+      <g stroke="#cfd8ea" stroke-width=".6" opacity=".35"><path d="M10 10l-4 12M24 6l-4 12M40 14l-4 12M90 40l-4 12M14 50l-4 12M32 40l-4 12"/></g>
+      ${waves(104, '#16324a', 7)}${icon('kraken-tentacle', 0, 22, 100, '#a23d8f', '#000a')}${waves(122, '#0b2233', 6)}${waves(134, '#061724', 5)}`},
+    whale: {k: '#123a66', f: u => `<defs>${lin('a' + u, '#030b1c', '#1a4c80')}</defs><rect width="100" height="148" fill="url(#a${u})"/>${dots(SKY, .8, '#fff', .8)}
+      <circle cx="74" cy="26" r="13" fill="#fff4cf"/><circle cx="70" cy="23" r="2.4" fill="#e8dcb0"/><circle cx="78" cy="30" r="1.6" fill="#e8dcb0"/><circle cx="74" cy="26" r="22" fill="#fff4cf" opacity=".12"/>
+      ${waves(98, '#0d2f52', 5)}${icon('sperm-whale', 0, 36, 100, '#f2f8ff', '#0009')}${waves(118, '#0a2747', 5)}${waves(130, '#06192f', 4)}
+      <g fill="#fff4cf" opacity=".5"><rect x="66" y="124" width="16" height="1.4" rx=".7"/><rect x="70" y="132" width="9" height="1.2" rx=".6"/></g>`},
+    ray: {k: '#127c8a', f: u => `<defs>${lin('a' + u, '#8ff2e4', '#1495a8')}</defs><rect width="100" height="148" fill="url(#a${u})"/>
+      <g fill="none" stroke="#fff" stroke-width=".9" opacity=".3"><path d="M0 20q10-6 20 0t20 0 20 0 20 0 20 0"/><path d="M0 44q10-6 20 0t20 0 20 0 20 0 20 0"/><path d="M0 96q10-6 20 0t20 0 20 0 20 0 20 0"/></g>
+      <path d="M-5 128q30-10 55-4t55-2V160H-5z" fill="#f4dca4"/>${dots([[10, 138], [24, 134], [40, 140], [62, 136], [80, 140], [92, 132]], 1, '#c9a868')}
+      <ellipse cx="50" cy="128" rx="34" ry="5" fill="#0005"/>${icon('manta-ray', 4, 30, 92, '#1e4a66', '')}
+      ${dots([[36, 68], [44, 76], [58, 70], [64, 80], [50, 62], [30, 78], [70, 70]], 1.6, '#bff6ee', .9)}${bubbles([[16, 30, 2], [84, 40, 2.4], [80, 30, 1.4]])}`},
+    davy: {k: '#0b4a36', f: u => `<defs>${lin('a' + u, '#020807', '#0b3a2c')}${rad('b' + u, '#5dffb0', '#5dffb000', .5, .5, .5)}</defs><rect width="100" height="148" fill="url(#a${u})"/>
+      <circle cx="50" cy="80" r="46" fill="url(#b${u})" opacity=".55"/>
+      <g fill="none" stroke="#6a7a72" stroke-width="3" stroke-dasharray="5 2" opacity=".85"><path d="M0 20L50 60"/><path d="M100 26L52 62"/><path d="M0 120L44 96"/><path d="M100 128L56 98"/></g>
+      ${icon('locked-chest', 12, 42, 76, '#a8ffd2', '#000c')}${bubbles([[20, 50, 2], [26, 40, 1.4], [80, 90, 2.4], [76, 78, 1.4], [50, 24, 2], [54, 16, 1.2]])}`},
+    salvo: {k: '#b83a08', f: u => `<defs>${lin('a' + u, '#2a0c04', '#ff7a1a')}</defs><rect width="100" height="148" fill="url(#a${u})"/>
+      <path d="M64 46l6-16 2 14 12-10-6 14 16-2-14 8 14 8-16-2 6 14-12-10-2 14-6-16z" fill="#ffd23a" opacity=".9"/>
+      <g fill="#8a7a72" opacity=".55"><circle cx="22" cy="108" r="14"/><circle cx="36" cy="118" r="12"/><circle cx="12" cy="124" r="10"/><circle cx="78" cy="122" r="12"/><circle cx="90" cy="112" r="9"/></g>
+      ${icon('cannon-shot', 4, 26, 92, '#160904', '#ffb34766')}${dots([[86, 20], [16, 30], [40, 14], [92, 70], [10, 70]], 1.3, '#ffe27a')}`},
+    plank: {k: '#6e3f1a', f: u => `<defs>${lin('a' + u, '#ff8fa3', '#ffd6a0')}</defs><rect width="100" height="148" fill="url(#a${u})"/>
+      <circle cx="50" cy="96" r="22" fill="#fff1c9" opacity=".8"/>${waves(96, '#2a6496')}${waves(108, '#1d4e7a')}
+      <g fill="#36404a"><path d="M22 116q6-12 12 0z"/><path d="M60 126q7-14 14 0z"/><path d="M84 112q4-8 8 0z"/></g>${waves(132, '#123659')}
+      ${icon('planks', 4, 14, 92, '#7a4a20', '#0005', -14)}
+      <g stroke="#2b2b2b" fill="none" stroke-width="1.1"><path d="M10 30q4-3 8 0q4-3 8 0"/><path d="M72 24q3-2 6 0q3-2 6 0"/></g>`},
+  };
+  let U = 0;
+  // Décor d'une carte spéciale : {k: couleur du liseré, svg} ou null
+  const scene = t => {
+    const S = SCENES[t];
+    if (!S || !GI['flying-flag']) return null;
+    const u = 'sks' + (++U);
+    return {k: S.k, svg: `<svg class="skc-scene" viewBox="0 0 100 148" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${S.f(u)}</svg>`};
+  };
+  window.SkullArt = Object.freeze({svg, has, scene});
 })();

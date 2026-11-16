@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Test cartes Skull King (vrai code)</title>
+<link rel="stylesheet" href="../styles.css">
+<style>body{background:#1d1a17;color:#eee;padding:12px;font-family:system-ui,sans-serif} h2{font-size:14px;opacity:.7;margin:18px 0 8px} .row{display:flex;flex-wrap:wrap;gap:8px} .felt{background:radial-gradient(#2c5a3e,#123022);border-radius:16px;padding:16px;display:flex;justify-content:center;gap:6px}</style>
+<script src="../skull-icons.js" defer></script>
+<script src="../skull-art.js" defer></script>
+<script src="../skull.js" defer></script>
+</head>
+<body>
+<h2>Pli sur la table (taille réelle .skb-card)</h2>
+<div class="felt"><div class="skb-card" id="trick" style="display:flex;gap:4px"></div></div>
+<h2>Ta main (.skb-hand)</h2>
+<div class="skb-hand active" id="hand"></div>
+<h2>Toutes les cartes (taille de base)</h2>
+<div class="row" id="all"></div>
+<script>
+addEventListener('DOMContentLoaded', () => {
+  const C = (id, o = {}) => YetiSkull.cardHTML(id, {escape: s => s, ...o});
+  document.getElementById('trick').innerHTML = ['y12', 'mer1', 'k3', 'king1'].map(id => C(id)).join('');
+  document.getElementById('hand').innerHTML = [['g4', 'no'], ['y9', 'can'], ['p13', 'no'], ['esc1', 'can'], ['pir2', 'can'], ['j15', 'no'], ['xk8', 'no']]
+    .map(([id, c]) => C(id, {button: true, cls: c})).join('');
+  const all = ['g1', 'g14', 'y1', 'y14', 'p7', 'p14', 'k1', 'k14', 'xg7', 'xy8', 'xp0', 'j15',
+    'esc1', 'loot1', 'pir1', 'tig1', 'second1', 'king1', 'mer1', 'kraken1', 'whale1', 'ray1', 'davy1', 'salvo1', 'plank1'];
+  document.getElementById('all').innerHTML = all.map(id => C(id)).join('');
+});
+</script>
+</body>
+</html>
