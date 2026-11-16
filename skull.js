@@ -268,10 +268,12 @@
     const els = fxCards(), last = lt.cards.length - 1;
     if (!window.SkullFX || els.length !== lt.cards.length) return;
     const ti = t => lt.cards.findIndex(pc => kind(pc.c).t === t);
-    const i = lt.kraken ? ti('kraken') : lt.applied === 'whale' || lt.applied === 'ray' ? ti(lt.applied) : (lt.destroyed || []).length ? ti('davy') : lt.win;
-    fxPlay(lt.cards[last].c, els[last]);
+    // Priorité : le Casier qui a détruit des léviathans, sinon le Kraken s'il s'applique (dernier léviathan posé) ; eux seuls s'animent alors
+    const davy = (lt.destroyed || []).length ? ti('davy') : -1, kraken = davy < 0 && lt.kraken ? ti('kraken') : -1;
+    const i = davy >= 0 ? davy : kraken >= 0 ? kraken : lt.applied === 'whale' || lt.applied === 'ray' ? ti(lt.applied) : lt.win;
+    if (davy < 0 && kraken < 0) fxPlay(lt.cards[last].c, els[last]);
     if (i === null || i < 0 || kind(lt.cards[i].c).t === 'num') return;
-    setTimeout(() => { if (els[i].isConnected) SkullFX.win(kind(lt.cards[i].c).t, els[i], fxBox(), els); }, i === last ? 900 : 400);
+    setTimeout(() => { if (els[i].isConnected) SkullFX.win(kind(lt.cards[i].c).t, els[i], fxBox(), els); }, davy >= 0 || kraken >= 0 ? 150 : i === last ? 900 : 400);
   }
   function seatName(G, s) { return nameOf(G.players[s]); }
   // ---------- table façon Board Game Arena : joueurs autour de la table, carte posée devant chacun, main en bas ----------
