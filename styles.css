@@ -1210,3 +1210,13 @@ button.skc:disabled{cursor:default}
 @keyframes skSpin{to{transform:rotate(360deg)}}
 .skb-seat{background:#04161fdd;border-color:#3de0ff66;box-shadow:0 0 14px #3de0ff33}
 @media(prefers-reduced-motion:reduce){.skb-table::before,.skb-felt::after{animation:none}}
+/* Skull King : menu « Dernier pli » */
+.skb-top{position:relative}
+.skb-tools button.on{background:#e8b53a;color:#241a08}
+.skb-lastpli{position:absolute;right:12px;top:100%;z-index:45;margin-top:6px;padding:10px 12px;border-radius:12px;background:#04161ff2;border:1.5px solid #3de0ff88;box-shadow:0 10px 24px #000b;max-width:calc(100% - 24px)}
+.skb-lastpli>b{display:block;margin-bottom:8px;font:800 13px var(--body,inherit);color:#c9f7ff}
+.skb-lp-cards{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px}
+.skb-lp-cards>div{display:grid;justify-items:center;gap:3px;flex:none}
+.skb-lp-cards small{font:700 10px var(--body,inherit);color:#c9f7ff;max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.skb-lp-cards .skc{width:52px;height:76px}
+.skb-lp-cards .win .skc{box-shadow:0 0 0 3px #ffd54a,0 0 12px #ffd54a99}

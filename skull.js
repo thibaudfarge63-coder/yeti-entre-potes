@@ -205,7 +205,7 @@
     clearInterval(timer); timer = setInterval(poll, 1500);
   }
   function close(silent) {
-    clearInterval(timer); timer = null; rtClose(); cur = null; pendingDecl = null; sheetOpen = false; fullView = false;
+    clearInterval(timer); timer = null; rtClose(); cur = null; pendingDecl = null; sheetOpen = false; lastOpen = false; fullView = false;
     if (root) { root.hidden = true; root.innerHTML = ''; root._html = ''; root._mode = ''; root.className = 'board-stage'; }
     if (!silent && ctx && ctx.onClose) ctx.onClose();
     loadList();
@@ -277,7 +277,7 @@
   }
   function seatName(G, s) { return nameOf(G.players[s]); }
   // ---------- table façon Board Game Arena : joueurs autour de la table, carte posée devant chacun, main en bas ----------
-  let fullView = false, sheetOpen = false;
+  let fullView = false, sheetOpen = false, lastOpen = false;
   function seatPos(G, s) {
     const me = G.me >= 0 ? G.me : 0, k = (s - me + G.P) % G.P, a = (90 + k * 360 / G.P) * Math.PI / 180;
     return {x: 50 + 43 * Math.cos(a), y: 50 + 39 * Math.sin(a), cx: 50 + 23 * Math.cos(a), cy: 50 + 21 * Math.sin(a)};
@@ -308,9 +308,13 @@
     const collect = showing && Date.now() > showTrickUntil - 1000;
     const myTurn = G.turn === me && me >= 0 && ['play', 'salvo', 'plank'].includes(G.phase);
     root.classList.toggle('sk-full', fullView);
+    // Dernier pli joué dans la manche en cours (menu déroulant à gauche de « Scores »)
+    const lastPli = G.phase !== 'done' && G.lastTrick && G.lastTrick.round === G.round ? G.lastTrick : null;
+    const lastBox = lastOpen && lastPli ? `<div class="skb-lastpli"><b>Pli ${lastPli.n} · ${lastPli.kraken ? '🐙 englouti par le Kraken' : lastPli.winner === null ? 'personne ne gagne' : `gagné par ${esc(seatName(G, lastPli.winner))}`}</b>
+      <div class="skb-lp-cards">${lastPli.cards.map((pc, i) => `<div class="${i === lastPli.win ? 'win' : ''}"><small>${esc(seatName(G, pc.s))}</small>${cardHTML(pc.c, {d: pc.d, escape: esc})}</div>`).join('')}</div></div>` : '';
     const top = `<div class="skb-top"><button type="button" class="gb-back" data-sk-close title="Ta place est gardée : reviens quand tu veux avec « Tes parties en cours »">🚪 Quitter la partie</button><b class="skb-title">☠️ Skull King</b>
       <span class="skb-round">${G.phase === 'done' ? 'Partie terminée' : `Manche <b>${G.round}</b>/${G.R} · ${G.dealt} carte${G.dealt > 1 ? 's' : ''}`}</span>
-      <span class="skb-tools"><button type="button" data-sk-sheet title="Feuille de score">📜 Scores</button><button type="button" data-sk-full title="${fullView ? 'Quitter le plein écran' : 'Plein écran'}">${fullView ? '✕' : '⛶'}</button></span></div>`;
+      <span class="skb-tools">${lastPli ? `<button type="button" data-sk-last class="${lastOpen ? 'on' : ''}" title="Revoir le dernier pli de la manche">🂠 Dernier pli ${lastOpen ? '▴' : '▾'}</button>` : ''}<button type="button" data-sk-sheet title="Feuille de score">📜 Scores</button><button type="button" data-sk-full title="${fullView ? 'Quitter le plein écran' : 'Plein écran'}">${fullView ? '✕' : '⛶'}</button></span>${lastBox}</div>`;
     const st = statusBar(G, me, myTurn);
     // joueurs autour de la table
     const winSeat = showing && G.lastTrick.winner !== null ? G.lastTrick.winner : null;
@@ -449,6 +453,7 @@
     if (b.dataset.skPlank !== undefined) return act({action: 'plank', idx: Number(b.dataset.skPlank)});
     if ('skReload' in b.dataset) { fails = 0; netBad = false; root._parts = {}; await load(false); render(); return; }
     if ('skSheet' in b.dataset) { sheetOpen = !sheetOpen; render(); return; }
+    if ('skLast' in b.dataset) { lastOpen = !lastOpen; render(); return; }
     if ('skFull' in b.dataset) { fullView = !fullView; render(); if (fullView) root.scrollTop = 0; else root.scrollIntoView({block: 'start'}); return; }
     if ('skNudge' in b.dataset) { nudgeAt = Date.now(); return act({action: 'nudge'}); }
     if (b.dataset.skJoin !== undefined) { const ok = b.dataset.skJoin === '1'; try { await api({action: 'answer', game: cur.id, accept: ok}); if (!ok) { close(); return; } await load(false); } catch (err) { ctx.toast(err.message || 'Oups.'); } return; }
