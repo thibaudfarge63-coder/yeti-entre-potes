@@ -455,8 +455,21 @@
     if ('skStart' in b.dataset) return act({action: 'start'});
     if ('skCancel' in b.dataset) { try { await api({action: 'cancel', game: cur.id}); close(); ctx.toast('Partie annulée.'); } catch (err) { ctx.toast(err.message || 'Oups.'); } return; }
     if ('skAgain' in b.dataset) {
-      const me = meId(), others = G.players.filter(p => p !== me);
-      try { const g = await api({action: 'create', invite: others, rounds: G.R, options: G.opts}); close(true); open(g.id); ctx.toast('☠️ Nouvelle partie, invitations envoyées !'); } catch (err) { ctx.toast(err.message || 'Impossible.'); }
+      const me = meId(), others = G.players.filter(p => p !== me), players = G.players.map(Number), since = Date.parse(cur.finished_at || cur.moved_at) - 1000;
+      // Revanche déjà lancée par un autre joueur (mêmes joueurs, créée après la fin) : on la rejoint au lieu d'en créer une 2e
+      const replays = async () => { const r = await ctx.request('/api/skull/list', {}); return ((r && r.games) || []).filter(g => g.status === 'lobby' && Date.parse(g.created_at) >= since
+        && g.seats.length === players.length && g.seats.every(p => players.includes(Number(p)))).sort((a, x) => a.id - x.id); };
+      const join = async g => { if (Number(g.host) !== Number(me)) await api({action: 'answer', game: g.id, accept: true}).catch(() => {}); close(true); open(g.id); };
+      try {
+        const found = await replays();
+        if (found.length) { await join(found[0]); ctx.toast('☠️ Tu rejoins la revanche !'); return; }
+        const g = await api({action: 'create', invite: others, rounds: G.R, options: G.opts});
+        // Deux clics presque en même temps : chacun garde la plus ancienne des deux revanches et annule la sienne
+        await new Promise(r => setTimeout(r, 1200));
+        const first = (await replays())[0];
+        if (first && first.id < g.id) { await api({action: 'cancel', game: g.id}).catch(() => {}); await join(first); ctx.toast('☠️ Tu rejoins la revanche !'); return; }
+        close(true); open(g.id); ctx.toast('☠️ Nouvelle partie, invitations envoyées !');
+      } catch (err) { ctx.toast(err.message || 'Impossible.'); }
     }
   }
   async function act(body) {

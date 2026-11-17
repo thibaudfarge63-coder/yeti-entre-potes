@@ -33,7 +33,10 @@ addEventListener('DOMContentLoaded', () => {
     session: () => ({player: 1, token: 'test'}), ready: () => true, toast: m => console.log('toast', m), sound() {}, avatar: () => '', badge() {}, boss: () => false,
     onOpen() {}, onClose() {},
     request: async (path, body) => {
-      if (path.endsWith('/list')) return {games: []};
+      if (path.endsWith('/list')) return {games: JSON.parse(JSON.stringify(window.LOBBIES || []))};
+      if (body.action === 'create') { const g = {id: window.NEXT_ID++, status: 'lobby', host: 1, seats: [1, ...body.invite], created_at: new Date().toISOString()}; LOBBIES.push(g); return {...row(), id: g.id, status: 'lobby'}; }
+      if (body.action === 'cancel') { LOBBIES = LOBBIES.filter(g => g.id !== body.game); return {ok: true, deleted: true}; }
+      if (body.action === 'answer') { (window.ANSWERS = window.ANSWERS || []).push(body.game); return row(); }
       if (path.endsWith('/version')) return {version: ver};
       (window.REQ = window.REQ || []).push([Math.round(performance.now()), body.action || path]);
       if (body.action === 'play') { G.hand = G.hand.filter(c => c !== body.card); G.trick.cards.push({s: 0, c: body.card}); G.turn = 1; G.playable = []; ver++; }
@@ -41,7 +44,9 @@ addEventListener('DOMContentLoaded', () => {
     },
   });
   // Pilotage du test depuis la console : SIM.opp('king') pose une carte pour le joueur suivant ; SIM.end(index gagnant, {kraken, applied, destroyed}) termine le pli
+  window.LOBBIES = []; window.NEXT_ID = 100;
   window.SIM = {
+    done() { G.phase = 'done'; G.trick = null; G.turn = null; ver++; },
     opp(c) { const s = (G.trick.cards.length + 1) % 4; G.trick.cards.push({s, c}); G.counts[s]--; ver++; },
     end(win, o = {}) { const cards = G.trick.cards.slice(); G.tricks++; G.lastTrick = {round: G.round, n: G.tricks, cards, win, winner: win === null ? null : cards[win].s, kraken: !!o.kraken,
       removed: null, destroyed: o.destroyed || [], applied: o.applied || null, bonus: []}; G.trick = {leader: 0, cards: [], lead: null, salvo: null}; G.turn = 0; G.playable = G.hand.slice(); ver++; },
