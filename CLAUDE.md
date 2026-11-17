@@ -22,4 +22,5 @@ Site entre potes : Yetisports 3 (Seal Bounce, SWF via Ruffle) + classements, Bat
 - Quand une partie se lance, les autres salons en attente du même jeu qui partagent un joueur sont supprimés.
 - Bouton « Quitter la partie » (place gardée) + bandeau « Tes parties en cours » + reprise auto (localStorage `yeti-resume`).
 - Skull King : règles détaillées dans `docs/skull-king-decisions.md`. Joker 15 = jaune/violet/vert, prend la couleur demandée, jamais noir.
+- Skull King : la couleur demandée est celle de la 1re carte de couleur posée dans le pli, même après des cartes spéciales. Moteur dans `supabase/functions/yeti-skull/`, tests : `tests/skull-engine-test.html`.
 - Erreurs JS des joueurs : `yeti_private.push_debug` (step = 'jserr').

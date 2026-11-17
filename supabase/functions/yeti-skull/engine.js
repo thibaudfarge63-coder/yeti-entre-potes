@@ -57,28 +57,15 @@
     }
     return {t: k.t};
   }
-  const FLEEING = new Set(['escape', 'loot']);                    // une Fuite / un Butin ouvre : la carte suivante fixe la couleur
-  const PASS = new Set(['ray', 'salvo', 'plank', 'davy']);         // ouvre : le joueur suivant fixe la couleur
-  const CHARACTERS = new Set(['pirate', 'mermaid', 'king', 'second', 'kraken', 'whale']); // ouvre : aucune couleur pour le pli
-
+  // Règle maison (17 nov. 2026) : la couleur demandée est celle de la 1re carte de couleur posée dans le pli,
+  // quelles que soient les cartes spéciales posées avant (Fuite, Pirate, Sirène, Roi, Kraken…).
   // Couleur demandée d'un pli (liste de cartes posées dans l'ordre). null = pas (encore) de couleur.
   function leadSuit(cards) {
-    for (const pc of cards) {
-      const i = info(pc);
-      if (i.t === 'num') return i.suit;
-      if (FLEEING.has(i.t) || PASS.has(i.t)) continue;
-      if (CHARACTERS.has(i.t)) return null;
-    }
+    for (const pc of cards) { const i = info(pc); if (i.t === 'num') return i.suit; }
     return null;
   }
   // Une couleur peut-elle encore être fixée par la prochaine carte ?
-  function leadOpen(cards) {
-    for (const pc of cards) {
-      const i = info(pc);
-      if (i.t === 'num' || CHARACTERS.has(i.t)) return false;
-    }
-    return true;
-  }
+  function leadOpen(cards) { return leadSuit(cards) === null; }
 
   // ---------- Cartes jouables ----------
   const isSpecial = id => CARDS[id].t !== 'num';

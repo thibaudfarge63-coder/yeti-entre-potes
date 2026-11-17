@@ -1,0 +1,30 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Tests moteur Skull King</title>
+<!-- Ouvrir via le serveur local (python3 -m http.server 8765) : http://localhost:8765/tests/skull-engine-test.html -->
+<script src="../supabase/functions/yeti-skull/engine.js"></script>
+<pre id="out"></pre>
+<script>
+const E = SkullEngine, out = [], P = (s, c, d) => (d ? {s, c, d} : {s, c});
+const ok = (name, got, want) => { const pass = JSON.stringify(got) === JSON.stringify(want); out.push(`${pass ? '✅' : '❌'} ${name}${pass ? '' : ` : obtenu ${JSON.stringify(got)}, attendu ${JSON.stringify(want)}`}`); };
+// Couleur demandée = 1re carte de couleur posée, même après une carte spéciale
+ok('Pirate puis jaune : jaune demandé', E.leadSuit([P(0, 'pir1'), P(1, 'y5')]), 'y');
+ok('Roi, Sirène puis violet : violet demandé', E.leadSuit([P(0, 'king'), P(1, 'mer1'), P(2, 'p3')]), 'p');
+ok('Kraken puis vert : vert demandé', E.leadSuit([P(0, 'kraken'), P(1, 'g9')]), 'g');
+ok('Fuite puis noir : noir demandé', E.leadSuit([P(0, 'esc1'), P(1, 'k2')]), 'k');
+ok('Que des spéciales : pas de couleur', E.leadSuit([P(0, 'pir1'), P(1, 'mer1')]), null);
+ok('Joker déclaré violet en 1re carte de couleur', E.leadSuit([P(0, 'second'), P(1, 'j15', {color: 'p'})]), 'p');
+// Obligation de suivre
+ok('Après Roi + jaune, il faut suivre le jaune', E.legalFrom(['y3', 'p2', 'esc1'], [P(0, 'king'), P(1, 'y9')], false), ['y3', 'esc1']);
+ok('Sans jaune en main, tout est jouable', E.legalFrom(['p2', 'g4'], [P(0, 'king'), P(1, 'y9')], false), ['p2', 'g4']);
+ok('Après un Pirate seul, tout est jouable', E.legalFrom(['y3', 'p2'], [P(0, 'pir1')], false), ['y3', 'p2']);
+ok('Dernière salve : carte libre', E.legalFrom(['y3', 'p2'], [P(0, 'king'), P(1, 'y9')], true), ['y3', 'p2']);
+// Joker
+ok('Joker après Pirate + jaune : prend le jaune sans choix', E.declNeeded('j15', [P(0, 'pir1'), P(1, 'y9')], false), null);
+ok('Joker après Pirate seul : choix de couleur', E.declNeeded('j15', [P(0, 'pir1')], false), 'color');
+// Résolution : la couleur demandée vient de la 1re carte de couleur
+ok('Fuite, violet 3, jaune 14 : le violet gagne', E.resolve([P(0, 'esc1'), P(1, 'p3'), P(2, 'y14')]).win, 1);
+ok('Planche retire le Pirate, jaune 3 puis violet 9 : le jaune gagne', E.resolve([P(0, 'plank'), P(1, 'pir1'), P(2, 'y3'), P(3, 'p9')]).win, 2);
+document.getElementById('out').textContent = out.join('\n');
+window.RESULT = {total: out.length, failed: out.filter(l => l.startsWith('❌'))};
+</script>
