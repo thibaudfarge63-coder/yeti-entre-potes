@@ -48,8 +48,8 @@ addEventListener('DOMContentLoaded', () => {
   window.SIM = {
     done() { G.phase = 'done'; G.trick = null; G.turn = null; ver++; },
     opp(c) { const s = (G.trick.cards.length + 1) % 4; G.trick.cards.push({s, c}); G.counts[s]--; ver++; },
-    end(win, o = {}) { const cards = G.trick.cards.slice(); G.tricks++; G.lastTrick = {round: G.round, n: G.tricks, cards, win, winner: win === null ? null : cards[win].s, kraken: !!o.kraken,
-      removed: null, destroyed: o.destroyed || [], applied: o.applied || null, bonus: []}; G.trick = {leader: 0, cards: [], lead: null, salvo: null}; G.turn = 0; G.playable = G.hand.slice(); ver++; },
+    end(win, o = {}) { const cards = o.wind ? G.trick.cards.map(pc => ({...pc, s: (pc.s + 1) % 4, from: pc.s})) : G.trick.cards.slice(); G.tricks++; G.lastTrick = {round: G.round, n: G.tricks, cards, win, winner: win === null ? null : cards[win].s, kraken: !!o.kraken,
+      wind: !!o.wind, removed: null, destroyed: o.destroyed || [], applied: o.applied || null, bonus: []}; G.trick = {leader: 0, cards: [], lead: null, salvo: null}; G.turn = 0; G.playable = G.hand.slice(); ver++; },
   };
   YetiSkull.open(1);
 });
