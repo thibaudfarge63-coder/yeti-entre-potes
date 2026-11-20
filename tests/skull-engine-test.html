@@ -25,6 +25,21 @@ ok('Joker après Pirate seul : choix de couleur', E.declNeeded('j15', [P(0, 'pir
 // Résolution : la couleur demandée vient de la 1re carte de couleur
 ok('Fuite, violet 3, jaune 14 : le violet gagne', E.resolve([P(0, 'esc1'), P(1, 'p3'), P(2, 'y14')]).win, 1);
 ok('Planche retire le Pirate, jaune 3 puis violet 9 : le jaune gagne', E.resolve([P(0, 'plank'), P(1, 'pir1'), P(2, 'y3'), P(3, 'p9')]).win, 2);
+// Vent tournant : chaque carte passe au joueur suivant en fin de pli
+const windGame = (hands, starter = 0) => { const st = E.newGame({players: hands.map((_, i) => i + 1), rounds: 1}, Math.random);
+  st.hands = hands.map(h => h.slice()); st.dealt = hands[0].length; st.bids = hands.map(() => 0); st.phase = 'play'; st.won = hands.map(() => 0); st.pend = hands.map(() => []);
+  st.trick = {leader: starter, cards: [], todo: hands.map((_, i) => i), salvo: null, extraDone: false}; st.turn = starter; return st; };
+let W = windGame([['y2', 'g1'], ['pir1', 'g2'], ['wind', 'g3']]);
+E.playCard(W, 0, 'y2'); E.playCard(W, 1, 'pir1'); E.playCard(W, 2, 'wind');
+ok('Vent : le Pirate du joueur 2 passe au joueur 3, qui gagne le pli', [W.lastTrick.winner, W.won], [2, [0, 0, 1]]);
+ok('Vent : le 2 jaune du joueur 1 passe au joueur 2', W.lastTrick.cards.map(pc => [pc.c, pc.from, pc.s]), [['y2', 0, 1], ['pir1', 1, 2], ['wind', 2, 0]]);
+ok('Vent : le nouveau propriétaire du gagnant ouvre le pli suivant', W.turn, 2);
+W = windGame([['wind', 'g1'], ['esc1', 'g2']]);
+E.playCard(W, 0, 'wind'); E.playCard(W, 1, 'esc1');
+ok('Vent seul avec une Fuite : la 1re posée gagne, mais elle a changé de main', W.lastTrick.winner, 1);
+ok('Vent : se joue comme une Fuite (pas de couleur)', E.leadSuit([P(0, 'wind'), P(1, 'p4')]), 'p');
+ok('Vent présent dans le paquet', E.buildDeck({}, 4).includes('wind'), true);
+ok('Vent désactivable', E.buildDeck({wind: false}, 4).includes('wind'), false);
 document.getElementById('out').textContent = out.join('\n');
 window.RESULT = {total: out.length, failed: out.filter(l => l.startsWith('❌'))};
 </script>
