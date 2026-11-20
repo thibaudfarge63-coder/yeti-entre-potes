@@ -22,13 +22,15 @@
   add('loot1', {t: 'loot'}); add('loot2', {t: 'loot'});
   add('kraken', {t: 'kraken'}); add('whale', {t: 'whale'}); add('ray', {t: 'ray'});
   add('second', {t: 'second'}); add('davy', {t: 'davy'}); add('salvo', {t: 'salvo'}); add('plank', {t: 'plank'});
+  add('wind', {t: 'wind'}); // Vent tournant (règle maison, 20 nov. 2026)
 
   // Options (cartes activables à la création). Fuites, Pirates et cartes de couleur de base sont toujours présents.
-  const OPTION_KEYS = ['ext', 'joker', 'tig', 'king', 'mer', 'loot', 'kraken', 'whale', 'ray', 'second', 'davy', 'salvo', 'plank'];
+  const OPTION_KEYS = ['ext', 'joker', 'tig', 'king', 'mer', 'loot', 'kraken', 'whale', 'ray', 'second', 'davy', 'salvo', 'plank', 'wind'];
   const OPTION_CARDS = {
     ext: id => /^x[gypk][780]$/.test(id), joker: id => id === 'j15', tig: id => id === 'tig', king: id => id === 'king',
     mer: id => /^mer\d$/.test(id), loot: id => /^loot\d$/.test(id), kraken: id => id === 'kraken', whale: id => id === 'whale',
     ray: id => id === 'ray', second: id => id === 'second', davy: id => id === 'davy', salvo: id => id === 'salvo', plank: id => id === 'plank',
+    wind: id => id === 'wind',
   };
   function normOptions(o, nPlayers) {
     const r = {};
@@ -55,6 +57,8 @@
       if (k.ext === 0) return {t: 'num', suit: k.suit, val: d.zero === 14 ? 14 : 0, zero: true};
       return {t: 'num', suit: k.suit, val: k.val, base: !!k.base, ext: k.ext};
     }
+    // Vent tournant : se joue comme une Fuite (le décalage des cartes se fait en fin de pli, voir finishTrick)
+    if (k.t === 'wind') return {t: 'escape', wind: true};
     return {t: k.t};
   }
   // Règle maison (17 nov. 2026) : la couleur demandée est celle de la 1re carte de couleur posée dans le pli,
@@ -224,6 +228,7 @@
     return st;
   }
   function startRound(st, rng) {
+    if (st.opts && st.opts.wind === undefined) st.opts.wind = false; // parties créées avant le Vent tournant : pas de nouvelle carte en cours de route
     st.round += 1;
     const deck = shuffle(buildDeck(st.opts, st.P), rng);
     const n = Math.min(st.round, Math.floor(deck.length / st.P));
@@ -297,15 +302,23 @@
     st.trick.plankPick = idx;
     finishTrick(st);
   }
+  // Vent tournant (règle maison, 20 nov. 2026) : en fin de pli, chaque carte posée passe au joueur suivant
+  // (sens du jeu), Vent compris. Le pli, les bonus, le Butin et l'ouverture du pli suivant vont au nouveau
+  // propriétaire de la carte. Deux Vents = deux crans. L'ordre de pose ne change pas.
+  function windTurn(st, cards) {
+    const n = cards.filter(pc => CARDS[pc.c].t === 'wind').length % st.P;
+    if (!n) return cards;
+    return cards.map(pc => ({...pc, s: (pc.s + n) % st.P, from: pc.s}));
+  }
   function finishTrick(st) {
-    const t = st.trick, res = resolve(t.cards, t.plankPick);
-    const b = trickBonuses(t.cards, res);
+    const t = st.trick, cards = windTurn(st, t.cards), res = resolve(cards, t.plankPick);
+    const b = trickBonuses(cards, res);
     for (const it of b.items) st.pend[it.s].push({pts: it.pts, why: it.why});
     for (const a of b.alliances) st.alliances.push(a);
-    const winner = res.win === null ? null : t.cards[res.win].s;
+    const winner = res.win === null ? null : cards[res.win].s;
     if (winner !== null) st.won[winner] += 1;
     st.tricks += 1;
-    st.lastTrick = {round: st.round, cards: t.cards, win: res.win, winner, kraken: !!res.kraken, removed: res.removed, destroyed: res.destroyed, applied: res.applied, n: st.tricks,
+    st.lastTrick = {round: st.round, cards, wind: cards !== t.cards, win: res.win, winner, kraken: !!res.kraken, removed: res.removed, destroyed: res.destroyed, applied: res.applied, n: st.tricks,
       bonus: b.items};
     if (st.hands.every(h => !h.length)) return endRound(st);
     st.phase = 'play';
