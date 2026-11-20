@@ -110,6 +110,15 @@
       <g fill="#36404a"><path d="M22 116q6-12 12 0z"/><path d="M60 126q7-14 14 0z"/><path d="M84 112q4-8 8 0z"/></g>${waves(132, '#123659')}
       ${icon('planks', 4, 14, 92, '#7a4a20', '#0005', -14)}
       <g stroke="#2b2b2b" fill="none" stroke-width="1.1"><path d="M10 30q4-3 8 0q4-3 8 0"/><path d="M72 24q3-2 6 0q3-2 6 0"/></g>`},
+    // Vent tournant (carte maison) : ciel d'orage, tourbillon de bourrasques et quatre flèches qui tournent
+    wind: {k: '#2f6f8f', f: u => `<defs>${lin('a' + u, '#bfe6f5', '#2f6f8f')}${rad('b' + u, '#ffffff', '#ffffff00', .5, .5, .5)}</defs><rect width="100" height="148" fill="url(#a${u})"/>
+      <circle cx="50" cy="70" r="40" fill="url(#b${u})" opacity=".6"/>
+      <g fill="none" stroke="#fff" stroke-linecap="round" opacity=".95">
+        <path d="M50 70m-6 0a6 6 0 1 1 12 0a12 12 0 1 1 -24 0a18 18 0 1 1 36 0a24 24 0 1 1 -48 0a30 30 0 1 1 60 0" stroke-width="3.2"/>
+      </g>
+      <g fill="#0f3a52"><path d="M50 18l7 10h-14z"/><path d="M102 70l-10 7v-14z" transform="translate(-6 0)"/><path d="M50 122l-7-10h14z"/><path d="M4 70l10-7v14z" transform="translate(2 0)"/></g>
+      <g fill="none" stroke="#0f3a52" stroke-width="2" stroke-linecap="round" opacity=".55"><path d="M8 24q14-8 26 0"/><path d="M66 22q12-6 24 2"/><path d="M10 120q14 8 28 0"/><path d="M64 124q12 6 26-2"/></g>
+      ${waves(132, '#1f5a78', 4)}${waves(140, '#14435c', 3)}`},
   };
   // Les décors sont rangés une seule fois dans le sprite : le HTML d'une carte reste identique d'un affichage à l'autre
   // (sinon la table croit qu'elle a changé et se redessine en boucle)

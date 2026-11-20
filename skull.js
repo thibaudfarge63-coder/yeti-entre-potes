@@ -21,9 +21,10 @@
     davy: {icon: '🔒', name: 'Casier de Davy Jones', tip: 'Détruit tous les léviathans du pli (+20 chacun si ton pari est réussi), puis résolution normale.'},
     salvo: {icon: '💥', name: 'Dernière salve', tip: 'Tu poses une carte de plus après tout le monde (au choix) ; tu finis la manche avec une carte de moins.'},
     plank: {icon: '🪵', name: 'Supplice de la planche', tip: 'En fin de pli, retire un Pirate du pli : il ne gagne plus et ne rapporte rien.'},
+    wind: {icon: '🌬️', name: 'Vent tournant', tip: 'Se joue comme une Fuite. En fin de pli, chaque carte posée (Vent compris) passe au joueur suivant : c’est sa carte qui gagne ou perd le pli.'},
   };
   const OPTIONS = [['ext', '7, 8 et 0/14 (extension)'], ['joker', 'Joker 15'], ['tig', 'Tigresse'], ['king', 'Le Roi'], ['mer', 'Sirènes'], ['loot', 'Butins'],
-    ['kraken', 'Kraken'], ['whale', 'Baleine blanche'], ['ray', 'Raie tachetée'], ['second', 'Second'], ['davy', 'Casier de Davy Jones'], ['salvo', 'Dernière salve'], ['plank', 'Planche']];
+    ['kraken', 'Kraken'], ['whale', 'Baleine blanche'], ['ray', 'Raie tachetée'], ['second', 'Second'], ['davy', 'Casier de Davy Jones'], ['salvo', 'Dernière salve'], ['plank', 'Planche'], ['wind', 'Vent tournant']];
 
   // ---------- cartes ----------
   function kind(id) {
@@ -341,13 +342,15 @@
         if (last) { if (i === last.win) cls = 'win'; if (i === last.removed || (last.destroyed || []).includes(i)) cls = 'gone'; }
         const pick = !showing && G.phase === 'plank' && G.turn === me && (G.plankChoices || []).includes(i);
         const x0 = `calc(${pos.cx}% + ${(n - 1) * 14}px)`, y0 = `calc(${pos.cy}% + ${(n - 1) * 8}px)`;
-        const anim = collect && wp ? 'collect' : !showing && i === cards.length - 1 ? 'new' : '';
-        return `<div class="skb-card ${cls} ${anim}" style="left:${x0};top:${y0};z-index:${i + 2};--x0:${x0};--y0:${y0};--x1:${wp ? wp.x : 50}%;--y1:${wp ? wp.y : 50}%">${cardHTML(pc.c, {d: pc.d, button: pick, escape: esc, cls: pick ? 'can' : '', attrs: pick ? `data-sk-plank="${i}"` : ''})}${pc.extra ? '<i class="skb-extra">+1</i>' : ''}</div>`;
+        const fp = showing && pc.from !== undefined && !collect ? seatPos(G, pc.from) : null;
+        const anim = collect && wp ? 'collect' : fp ? 'shift' : !showing && i === cards.length - 1 ? 'new' : '';
+        return `<div class="skb-card ${cls} ${anim}" style="left:${x0};top:${y0};z-index:${i + 2};--x0:${x0};--y0:${y0};--x1:${wp ? wp.x : 50}%;--y1:${wp ? wp.y : 50}%${fp ? `;--xf:calc(${fp.cx}% + ${(n - 1) * 14}px);--yf:calc(${fp.cy}% + ${(n - 1) * 8}px)` : ''}">${cardHTML(pc.c, {d: pc.d, button: pick, escape: esc, cls: pick ? 'can' : '', attrs: pick ? `data-sk-plank="${i}"` : ''})}${pc.extra ? '<i class="skb-extra">+1</i>' : ''}</div>`;
       }).join('');
       if (last) {
         caption = last.kraken ? '🐙 Le Kraken engloutit le pli' : last.winner === null ? 'Personne ne gagne ce pli' : `<b>${esc(seatName(G, last.winner))}</b> remporte le pli${last.applied === 'whale' ? ' (Baleine)' : last.applied === 'ray' ? ' (Raie)' : ''} !`;
         if (last.destroyed && last.destroyed.length) caption += '<br>🔒 Léviathans détruits';
         if (last.removed !== null && last.removed !== undefined) caption += '<br>🪵 Un Pirate passe par la planche';
+        if (last.wind) caption += '<br>🌬️ Vent tournant : chaque carte passe au voisin';
       } else if (G.phase === 'bid') caption = `<span class="skb-big">${G.round}</span>Manche ${G.round} : les paris`;
       else if (G.trick && G.trick.lead) caption = `<span class="skb-lead n-${G.trick.lead}">${ART('suit-' + G.trick.lead) || SUIT[G.trick.lead].icon}</span>${SUIT[G.trick.lead].name}`;
       else caption = cards.length ? 'Pas de couleur demandée' : `Pli ${G.tricks + 1}/${G.dealt}<br>⛵ <b>${G.turn === me ? 'Tu commences' : `${esc(seatName(G, G.turn ?? G.starter))} commence`}</b>`;

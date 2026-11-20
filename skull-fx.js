@@ -124,6 +124,17 @@
 
   // ---------- les animations, carte par carte ----------
   const FX = {
+    wind: {
+      play(el, L) {
+        const p = at(el, L);
+        card(el, [{transform: 'rotate(0)'}, {transform: 'rotate(360deg) scale(1.08)', offset: .7}, {transform: 'rotate(360deg)'}], 1100, {ease: 'ease-in-out'});
+        for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2, r = p.w * 1.1;
+          spawn(L, `<i style="display:block;width:${R(24, 44)}px;height:2px;border-radius:2px;background:#fff;opacity:.85"></i>`, p.x + Math.cos(a) * r, p.y + Math.sin(a) * r,
+            [{transform: T(0, 0), opacity: 0}, {transform: T(-Math.sin(a) * 40, Math.cos(a) * 40), opacity: .9, offset: .5}, {transform: T(-Math.sin(a) * 80, Math.cos(a) * 80), opacity: 0}],
+            {dur: 900, delay: i * 50, ease: 'ease-in-out'}); }
+        banner(L, 'LE VENT TOURNE !', '#bfe6f5', {delay: 150});
+      },
+    },
     escape: {
       play(el, L) {
         const p = at(el, L);
