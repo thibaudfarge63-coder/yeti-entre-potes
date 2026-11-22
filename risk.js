@@ -294,10 +294,10 @@
     const c = Math.floor(n / 10), a = Math.floor((n % 10) / 5), so = n % 5, an = ANIMAL_ICON[E().animalOf(t)];
     const parts = [];
     if (c) parts.push(['char', c]); if (a) parts.push([an, a]); if (so) parts.push(['soldat', so]);
-    const w = parts.length * 11 + 14, h = 15;
+    const tw = String(n).length * 7 + 6, w = parts.length * 14 + tw + 4, h = 19;
     let x = -w / 2 + 3, inner = '';
-    for (const [k] of parts) { inner += icon(k, 11, '#fff', x, -h / 2 + 2); x += 11; }
-    return `<g class="rk-tk" data-t="${t}"><rect x="${-w / 2}" y="${-h / 2}" width="${w}" height="${h}" rx="7.5" fill="${DARK[s % 7]}" stroke="#fff" stroke-width=".8"/>${inner}<text x="${w / 2 - 6}" y="4" text-anchor="middle">${n}</text></g>`;
+    for (const [k] of parts) { inner += icon(k, 14, '#fff', x, -h / 2 + 2.5); x += 14; }
+    return `<g class="rk-tk" data-t="${t}"><rect x="${-w / 2}" y="${-h / 2}" width="${w}" height="${h}" rx="9.5" fill="${DARK[s % 7]}" stroke="#fff" stroke-width="1"/>${inner}<text x="${w / 2 - tw / 2 - 1}" y="4.5" text-anchor="middle">${n}</text></g>`;
   }
   function paintMap() {
     const G = cur.game, M = MAP(), me = G.me;
@@ -313,7 +313,7 @@
       p.classList.toggle('dim', hl.dim && !hl.can.has(t) && t !== sel && t !== target);
     });
     root.querySelectorAll('.rk-sides path, .rk-sides2 path').forEach((p, i) => { const t = E().IDS[i % 42]; p.setAttribute('fill', G.owner[t] === null ? '#8c826a' : DARK[G.owner[t] % 7]); });
-    const troops = E().IDS.filter(t => G.owner[t] !== null).map(t => `<g transform="translate(${M.t[t].x} ${M.t[t].y})" class="rk-tkw ${plan[t] ? 'plus' : ''}" data-t="${t}">${troopsSVG(t, shown[t], G.owner[t])}${plan[t] ? `<text class="rk-plus" y="-11" text-anchor="middle">+${plan[t]}</text>` : ''}</g>`).join('');
+    const troops = E().IDS.filter(t => G.owner[t] !== null).map(t => `<g transform="translate(${M.t[t].x} ${M.t[t].y})" class="rk-tkw ${plan[t] ? 'plus' : ''}" data-t="${t}">${troopsSVG(t, shown[t], G.owner[t])}${plan[t] ? `<text class="rk-plus" y="-14" text-anchor="middle">+${plan[t]}</text>` : ''}</g>`).join('');
     const tg = root.querySelector('[data-rk-troops]');
     if (tg._html !== troops) { tg.innerHTML = troops; tg._html = troops; }
     const ar = root.querySelector('[data-rk-arrows]');
