@@ -251,7 +251,7 @@
   }
   // ---------- Hall of Fame : un classement par jeu ----------
   // Yéti : meilleur lancer (calculé ici). Autres jeux : résultats gardés en base à la fin de chaque partie (yeti_leaderboards).
-  const LB_GAMES={yeti:{icon:'🏔️',name:'Yéti',sub:'Le meilleur lancer fait la différence.'},chess:{icon:'♟️',name:'Échecs',sub:'Duels aux échecs : victoires, nulles, défaites.'},naval:{icon:'🚢',name:'Bataille navale',sub:'Duels de bataille navale.'},camel:{icon:'🐪',name:'Petits chameaux',sub:'Places finales, bots compris.'},skull:{icon:'☠️',name:'Skull King',sub:'Points et places à la fin de chaque partie.'}};
+  const LB_GAMES={yeti:{icon:'🏔️',name:'Yéti',sub:'Le meilleur lancer fait la différence.'},chess:{icon:'♟️',name:'Échecs',sub:'Duels aux échecs : victoires, nulles, défaites.'},naval:{icon:'🚢',name:'Bataille navale',sub:'Duels de bataille navale.'},camel:{icon:'🐪',name:'Petits chameaux',sub:'Places finales, bots compris.'},skull:{icon:'☠️',name:'Skull King',sub:'Points et places à la fin de chaque partie.'},risk:{icon:'🎲',name:'Risk',sub:'Places finales (le vainqueur conquiert le monde, les bots ne comptent pas).'}};
   const LB_SORTS={wins:{label:'Victoires',get:r=>r.wins,unit:r=>`victoire${r.wins>1?'s':''}`},avg_pos:{label:'Place moyenne',get:r=>r.avg_pos,asc:true,fmt:v=>oneDecimal.format(v)+'e',unit:()=>'place moy.'},podiums:{label:'Podiums',get:r=>r.podiums,unit:r=>`podium${r.podiums>1?'s':''}`,multi:true},lasts:{label:'Dernières places',get:r=>r.lasts,unit:r=>`fois dernier`},best_pts:{label:'Meilleur score',get:r=>r.best_pts,unit:()=>'pts max',pts:true},avg_pts:{label:'Points moyens',get:r=>r.avg_pts,unit:()=>'pts moy.',pts:true},played:{label:'Parties jouées',get:r=>r.played,unit:r=>`partie${r.played>1?'s':''}`}};
   let lbGame='yeti',lbSort='wins',lbData=null,lbAt=0,lbHist={},lbLoading=false;
   async function loadBoards(force){
@@ -260,7 +260,7 @@
     try{if(lbGame!=='yeti'){const h=await request('/api/game-history',{kind:lbGame,limit:15});lbHist[lbGame]=(h&&h.games)||[];}}catch(_){}
     lbLoading=false;if(lbGame!=='yeti')renderGameBoard();
   }
-  function sortsFor(kind){return Object.keys(LB_SORTS).filter(k=>!(LB_SORTS[k].multi&&(kind==='chess'||kind==='naval'))&&!(LB_SORTS[k].pts&&(kind==='chess'||kind==='naval')));}
+  function sortsFor(kind){return Object.keys(LB_SORTS).filter(k=>!(LB_SORTS[k].multi&&(kind==='chess'||kind==='naval'))&&!(LB_SORTS[k].pts&&(kind==='chess'||kind==='naval'||kind==='risk')));}
   function renderGameBoard(){
     const kind=lbGame,G=LB_GAMES[kind],rows=((lbData&&lbData[kind])||[]).filter(r=>player(r.player));
     $('board-sub').textContent=G.sub;
@@ -727,7 +727,7 @@
     const what=scope==='all'?'TOUTES les parties de ce jeu (même en cours)':scope==='done'?'toutes les parties terminées de ce jeu':'cette partie';
     if(!window.confirm(`Supprimer ${what} ? C’est définitif.`))return false;
     try{const r=await request('/api/admin/delete-game',{player:authed,token:s.token,kind,id:id||0,scope:scope||'one'});showToast(`🗑️ ${r&&r.deleted?r.deleted:0} partie${r&&r.deleted>1?'s':''} supprimée${r&&r.deleted>1?'s':''}.`);
-      if(kind==='duel')await refresh();else if(kind==='camel'&&window.YetiCamels)YetiCamels.refresh();else if(window.YetiSkull)YetiSkull.refresh();return true;}
+      if(kind==='duel')await refresh();else if(kind==='camel'&&window.YetiCamels)YetiCamels.refresh();else if(kind==='risk'&&window.YetiRisk)YetiRisk.refresh();else if(window.YetiSkull)YetiSkull.refresh();return true;}
     catch(e){showToast(e.message||'Suppression impossible.');return false;}
   }
   document.addEventListener('click',e=>{const b=e.target.closest('[data-del-kind]');if(!b)return;e.preventDefault();e.stopPropagation();delGame(b.dataset.delKind,Number(b.dataset.delId)||0,b.dataset.delScope||'one');},true);
@@ -747,10 +747,11 @@
     for(const d of duels)if(d.game&&d.game!=='yeti'&&d.status==='accepted'&&!d.finished_at&&(d.challenger===me||d.opponent===me)){const o=player(d.challenger===me?d.opponent:d.challenger);out.push({kind:'duel',id:d.id,label:`${GAME_INFO[d.game].icon} ${GAME_INFO[d.game].name} contre ${o?o.name:'?'}`,turn:boardTodo(d,me)});}
     if(window.YetiCamels&&YetiCamels.mine)for(const g of YetiCamels.mine(me))out.push({kind:'camel',...g});
     if(window.YetiSkull&&YetiSkull.mine)for(const g of YetiSkull.mine(me))out.push({kind:'skull',...g});
+    if(window.YetiRisk&&YetiRisk.mine)for(const g of YetiRisk.mine(me))out.push({kind:'risk',...g});
     return out;
   }
-  function openAny(kind,id){if(kind==='duel')openBoard(id);else if(kind==='camel'&&window.YetiCamels)YetiCamels.open(id);else if(kind==='skull'&&window.YetiSkull)YetiSkull.open(id);}
-  function openNow(){return (window.YetiGames&&YetiGames.openId&&{kind:'duel',id:YetiGames.openId})||(window.YetiCamels&&YetiCamels.openId&&{kind:'camel',id:YetiCamels.openId})||(window.YetiSkull&&YetiSkull.openId&&{kind:'skull',id:YetiSkull.openId})||null;}
+  function openAny(kind,id){if(kind==='duel')openBoard(id);else if(kind==='camel'&&window.YetiCamels)YetiCamels.open(id);else if(kind==='skull'&&window.YetiSkull)YetiSkull.open(id);else if(kind==='risk'&&window.YetiRisk)YetiRisk.open(id);}
+  function openNow(){return (window.YetiGames&&YetiGames.openId&&{kind:'duel',id:YetiGames.openId})||(window.YetiCamels&&YetiCamels.openId&&{kind:'camel',id:YetiCamels.openId})||(window.YetiSkull&&YetiSkull.openId&&{kind:'skull',id:YetiSkull.openId})||(window.YetiRisk&&YetiRisk.openId&&{kind:'risk',id:YetiRisk.openId})||null;}
   function renderResume(){
     const bar=$('resume-bar');if(!bar)return;
     const games=myActiveGames(),cur=openNow();
@@ -758,7 +759,7 @@
     if(!resumeTried&&authed&&lastStateSig){let saved=null;try{saved=JSON.parse(localStorage.getItem(RESUME)||'null');}catch(_){}
       if(!saved||saved.player!==authed)resumeTried=true;
       else{const g=games.find(x=>x.kind===saved.kind&&x.id===saved.id);if(g&&!cur){resumeTried=true;showToast('♻️ On te remet dans ta partie en cours.');openAny(g.kind,g.id);return;}
-        if(saved.kind==='duel'||(saved.kind==='camel'&&window.YetiCamels&&YetiCamels.loaded)||(saved.kind==='skull'&&window.YetiSkull&&YetiSkull.loaded)){resumeTried=true;if(!g)forget();}}}
+        if(saved.kind==='duel'||(saved.kind==='camel'&&window.YetiCamels&&YetiCamels.loaded)||(saved.kind==='skull'&&window.YetiSkull&&YetiSkull.loaded)||(saved.kind==='risk'&&window.YetiRisk&&YetiRisk.loaded)){resumeTried=true;if(!g)forget();}}}
     const list=games.filter(g=>!cur||cur.kind!==g.kind||cur.id!==g.id);
     const html=list.length?`<span class="resume-t">♻️ Tes parties en cours</span>${list.map(g=>`<button type="button" class="${g.turn?'turn':''}" data-resume-kind="${g.kind}" data-resume-id="${g.id}">${escape(g.label)}${g.turn?' · <b>à toi !</b>':''}</button>`).join('')}`:'';
     if(bar._html!==html){bar._html=html;bar.innerHTML=html;bar.hidden=!html;}
@@ -784,7 +785,7 @@
   function sound(kind){try{audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='triangle';o.frequency.value=kind==='capture'?220:330;g.gain.setValueAtTime(.18,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+.12);o.connect(g).connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+.13);}catch(_){}}
   function openBoard(id){
     if(window.YetiCamels&&YetiCamels.openId)YetiCamels.close(true);
-    if(window.YetiSkull&&YetiSkull.openId)YetiSkull.close(true);
+    if(window.YetiSkull&&YetiSkull.openId)YetiSkull.close(true);if(window.YetiRisk&&YetiRisk.openId)YetiRisk.close(true);
     if(!window.YetiGames){showToast('Le module de jeux n’est pas chargé, recharge la page.');return;}
     if(activeRound){showToast('Termine ton lancer avant d’ouvrir la partie.');return;}
     YetiGames.open(id,{root:$('board-stage'),request,player:pid=>player(pid),avatar,escape,toast:showToast,sound,
@@ -812,13 +813,21 @@
     try{const r=await request('/api/duel',{challenger:selectedPlayer,opponent:opp});await refresh();showToast(`⚔️ Défi envoyé à ${player(opp).name}, en attente de sa réponse…`);if(r&&r.id){knownDuels&&knownDuels.add(Number(r.id));}}
     catch(error){showToast(error.message||'Impossible de créer le duel.');}finally{duelOpp=null;renderCompet();}});
   $('duel-pick').addEventListener('click',e=>{const b=e.target.closest('[data-opp]');if(!b)return;const id=Number(b.dataset.opp);duelOpp=duelOpp===id?null:id;renderCompet();});
-  document.querySelector('.compet-tabs').addEventListener('click',e=>{const t=e.target.closest('[data-tab]');if(!t)return;competTab=t.dataset.tab;renderCompet();if(competTab==='camel'&&window.YetiCamels)YetiCamels.refresh();if(competTab==='skull'&&window.YetiSkull)YetiSkull.refresh();});
+  document.querySelector('.compet-tabs').addEventListener('click',e=>{const t=e.target.closest('[data-tab]');if(!t)return;competTab=t.dataset.tab;renderCompet();if(competTab==='camel'&&window.YetiCamels)YetiCamels.refresh();if(competTab==='skull'&&window.YetiSkull)YetiSkull.refresh();if(competTab==='risk'&&window.YetiRisk)YetiRisk.refresh();});
   // ---------- Skull King (2 à 9 joueurs, logique sur le serveur) ----------
   if(window.YetiSkull)YetiSkull.init({root:$('board-stage'),panel:$('skull-panel'),request,player:pid=>PLAYERS.find(p=>p.id===pid)||null,players:()=>PLAYERS,avatar,escape,toast:showToast,sound,
     ready:()=>!privateAccess&&!!lastStateSig,
     session:()=>{const s=getSession();return s&&authed&&s.player===authed?s:null;},
     badge:n=>{const b=$('ct-skull-badge');if(b){b.hidden=!n;b.textContent=n;}},boss:()=>isBoss(),
-    onOpen:id=>{if(id)remember('skull',id);if(window.YetiGames&&YetiGames.openId)YetiGames.close();if(window.YetiCamels&&YetiCamels.openId)YetiCamels.close(true);$('game-stage').hidden=true;document.querySelector('.game-footer').hidden=true;try{if(playerApi){if(playerApi.suspend)playerApi.suspend();else if(playerApi.pause)playerApi.pause();}}catch(_){}
+    onOpen:id=>{if(id)remember('skull',id);if(window.YetiGames&&YetiGames.openId)YetiGames.close();if(window.YetiRisk&&YetiRisk.openId)YetiRisk.close(true);if(window.YetiCamels&&YetiCamels.openId)YetiCamels.close(true);$('game-stage').hidden=true;document.querySelector('.game-footer').hidden=true;try{if(playerApi){if(playerApi.suspend)playerApi.suspend();else if(playerApi.pause)playerApi.pause();}}catch(_){}
+      $('board-stage').scrollIntoView({behavior:'smooth',block:'start'});},
+    onClose:()=>{forget();$('game-stage').hidden=false;document.querySelector('.game-footer').hidden=false;try{if(playerApi){if(playerApi.resume)playerApi.resume();else if(playerApi.play)playerApi.play();}}catch(_){}renderResume();}});
+  // ---------- Risk (2 à 7, bots compris) ----------
+  if(window.YetiRisk)YetiRisk.init({root:$('board-stage'),panel:$('risk-panel'),request,player:pid=>PLAYERS.find(p=>p.id===pid)||null,players:()=>PLAYERS,avatar,escape,toast:showToast,sound,party:()=>{try{if(typeof celebrate==='function')celebrate();}catch(_){}},
+    ready:()=>!privateAccess&&!!lastStateSig,
+    session:()=>{const s=getSession();return s&&authed&&s.player===authed?s:null;},
+    badge:n=>{const b=$('ct-risk-badge');if(b){b.hidden=!n;b.textContent=n;}},boss:()=>isBoss(),
+    onOpen:id=>{if(id)remember('risk',id);if(window.YetiGames&&YetiGames.openId)YetiGames.close();if(window.YetiCamels&&YetiCamels.openId)YetiCamels.close(true);if(window.YetiSkull&&YetiSkull.openId)YetiSkull.close(true);$('game-stage').hidden=true;document.querySelector('.game-footer').hidden=true;try{if(playerApi){if(playerApi.suspend)playerApi.suspend();else if(playerApi.pause)playerApi.pause();}}catch(_){}
       $('board-stage').scrollIntoView({behavior:'smooth',block:'start'});},
     onClose:()=>{forget();$('game-stage').hidden=false;document.querySelector('.game-footer').hidden=false;try{if(playerApi){if(playerApi.resume)playerApi.resume();else if(playerApi.play)playerApi.play();}}catch(_){}renderResume();}});
   // ---------- Petits chameaux (jusqu'à 4, bots aux places libres) ----------
@@ -827,7 +836,7 @@
     ready:()=>!privateAccess&&!!lastStateSig,
     session:()=>{const s=getSession();return s&&authed&&s.player===authed?s:null;},
     badge:n=>{const b=$('ct-camel-badge');if(b){b.hidden=!n;b.textContent=n;}},boss:()=>isBoss(),
-    onOpen:id=>{if(id)remember('camel',id);if(window.YetiGames&&YetiGames.openId)YetiGames.close();if(window.YetiSkull&&YetiSkull.openId)YetiSkull.close(true);$('game-stage').hidden=true;document.querySelector('.game-footer').hidden=true;try{if(playerApi){if(playerApi.suspend)playerApi.suspend();else if(playerApi.pause)playerApi.pause();}}catch(_){}
+    onOpen:id=>{if(id)remember('camel',id);if(window.YetiGames&&YetiGames.openId)YetiGames.close();if(window.YetiRisk&&YetiRisk.openId)YetiRisk.close(true);if(window.YetiSkull&&YetiSkull.openId)YetiSkull.close(true);$('game-stage').hidden=true;document.querySelector('.game-footer').hidden=true;try{if(playerApi){if(playerApi.suspend)playerApi.suspend();else if(playerApi.pause)playerApi.pause();}}catch(_){}
       $('board-stage').scrollIntoView({behavior:'smooth',block:'start'});},
     onClose:()=>{forget();$('game-stage').hidden=false;document.querySelector('.game-footer').hidden=false;try{if(playerApi){if(playerApi.resume)playerApi.resume();else if(playerApi.play)playerApi.play();}}catch(_){}renderResume();}});
   // ---------- Top 10 de chaque joueur ----------
@@ -1371,6 +1380,7 @@
     if(what==='game'){let gid=0;try{gid=Number(new URL(url,location.href).searchParams.get('id'))||0;}catch(_){}if(gid){const go=()=>{if(selectedPlayer&&lastStateSig)openBoard(gid);else setTimeout(go,800);};go();}}
     if(what==='camel'){competTab='camel';renderCompet();const c=$('compet');if(c)c.scrollIntoView({behavior:'smooth',block:'start'});let gid=0;try{gid=Number(new URL(url,location.href).searchParams.get('id'))||0;}catch(_){}if(gid&&window.YetiCamels){const go=()=>{if(selectedPlayer&&lastStateSig)YetiCamels.open(gid);else setTimeout(go,800);};go();}}
     if(what==='skull'){competTab='skull';renderCompet();const c=$('compet');if(c)c.scrollIntoView({behavior:'smooth',block:'start'});let gid=0;try{gid=Number(new URL(url,location.href).searchParams.get('id'))||0;}catch(_){}if(gid&&window.YetiSkull){const go=()=>{if(selectedPlayer&&lastStateSig)YetiSkull.open(gid);else setTimeout(go,800);};go();}}
+    if(what==='risk'){competTab='risk';renderCompet();const c=$('compet');if(c)c.scrollIntoView({behavior:'smooth',block:'start'});let gid=0;try{gid=Number(new URL(url,location.href).searchParams.get('id'))||0;}catch(_){}if(gid&&window.YetiRisk){const go=()=>{if(selectedPlayer&&lastStateSig)YetiRisk.open(gid);else setTimeout(go,800);};go();}}
     if(what==='top'){const c=document.querySelector('.top-card');if(c)c.scrollIntoView({behavior:'smooth',block:'center'});}
   }
   window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;renderAppButtons();});

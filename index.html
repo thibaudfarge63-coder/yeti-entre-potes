@@ -12,22 +12,26 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Yeti rich club">
-  <link rel="stylesheet" href="styles.css?v=20261120-88">
+  <link rel="stylesheet" href="styles.css?v=20261121-89">
   <link rel="stylesheet" href="chess-pieces.css?v=1">
   <script>window.RufflePlayer = window.RufflePlayer || {}; window.RufflePlayer.config = {autoplay:"on",unmuteOverlay:"visible",backgroundColor:"#c9e8f7",contextMenu:"off",warnOnUnsupportedContent:false};</script>
   <script src="ruffle/ruffle.js" defer></script>
-  <script src="config.js?v=20261120-88" defer></script>
-  <script src="data-client.js?v=20261120-88" defer></script>
-  <script src="costumes.js?v=20261120-88" defer></script>
-  <script src="skins.js?v=20261120-88" defer></script>
+  <script src="config.js?v=20261121-89" defer></script>
+  <script src="data-client.js?v=20261121-89" defer></script>
+  <script src="costumes.js?v=20261121-89" defer></script>
+  <script src="skins.js?v=20261121-89" defer></script>
   <script src="chess-engine.js?v=1" defer></script>
-  <script src="games.js?v=20261120-88" defer></script>
-  <script src="camels.js?v=20261120-88" defer></script>
-  <script src="skull-icons.js?v=20261120-88" defer></script>
-  <script src="skull-art.js?v=20261120-88" defer></script>
-  <script src="skull-fx.js?v=20261120-88" defer></script>
-  <script src="skull.js?v=20261120-88" defer></script>
-  <script src="app.js?v=20261120-88" defer></script>
+  <script src="games.js?v=20261121-89" defer></script>
+  <script src="camels.js?v=20261121-89" defer></script>
+  <script src="skull-icons.js?v=20261121-89" defer></script>
+  <script src="skull-art.js?v=20261121-89" defer></script>
+  <script src="skull-fx.js?v=20261121-89" defer></script>
+  <script src="skull.js?v=20261121-89" defer></script>
+  <script src="supabase/functions/yeti-risk/engine.js?v=20261121-89" defer></script>
+  <script src="risk-map.js?v=20261121-89" defer></script>
+  <script src="risk-art.js?v=20261121-89" defer></script>
+  <script src="risk.js?v=20261121-89" defer></script>
+  <script src="app.js?v=20261121-89" defer></script>
 </head>
 <body>
   <div class="page-shell">
@@ -43,7 +47,7 @@
 <section class="compet" id="compet" aria-labelledby="compet-title">
         <div class="compet-heading"><div><p class="eyebrow">LES COMPÉTITIONS</p><h2 id="compet-title">Battle royale &amp; duels.</h2></div><p class="compet-rules">Une session officielle par jour : 10 lancers, ta moyenne fait foi. Chaque jour rapporte des points selon ton rang (10, 8, 6, 5, 4, 3, 2, 1) pour le classement du mois.</p></div>
         <div class="resume-bar" id="resume-bar" hidden role="region" aria-label="Tes parties en cours"></div>
-        <div class="compet-tabs" role="tablist"><button type="button" class="compet-tab active" role="tab" data-tab="br" aria-selected="true"><span class="ct-ico">🏟️</span><span><b>Battle royale</b><small id="ct-br-sub">Session du jour · 10 lancers</small></span></button><button type="button" class="compet-tab" role="tab" data-tab="duel" aria-selected="false"><span class="ct-ico">⚔️</span><span><b>Duels 1v1</b><small id="ct-duel-sub"><span class="ct-logos" aria-label="Yéti, échecs, bataille navale"><i title="Yéti">🏔️</i><i title="Échecs">♟️</i><i title="Bataille navale">🚢</i></span></small></span><i class="ct-badge" id="ct-duel-badge" hidden></i></button><button type="button" class="compet-tab" role="tab" data-tab="camel" aria-selected="false"><span class="ct-ico">🐪</span><span><b>Petits chameaux</b><small>Jusqu’à 4, avec des dés</small></span><i class="ct-badge" id="ct-camel-badge" hidden></i></button><button type="button" class="compet-tab" role="tab" data-tab="skull" aria-selected="false"><span class="ct-ico">☠️</span><span><b>Skull King</b><small>Jeu de plis, 2 à 9</small></span><i class="ct-badge" id="ct-skull-badge" hidden></i></button></div>
+        <div class="compet-tabs" role="tablist"><button type="button" class="compet-tab active" role="tab" data-tab="br" aria-selected="true"><span class="ct-ico">🏟️</span><span><b>Battle royale</b><small id="ct-br-sub">Session du jour · 10 lancers</small></span></button><button type="button" class="compet-tab" role="tab" data-tab="duel" aria-selected="false"><span class="ct-ico">⚔️</span><span><b>Duels 1v1</b><small id="ct-duel-sub"><span class="ct-logos" aria-label="Yéti, échecs, bataille navale"><i title="Yéti">🏔️</i><i title="Échecs">♟️</i><i title="Bataille navale">🚢</i></span></small></span><i class="ct-badge" id="ct-duel-badge" hidden></i></button><button type="button" class="compet-tab" role="tab" data-tab="camel" aria-selected="false"><span class="ct-ico">🐪</span><span><b>Petits chameaux</b><small>Jusqu’à 4, avec des dés</small></span><i class="ct-badge" id="ct-camel-badge" hidden></i></button><button type="button" class="compet-tab" role="tab" data-tab="skull" aria-selected="false"><span class="ct-ico">☠️</span><span><b>Skull King</b><small>Jeu de plis, 2 à 9</small></span><i class="ct-badge" id="ct-skull-badge" hidden></i></button><button type="button" class="compet-tab" role="tab" data-tab="risk" aria-selected="false"><span class="ct-ico">🎲</span><span><b>Risk</b><small>Conquiers le monde, 2 à 7</small></span><i class="ct-badge" id="ct-risk-badge" hidden></i></button></div>
         <div class="compet-grid">
           <article class="br-card compet-panel" data-panel="br"><div class="card-title"><div><h3>🏟️ Battle royale</h3><p id="br-date"></p></div><div class="br-tabs" id="br-tabs"><button type="button" data-br="day" class="active">Aujourd’hui</button><button type="button" data-br="month">Ce mois-ci</button></div></div>
             <div class="br-me" id="br-me"></div><div class="br-table" id="br-table"></div></article>
@@ -54,6 +58,8 @@
             <div class="camel-panel" id="camel-panel"></div></article>
           <article class="duel-card skull-card compet-panel" data-panel="skull" hidden><div class="card-title"><div><h3>☠️ Skull King</h3><p>Le jeu de plis à paris, de 2 à 9 joueurs. Parie le nombre de plis que tu vas gagner, pile poil.</p></div></div>
             <div class="camel-panel" id="skull-panel"></div></article>
+          <article class="duel-card risk-card compet-panel" data-panel="risk" hidden><div class="card-title"><div><h3>🎲 Risk</h3><p>Conquiers le monde, de 2 à 7 joueurs, bots compris. Taureaux, vaches, tigres et chars au rendez-vous.</p></div></div>
+            <div class="camel-panel" id="risk-panel"></div></article>
         </div>
       </section>
       <section class="news-ticker" aria-label="Les actus du club"><div class="ticker-label"><span class="ticker-live">EN DIRECT</span><span class="ticker-channel">YÉTI INFO</span></div><div class="ticker-viewport"><div class="ticker-track" id="ticker-track"><span class="ticker-item">Les scores arrivent…</span></div></div></section>
@@ -75,7 +81,7 @@
           <div class="last-result" id="last-result" hidden><div><p class="eyebrow" id="last-result-name">DERNIER LANCER</p><strong id="last-result-score">—</strong><span>mètres</span></div><p id="last-result-detail"></p></div>
         </div>
 
-        <aside class="leaderboard-card" aria-labelledby="leaderboard-title"><div class="board-heading"><span class="eyebrow">LES HOSTILITÉS</span><span class="tiny-symbol" aria-hidden="true">↗</span><h2 id="leaderboard-title">Hall of Fame.</h2><p id="board-sub">Le meilleur lancer fait la différence.</p></div><div class="lb-tabs" id="lb-tabs" role="tablist" aria-label="Choisir le jeu"><button type="button" class="active" data-lb="yeti" title="Yéti">🏔️</button><button type="button" data-lb="chess" title="Échecs">♟️</button><button type="button" data-lb="naval" title="Bataille navale">🚢</button><button type="button" data-lb="camel" title="Petits chameaux">🐪</button><button type="button" data-lb="skull" title="Skull King">☠️</button></div><div class="board-period" id="board-period">Depuis le début</div><div class="lb-sort" id="lb-sort" hidden></div><div class="lb-highlights" id="lb-highlights" hidden></div><div id="leaderboard" class="leaderboard"></div><details class="lb-history" id="lb-history" hidden><summary>Dernières parties</summary><div id="lb-history-list"></div></details><div class="board-bottom"><span aria-hidden="true">✦</span><p id="board-note">Les scores identiques comptent comme des parties distinctes. Les records ex æquo partagent le même rang.</p></div></aside>
+        <aside class="leaderboard-card" aria-labelledby="leaderboard-title"><div class="board-heading"><span class="eyebrow">LES HOSTILITÉS</span><span class="tiny-symbol" aria-hidden="true">↗</span><h2 id="leaderboard-title">Hall of Fame.</h2><p id="board-sub">Le meilleur lancer fait la différence.</p></div><div class="lb-tabs" id="lb-tabs" role="tablist" aria-label="Choisir le jeu"><button type="button" class="active" data-lb="yeti" title="Yéti">🏔️</button><button type="button" data-lb="chess" title="Échecs">♟️</button><button type="button" data-lb="naval" title="Bataille navale">🚢</button><button type="button" data-lb="camel" title="Petits chameaux">🐪</button><button type="button" data-lb="skull" title="Skull King">☠️</button><button type="button" data-lb="risk" title="Risk">🎲</button></div><div class="board-period" id="board-period">Depuis le début</div><div class="lb-sort" id="lb-sort" hidden></div><div class="lb-highlights" id="lb-highlights" hidden></div><div id="leaderboard" class="leaderboard"></div><details class="lb-history" id="lb-history" hidden><summary>Dernières parties</summary><div id="lb-history-list"></div></details><div class="board-bottom"><span aria-hidden="true">✦</span><p id="board-note">Les scores identiques comptent comme des parties distinctes. Les records ex æquo partagent le même rang.</p></div></aside>
       </section>
 
       <section class="analytics" aria-labelledby="analytics-title">

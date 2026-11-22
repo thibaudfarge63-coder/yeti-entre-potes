@@ -167,7 +167,7 @@
       forgetCode(config);
       return {ok: true};
     }
-    if (path !== '/api/state' && path !== '/api/scores' && path !== '/api/players' && path !== '/api/version' && path !== '/api/chat' && path !== '/api/chat/send' && path !== '/api/chat/seen' && path !== '/api/chat/react' && path !== '/api/chat/clear' && path !== '/api/duel' && path !== '/api/duel/answer' && path !== '/api/skins' && path !== '/api/presence' && path !== '/api/password' && path !== '/api/password/change' && path !== '/api/login' && path !== '/api/session' && path !== '/api/ban' && path !== '/api/mute' && path !== '/api/mod' && path !== '/api/typing' && path !== '/api/popup' && path !== '/api/push' && path !== '/api/push/test' && path !== '/api/push/diag' && path !== '/api/game/create' && path !== '/api/game/state' && path !== '/api/game/move' && !path.startsWith('/api/camel/') && !path.startsWith('/api/skull') && path !== '/api/admin/delete-game' && path !== '/api/leaderboards' && path !== '/api/game-history') {
+    if (path !== '/api/state' && path !== '/api/scores' && path !== '/api/players' && path !== '/api/version' && path !== '/api/chat' && path !== '/api/chat/send' && path !== '/api/chat/seen' && path !== '/api/chat/react' && path !== '/api/chat/clear' && path !== '/api/duel' && path !== '/api/duel/answer' && path !== '/api/skins' && path !== '/api/presence' && path !== '/api/password' && path !== '/api/password/change' && path !== '/api/login' && path !== '/api/session' && path !== '/api/ban' && path !== '/api/mute' && path !== '/api/mod' && path !== '/api/typing' && path !== '/api/popup' && path !== '/api/push' && path !== '/api/push/test' && path !== '/api/push/diag' && path !== '/api/game/create' && path !== '/api/game/state' && path !== '/api/game/move' && !path.startsWith('/api/camel/') && !path.startsWith('/api/skull') && !path.startsWith('/api/risk') && path !== '/api/admin/delete-game' && path !== '/api/leaderboards' && path !== '/api/game-history') {
       throw failure('Cette action est introuvable.', 404, 'not_found');
     }
     const invitedState = await validateInvite(config);
@@ -204,6 +204,9 @@
       if (path === '/api/skull/list') return await rpc(config, 'yeti_sk_list', {p_room_code: code});
       if (path === '/api/skull/version') return await rpc(config, 'yeti_sk_version', {p_room_code: code, p_game: Number(body.game)});
       if (path === '/api/skull') return await edge(config, 'yeti-skull', {...body, code});
+      if (path === '/api/risk/list') return await rpc(config, 'yeti_rk_list', {p_room_code: code});
+      if (path === '/api/risk/version') return await rpc(config, 'yeti_rk_version', {p_room_code: code, p_game: Number(body.game)});
+      if (path === '/api/risk') return await edge(config, 'yeti-risk', {...body, code});
       if (path.startsWith('/api/camel/')) throw failure('Cette action est introuvable.', 404, 'not_found');
       if (path === '/api/mod') return await rpc(config, 'yeti_mod', {p_room_code: code, p_mod: Number(body.mod), p_token: String(body.token || ''), p_target: Number(body.target), p_action: String(body.action || ''), p_body: body.body == null ? null : String(body.body)});
       if (path === '/api/popup') return await rpc(config, 'yeti_send_popup', {p_room_code: code, p_player: Number(body.player), p_token: String(body.token || ''), p_target: Number(body.target), p_text: String(body.text || ''), p_gif: body.gif ? String(body.gif) : null});
